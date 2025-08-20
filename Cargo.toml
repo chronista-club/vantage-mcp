@@ -1,0 +1,39 @@
+[package]
+name = "ichimi-server"
+version = "0.1.0"
+edition = "2024"
+authors = ["Chronista Club <dev@chronista.club>"]
+description = "A powerful process management server for Claude Code via Model Context Protocol (MCP)"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/chronista-club/ichimi-server"
+keywords = ["mcp", "process-management", "claude", "server", "orchestration"]
+categories = ["command-line-utilities", "development-tools"]
+
+[[bin]]
+name = "ichimi-server"
+path = "src/bin/ichimi_server.rs"
+
+[dependencies]
+# MCP SDK
+rmcp = { git = "https://github.com/modelcontextprotocol/rust-sdk", branch = "main", features = ["server", "transport-io"] }
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Error handling
+anyhow = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Utils
+chrono = { version = "0.4", features = ["serde"] }
+schemars = "1.0"
+
+[dev-dependencies]
+tempfile = "3.8"
