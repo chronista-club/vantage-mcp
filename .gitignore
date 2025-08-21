@@ -32,3 +32,6 @@ Thumbs.db
 # Environment
 .env
 .env.local
+
+# Vendor files (Tabler and other external libraries)
+static/vendor/
