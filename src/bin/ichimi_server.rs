@@ -10,7 +10,7 @@ async fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
     let mut web_enabled = false;
     let mut web_only = false;
-    let mut web_port = 8080u16;
+    let mut web_port = 12700u16;
     
     let mut i = 1;
     while i < args.len() {
@@ -24,7 +24,7 @@ async fn main() -> Result<()> {
             }
             "--web-port" => {
                 if i + 1 < args.len() {
-                    web_port = args[i + 1].parse().unwrap_or(8080);
+                    web_port = args[i + 1].parse().unwrap_or(12700);
                     i += 1;
                 }
             }
