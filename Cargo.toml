@@ -36,5 +36,17 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 chrono = { version = "0.4", features = ["serde"] }
 schemars = "1.0"
 
+# Web server
+axum = { version = "0.7", optional = true }
+tower = { version = "0.5", optional = true }
+tower-http = { version = "0.6", features = ["cors", "fs"], optional = true }
+axum-extra = { version = "0.9", features = ["typed-header"], optional = true }
+futures = { version = "0.3", optional = true }
+tokio-stream = { version = "0.1", optional = true }
+
+[features]
+default = []
+web = ["dep:axum", "dep:tower", "dep:tower-http", "dep:axum-extra", "dep:futures", "dep:tokio-stream"]
+
 [dev-dependencies]
 tempfile = "3.8"

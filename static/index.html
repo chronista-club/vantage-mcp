@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ja" data-bs-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ichimi Server Dashboard</title>
+    
+    <!-- Tabler CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/css/tabler.min.css" rel="stylesheet">
+    <!-- Tabler Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons@latest/iconfont/tabler-icons.min.css">
+    
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- Custom CSS -->
+    <link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <div class="page" x-data="processManager">
+        <!-- Header -->
+        <header class="navbar navbar-expand-md d-print-none">
+            <div class="container-xl">
+                <h1 class="navbar-brand navbar-brand-autodark d-none-navbar-horizontal pe-0 pe-md-3">
+                    <a href="/">
+                        <i class="ti ti-server-2 me-2"></i>
+                        Ichimi Server Dashboard
+                    </a>
+                </h1>
+                <div class="navbar-nav flex-row order-md-last">
+                    <div class="nav-item d-none d-md-flex me-3">
+                        <div class="btn-list">
+                            <button @click="refreshData()" class="btn btn-outline-primary">
+                                <i class="ti ti-refresh"></i> 更新
+                            </button>
+                            <button @click="showCreateModal = true" class="btn btn-primary">
+                                <i class="ti ti-plus"></i> 新規プロセス
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Page Content -->
+        <div class="page-wrapper">
+            <div class="page-header d-print-none">
+                <div class="container-xl">
+                    <div class="row g-2 align-items-center">
+                        <div class="col">
+                            <h2 class="page-title">プロセス管理</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="page-body">
+                <div class="container-xl">
+                    <!-- Stats -->
+                    <div class="row row-cards mb-3">
+                        <div class="col-sm-6 col-lg-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center">
+                                        <div class="subheader">総プロセス数</div>
+                                    </div>
+                                    <div class="h1 mb-0" x-text="processes.length"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-lg-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center">
+                                        <div class="subheader">実行中</div>
+                                    </div>
+                                    <div class="h1 mb-0 text-green" x-text="runningCount"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-lg-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center">
+                                        <div class="subheader">停止中</div>
+                                    </div>
+                                    <div class="h1 mb-0 text-yellow" x-text="stoppedCount"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-lg-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center">
+                                        <div class="subheader">失敗</div>
+                                    </div>
+                                    <div class="h1 mb-0 text-red" x-text="failedCount"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Process Table -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">プロセス一覧</h3>
+                            <div class="card-actions">
+                                <input type="text" 
+                                       x-model="searchQuery" 
+                                       @input="filterProcesses()"
+                                       class="form-control form-control-sm" 
+                                       placeholder="検索...">
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-vcenter card-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>コマンド</th>
+                                        <th>状態</th>
+                                        <th>PID</th>
+                                        <th>開始時刻</th>
+                                        <th class="w-1"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="process in filteredProcesses" :key="process.info.id">
+                                        <tr>
+                                            <td x-text="process.info.id"></td>
+                                            <td>
+                                                <code x-text="process.info.command"></code>
+                                            </td>
+                                            <td>
+                                                <span class="badge" 
+                                                      :class="getStatusBadgeClass(process.info.state)"
+                                                      x-text="getStatusText(process.info.state)">
+                                                </span>
+                                            </td>
+                                            <td x-text="process.info.state.pid || '-'"></td>
+                                            <td x-text="formatDate(process.info.state.started_at)"></td>
+                                            <td>
+                                                <div class="btn-list flex-nowrap">
+                                                    <button x-show="process.info.state.state === 'NotStarted' || process.info.state.state === 'Stopped'"
+                                                            @click="startProcess(process.info.id)"
+                                                            class="btn btn-sm btn-success">
+                                                        <i class="ti ti-player-play"></i>
+                                                    </button>
+                                                    <button x-show="process.info.state.state === 'Running'"
+                                                            @click="stopProcess(process.info.id)"
+                                                            class="btn btn-sm btn-warning">
+                                                        <i class="ti ti-player-stop"></i>
+                                                    </button>
+                                                    <button @click="viewLogs(process.info.id)"
+                                                            class="btn btn-sm btn-info">
+                                                        <i class="ti ti-file-text"></i>
+                                                    </button>
+                                                    <button @click="deleteProcess(process.info.id)"
+                                                            class="btn btn-sm btn-danger">
+                                                        <i class="ti ti-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                    <tr x-show="filteredProcesses.length === 0">
+                                        <td colspan="6" class="text-center text-muted">
+                                            プロセスがありません
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Create Process Modal -->
+        <div class="modal modal-blur fade" 
+             :class="{ 'show': showCreateModal }" 
+             :style="{ display: showCreateModal ? 'block' : 'none' }"
+             x-show="showCreateModal"
+             @click.outside="showCreateModal = false">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">新規プロセス作成</h5>
+                        <button type="button" class="btn-close" @click="showCreateModal = false"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">プロセスID</label>
+                            <input type="text" class="form-control" x-model="newProcess.id" placeholder="my-process">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">コマンド</label>
+                            <input type="text" class="form-control" x-model="newProcess.command" placeholder="python">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">引数</label>
+                            <input type="text" class="form-control" x-model="newProcess.argsString" placeholder="-m http.server 8000">
+                            <small class="text-muted">スペース区切りで入力</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">作業ディレクトリ（オプション）</label>
+                            <input type="text" class="form-control" x-model="newProcess.cwd" placeholder="/path/to/directory">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">環境変数（オプション）</label>
+                            <textarea class="form-control" x-model="newProcess.envString" rows="3" placeholder="KEY1=value1&#10;KEY2=value2"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn me-auto" @click="showCreateModal = false">キャンセル</button>
+                        <button type="button" class="btn btn-primary" @click="createProcess()">作成</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logs Modal -->
+        <div class="modal modal-blur fade modal-xl" 
+             :class="{ 'show': showLogsModal }" 
+             :style="{ display: showLogsModal ? 'block' : 'none' }"
+             x-show="showLogsModal"
+             @click.outside="showLogsModal = false">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">ログ: <span x-text="currentProcessId"></span></h5>
+                        <button type="button" class="btn-close" @click="showLogsModal = false"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <div class="btn-group" role="group">
+                                <button type="button" 
+                                        class="btn" 
+                                        :class="{ 'btn-primary': logStream === 'both' }"
+                                        @click="setLogStream('both')">全て</button>
+                                <button type="button" 
+                                        class="btn" 
+                                        :class="{ 'btn-primary': logStream === 'stdout' }"
+                                        @click="setLogStream('stdout')">stdout</button>
+                                <button type="button" 
+                                        class="btn" 
+                                        :class="{ 'btn-primary': logStream === 'stderr' }"
+                                        @click="setLogStream('stderr')">stderr</button>
+                            </div>
+                        </div>
+                        <pre class="log-viewer" x-text="currentLogs"></pre>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @click="showLogsModal = false">閉じる</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabler JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/js/tabler.min.js"></script>
+    <!-- Custom JS -->
+    <script src="/js/app.js"></script>
+</body>
+</html>

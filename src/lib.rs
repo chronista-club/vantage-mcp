@@ -10,6 +10,8 @@ use tokio::sync::Mutex;
 
 pub mod messages;
 pub mod process;
+#[cfg(feature = "web")]
+pub mod web;
 
 use messages::*;
 use process::ProcessManager;
@@ -29,6 +31,10 @@ impl IchimiServer {
             process_manager: ProcessManager::new(),
             tool_router: Self::tool_router(),
         }
+    }
+    
+    pub fn set_process_manager(&mut self, manager: ProcessManager) {
+        self.process_manager = manager;
     }
 
     #[tool(description = "Echo the input message back")]
