@@ -1,5 +1,6 @@
 use super::buffer::CircularBuffer;
 use super::types::*;
+use crate::persistence::PersistenceManager;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process::Stdio;
@@ -48,13 +49,69 @@ impl ManagedProcess {
 #[derive(Clone)]
 pub struct ProcessManager {
     processes: Arc<RwLock<HashMap<String, Arc<RwLock<ManagedProcess>>>>>,
+    persistence: Arc<PersistenceManager>,
 }
 
 impl ProcessManager {
     pub fn new() -> Self {
-        Self {
+        let persistence = Arc::new(PersistenceManager::default());
+        
+        let manager = Self {
             processes: Arc::new(RwLock::new(HashMap::new())),
+            persistence: persistence.clone(),
+        };
+        
+        // Load persisted processes on startup
+        let manager_clone = manager.clone();
+        tokio::spawn(async move {
+            if let Err(e) = manager_clone.load_persisted_processes().await {
+                tracing::warn!("Failed to load persisted processes: {}", e);
+            }
+        });
+        
+        // Start auto-export if enabled
+        if let Ok(interval_str) = std::env::var("ICHIMI_AUTO_EXPORT_INTERVAL") {
+            if let Ok(interval_secs) = interval_str.parse::<u64>() {
+                if interval_secs > 0 {
+                    let manager_clone = manager.clone();
+                    tokio::spawn(async move {
+                        let mut interval = tokio::time::interval(
+                            tokio::time::Duration::from_secs(interval_secs)
+                        );
+                        loop {
+                            interval.tick().await;
+                            if let Err(e) = manager_clone.export_processes(None).await {
+                                tracing::warn!("Auto-export failed: {}", e);
+                            } else {
+                                tracing::debug!("Auto-export completed");
+                            }
+                        }
+                    });
+                    tracing::info!("Auto-export enabled with interval: {}s", interval_secs);
+                }
+            }
         }
+        
+        manager
+    }
+    
+    async fn load_persisted_processes(&self) -> Result<(), String> {
+        let loaded_processes = self.persistence.load_all_processes().await?;
+        let mut processes = self.processes.write().await;
+        
+        for (id, info) in loaded_processes {
+            let managed = ManagedProcess {
+                info,
+                stdout_buffer: CircularBuffer::new(1000),
+                stderr_buffer: CircularBuffer::new(1000),
+                child: None,
+                output_handles: None,
+            };
+            processes.insert(id, Arc::new(RwLock::new(managed)));
+        }
+        
+        tracing::info!("Loaded {} persisted processes", processes.len());
+        Ok(())
     }
 
     /// プロセスを作成・登録
@@ -73,7 +130,13 @@ impl ProcessManager {
         }
 
         let process = ManagedProcess::new(id.clone(), command, args, env, cwd);
+        let process_info = process.info.clone();
         processes.insert(id, Arc::new(RwLock::new(process)));
+        
+        // Persist the process
+        if let Err(e) = self.persistence.save_process(&process_info).await {
+            tracing::warn!("Failed to persist process: {}", e);
+        }
         
         Ok(())
     }
@@ -148,6 +211,11 @@ impl ProcessManager {
         };
         process.child = Some(child);
         process.output_handles = Some((stdout_handle, stderr_handle));
+        
+        // Persist the updated state
+        if let Err(e) = self.persistence.update_process(&process.info).await {
+            tracing::warn!("Failed to persist process state: {}", e);
+        }
 
         info!("Started process '{}' with PID {}", id, pid);
         Ok(pid)
@@ -195,6 +263,11 @@ impl ProcessManager {
                 exit_code: None,
                 stopped_at: chrono::Utc::now(),
             };
+            
+            // Persist the updated state
+            if let Err(e) = self.persistence.update_process(&process.info).await {
+                tracing::warn!("Failed to persist process state: {}", e);
+            }
 
             info!("Stopped process '{}'", id);
         }
@@ -301,6 +374,35 @@ impl ProcessManager {
         let mut processes = self.processes.write().await;
         processes.remove(&id)
             .ok_or_else(|| format!("Process '{}' not found", id))?;
+        
+        // Delete from persistence
+        if let Err(e) = self.persistence.delete_process(&id).await {
+            tracing::warn!("Failed to delete persisted process: {}", e);
+        }
+        
+        Ok(())
+    }
+    
+    /// Export processes to surql file
+    pub async fn export_processes(&self, file_path: Option<String>) -> Result<String, String> {
+        match file_path {
+            Some(path) => {
+                self.persistence.export_to_file(&path).await?;
+                Ok(path)
+            }
+            None => {
+                self.persistence.export_default().await
+            }
+        }
+    }
+    
+    /// Import processes from surql file
+    pub async fn import_processes(&self, file_path: &str) -> Result<(), String> {
+        // Import to database
+        self.persistence.import_from_file(file_path).await?;
+        
+        // Reload processes into memory
+        self.load_persisted_processes().await?;
         
         Ok(())
     }

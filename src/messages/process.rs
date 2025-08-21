@@ -44,3 +44,13 @@ pub struct ListProcessesRequest {
 pub struct RemoveProcessRequest {
     pub id: String,
 }
+
+#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
+pub struct ExportProcessesRequest {
+    pub file_path: Option<String>,
+}
+
+#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
+pub struct ImportProcessesRequest {
+    pub file_path: String,
+}

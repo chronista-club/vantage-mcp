@@ -8,7 +8,9 @@ Model Context Protocol (MCP) を介した Claude Code 用の強力なプロセ�
 - 📊 **リアルタイムログ**: stdout/stderr 出力のキャプチャとストリーミング
 - 🔍 **ステータス監視**: プロセスの状態とメトリクスの追跡
 - 🎯 **柔軟なフィルタリング**: フィルタを使用したプロセスの一覧表示と検索
-- 💾 **メモリ効率**: ログ管理用の循環バッファ
+- 💾 **永続化**: SurrealDBインメモリデータベースによるエクスポート/インポート
+- 🌐 **Webダッシュボード**: ブラウザベースの管理用オプションWeb UI
+- 🔄 **自動バックアップ**: 設定可能な間隔での自動エクスポート
 - 🔌 **MCP ネイティブ**: Claude Code 統合に特化して構築
 
 ## インストール
@@ -47,7 +49,8 @@ cargo install ichimi-server
             "type": "stdio",
             "command": "ichimi",
             "env": {
-                "RUST_LOG": "info"
+                "RUST_LOG": "info",
+                "ICHIMI_AUTO_EXPORT_INTERVAL": "300"
             }
         }
     }
@@ -80,6 +83,8 @@ Claude Code で以下を実行:
 - `get_process_output` - プロセスの stdout/stderr ログを取得
 - `list_processes` - フィルタを使用して管理中の全プロセスを一覧表示
 - `remove_process` - 管理からプロセスを削除
+- `export_processes` - 全プロセスを .surql ファイルにエクスポート
+- `import_processes` - .surql ファイルからプロセスをインポート
 
 ### 使用例
 
@@ -156,6 +161,60 @@ for process in list_processes(filter={"name_pattern": "worker"}):
 - `state` - プロセス状態でフィルタ (Running/Stopped/Failed/All)
 - `name_pattern` - ID パターンでフィルタ (ワイルドカード対応)
 
+## 永続化
+
+### 自動バックアップ
+
+Ichimi Server はプロセスの永続化にインメモリ SurrealDB データベースを使用します。データはバックアップと復旧のために `.surql` ファイルにエクスポート/インポートできます。
+
+```bash
+# 5分（300秒）ごとに自動エクスポートを有効化
+ICHIMI_AUTO_EXPORT_INTERVAL=300 ichimi
+
+# 起動時にデータをインポート
+ICHIMI_IMPORT_FILE=/path/to/backup.surql ichimi
+
+# デフォルトのエクスポート場所
+# ~/.ichimi/data/ichimi_export.surql
+```
+
+### 手動エクスポート/インポート
+
+```python
+# 全プロセスをファイルにエクスポート
+export_processes(file_path="/path/to/backup.surql")
+
+# デフォルト場所にエクスポート
+export_processes()
+
+# ファイルからプロセスをインポート
+import_processes(file_path="/path/to/backup.surql")
+```
+
+## Webダッシュボード
+
+Ichimi Server にはブラウザベース管理用のオプションのWebダッシュボードが含まれています。
+
+### ダッシュボードへのアクセス
+
+```bash
+# Webダッシュボードで起動（デフォルトポート 12700）
+ichimi --web
+
+# カスタムポートを指定
+ichimi --web --web-port 8080
+```
+
+その後、ブラウザで `http://localhost:12700` を開きます
+
+### ダッシュボード機能
+
+- リアルタイムプロセスステータス監視
+- ワンクリックでプロセスの起動/停止
+- プロセスログ（stdout/stderr）の表示
+- プロセスの検索とフィルタリング
+- Tabler UI によるレスポンシブデザイン
+
 ## 開発
 
 ### ソースからのビルド
@@ -182,11 +241,21 @@ ichimi-server/
 │   ├── lib.rs           # コアサーバー実装
 │   ├── bin/
 │   │   └── ichimi_server.rs # バイナリエントリーポイント
-│   └── process/
-│       ├── mod.rs       # プロセスモジュールのエクスポート
-│       ├── manager.rs   # プロセスライフサイクル管理
-│       ├── buffer.rs    # ログ用循環バッファ
-│       └── types.rs     # 型定義
+│   ├── process/
+│   │   ├── mod.rs       # プロセスモジュールのエクスポート
+│   │   ├── manager.rs   # プロセスライフサイクル管理
+│   │   ├── buffer.rs    # ログ用循環バッファ
+│   │   └── types.rs     # 型定義
+│   ├── web/
+│   │   ├── mod.rs       # Webサーバーモジュール
+│   │   └── server.rs    # ダッシュボード HTTPサーバー
+│   ├── messages/
+│   │   ├── mod.rs       # メッセージ型
+│   │   └── process.rs   # プロセス関連メッセージ
+│   └── persistence.rs   # SurrealDB永続化レイヤー
+├── static/              # Webダッシュボードアセット
+│   ├── index.html       # ダッシュボード UI
+│   └── favicon.ico      # アイコン
 ├── examples/            # 使用例
 └── tests/              # 統合テスト
 ```
@@ -210,9 +279,20 @@ ichimi-server/
 
 お好みの方をお選びください。
 
+## 環境変数
+
+| 変数 | 説明 | デフォルト |
+|----------|-------------|---------|  
+| `RUST_LOG` | ログレベル (error, warn, info, debug, trace) | info |
+| `ICHIMI_AUTO_EXPORT_INTERVAL` | 自動エクスポート間隔（秒） | - |
+| `ICHIMI_IMPORT_FILE` | 起動時にインポートするファイル | - |
+| `ICHIMI_DATA_DIR` | データファイル用ディレクトリ | ~/.ichimi/data |
+
 ## 謝辞
 
 - [rmcp](https://github.com/modelcontextprotocol/rust-sdk) - Rust MCP SDK で構築
+- [SurrealDB](https://surrealdb.com/) - インメモリドキュメントデータベース
+- UIフレームワーク: [Alpine.js](https://alpinejs.dev/) & [Tabler](https://tabler.io/)
 - Model Context Protocol 仕様に触発
 - Chronista Club エコシステムの一部
 

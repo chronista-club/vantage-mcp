@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "ichimi": {
+      "type": "stdio",
+      "command": "./target/release/ichimi",
+      "env": {
+        "RUST_LOG": "info",
+        "ICHIMI_AUTO_EXPORT_INTERVAL": "300"
+      }
+    }
+  }
+}

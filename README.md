@@ -8,7 +8,9 @@ A powerful process management server for Claude Code via the Model Context Proto
 - 📊 **Real-time Logging**: Capture and stream stdout/stderr outputs
 - 🔍 **Status Monitoring**: Track process states and metrics
 - 🎯 **Flexible Filtering**: List and search processes with filters
-- 💾 **Memory Efficient**: Circular buffer for log management
+- 💾 **Persistence**: Export/import processes with SurrealDB in-memory database
+- 🌐 **Web Dashboard**: Optional web UI for browser-based management
+- 🔄 **Auto-backup**: Automatic export at configurable intervals
 - 🔌 **MCP Native**: Built specifically for Claude Code integration
 
 ## Installation
@@ -47,7 +49,8 @@ Add the server to your `.mcp.json` or Claude Code settings:
             "type": "stdio",
             "command": "ichimi",
             "env": {
-                "RUST_LOG": "info"
+                "RUST_LOG": "info",
+                "ICHIMI_AUTO_EXPORT_INTERVAL": "300"
             }
         }
     }
@@ -80,6 +83,8 @@ You should see "ichimi" server as "connected".
 - `get_process_output` - Retrieve process stdout/stderr logs
 - `list_processes` - List all managed processes with filters
 - `remove_process` - Remove a process from management
+- `export_processes` - Export all processes to a .surql file
+- `import_processes` - Import processes from a .surql file
 
 ### Examples
 
@@ -156,6 +161,60 @@ for process in list_processes(filter={"name_pattern": "worker"}):
 - `state` - Filter by process state (Running/Stopped/Failed/All)
 - `name_pattern` - Filter by ID pattern (supports wildcards)
 
+## Persistence
+
+### Automatic Backup
+
+Ichimi Server uses an in-memory SurrealDB database for process persistence. Data can be exported/imported to `.surql` files for backup and recovery.
+
+```bash
+# Enable automatic export every 5 minutes (300 seconds)
+ICHIMI_AUTO_EXPORT_INTERVAL=300 ichimi
+
+# Import data on startup
+ICHIMI_IMPORT_FILE=/path/to/backup.surql ichimi
+
+# Default export location
+# ~/.ichimi/data/ichimi_export.surql
+```
+
+### Manual Export/Import
+
+```python
+# Export all processes to a file
+export_processes(file_path="/path/to/backup.surql")
+
+# Export to default location
+export_processes()
+
+# Import processes from a file
+import_processes(file_path="/path/to/backup.surql")
+```
+
+## Web Dashboard
+
+Ichimi Server includes an optional web dashboard for browser-based management.
+
+### Accessing the Dashboard
+
+```bash
+# Start with web dashboard (default port 12700)
+ichimi --web
+
+# Specify custom port
+ichimi --web --web-port 8080
+```
+
+Then open your browser to `http://localhost:12700`
+
+### Dashboard Features
+
+- Real-time process status monitoring
+- Start/stop processes with one click
+- View process logs (stdout/stderr)
+- Search and filter processes
+- Responsive design with Tabler UI
+
 ## Development
 
 ### Building from Source
@@ -182,11 +241,21 @@ ichimi-server/
 │   ├── lib.rs           # Core server implementation
 │   ├── bin/
 │   │   └── ichimi_server.rs # Binary entry point
-│   └── process/
-│       ├── mod.rs       # Process module exports
-│       ├── manager.rs   # Process lifecycle management
-│       ├── buffer.rs    # Circular buffer for logs
-│       └── types.rs     # Type definitions
+│   ├── process/
+│   │   ├── mod.rs       # Process module exports
+│   │   ├── manager.rs   # Process lifecycle management
+│   │   ├── buffer.rs    # Circular buffer for logs
+│   │   └── types.rs     # Type definitions
+│   ├── web/
+│   │   ├── mod.rs       # Web server module
+│   │   └── server.rs    # Dashboard HTTP server
+│   ├── messages/
+│   │   ├── mod.rs       # Message types
+│   │   └── process.rs   # Process-related messages
+│   └── persistence.rs   # SurrealDB persistence layer
+├── static/              # Web dashboard assets
+│   ├── index.html       # Dashboard UI
+│   └── favicon.ico      # Icon
 ├── examples/            # Usage examples
 └── tests/              # Integration tests
 ```
@@ -210,9 +279,20 @@ This project is dual-licensed under either of:
 
 at your option.
 
+## Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|  
+| `RUST_LOG` | Log level (error, warn, info, debug, trace) | info |
+| `ICHIMI_AUTO_EXPORT_INTERVAL` | Auto-export interval in seconds | - |
+| `ICHIMI_IMPORT_FILE` | File to import on startup | - |
+| `ICHIMI_DATA_DIR` | Directory for data files | ~/.ichimi/data |
+
 ## Acknowledgments
 
 - Built with [rmcp](https://github.com/modelcontextprotocol/rust-sdk) - Rust MCP SDK
+- Database powered by [SurrealDB](https://surrealdb.com/) - In-memory document database
+- UI framework: [Alpine.js](https://alpinejs.dev/) & [Tabler](https://tabler.io/)
 - Inspired by the Model Context Protocol specification
 - Part of the Chronista Club ecosystem
 

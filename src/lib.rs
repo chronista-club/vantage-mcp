@@ -9,6 +9,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 pub mod messages;
+pub mod persistence;
 pub mod process;
 #[cfg(feature = "web")]
 pub mod web;
@@ -203,6 +204,46 @@ impl IchimiServer {
         Ok(CallToolResult::success(vec![Content::text(format!(
             "Process '{}' removed successfully",
             id
+        ))]))
+    }
+    
+    #[tool(description = "Export all processes to a surql file for backup/persistence")]
+    async fn export_processes(
+        &self,
+        Parameters(ExportProcessesRequest { file_path }): Parameters<ExportProcessesRequest>,
+    ) -> Result<CallToolResult, McpError> {
+        let path = self.process_manager
+            .export_processes(file_path)
+            .await
+            .map_err(|e| McpError {
+                message: e.into(),
+                code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+                data: None,
+            })?;
+        
+        Ok(CallToolResult::success(vec![Content::text(format!(
+            "Processes exported successfully to {}",
+            path
+        ))]))
+    }
+    
+    #[tool(description = "Import processes from a surql file")]
+    async fn import_processes(
+        &self,
+        Parameters(ImportProcessesRequest { file_path }): Parameters<ImportProcessesRequest>,
+    ) -> Result<CallToolResult, McpError> {
+        self.process_manager
+            .import_processes(&file_path)
+            .await
+            .map_err(|e| McpError {
+                message: e.into(),
+                code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+                data: None,
+            })?;
+        
+        Ok(CallToolResult::success(vec![Content::text(format!(
+            "Processes imported successfully from {}",
+            file_path
         ))]))
     }
 }
