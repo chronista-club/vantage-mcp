@@ -24,13 +24,14 @@ cd ichimi-server
 cargo build --release
 
 # バイナリは以下の場所に生成されます:
-# target/release/ichimi-server
+# target/release/ichimi
 ```
 
 ### Cargo を使用
 
 ```bash
 cargo install ichimi-server
+# コマンドは 'ichimi' として利用可能になります
 ```
 
 ## 設定
@@ -44,7 +45,7 @@ cargo install ichimi-server
     "mcpServers": {
         "ichimi": {
             "type": "stdio",
-            "command": "ichimi-server",
+            "command": "ichimi",
             "env": {
                 "RUST_LOG": "info"
             }

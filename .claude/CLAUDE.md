@@ -24,8 +24,8 @@ cargo clippy         # Run linter
 cargo clippy -- -D warnings # Fail on warnings
 
 # Run the server
-cargo run --bin ichimi-server
-./target/release/ichimi-server # Run release build
+cargo run --bin ichimi
+./target/release/ichimi # Run release build
 ```
 
 ## Architecture

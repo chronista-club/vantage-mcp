@@ -24,13 +24,14 @@ cd ichimi-server
 cargo build --release
 
 # The binary will be available at:
-# target/release/ichimi-server
+# target/release/ichimi
 ```
 
 ### Using Cargo
 
 ```bash
 cargo install ichimi-server
+# The command will be available as 'ichimi'
 ```
 
 ## Configuration
@@ -44,7 +45,7 @@ Add the server to your `.mcp.json` or Claude Code settings:
     "mcpServers": {
         "ichimi": {
             "type": "stdio",
-            "command": "ichimi-server",
+            "command": "ichimi",
             "env": {
                 "RUST_LOG": "info"
             }

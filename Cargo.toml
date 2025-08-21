@@ -10,7 +10,7 @@ keywords = ["mcp", "process-management", "claude", "server", "orchestration"]
 categories = ["command-line-utilities", "development-tools"]
 
 [[bin]]
-name = "ichimi-server"
+name = "ichimi"
 path = "src/bin/ichimi_server.rs"
 
 [dependencies]
