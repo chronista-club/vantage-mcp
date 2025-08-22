@@ -1,81 +1,50 @@
 # Ichimi Server
 
-A powerful process management server for Claude Code via the Model Context Protocol (MCP).
+[English](./README.en.md) | **日本語**
 
-## Features
+Process as a Resource
 
-- 🚀 **Process Management**: Start, stop, and monitor any process
-- 📊 **Real-time Logging**: Capture and stream stdout/stderr outputs
-- 🔍 **Status Monitoring**: Track process states and metrics
-- 🎯 **Flexible Filtering**: List and search processes with filters
-- 💾 **Persistence**: Export/import processes with SurrealDB in-memory database
-- 🌐 **Web Dashboard**: Optional web UI for browser-based management
-- 🔄 **Auto-backup**: Automatic export at configurable intervals
-- 🔌 **MCP Native**: Built specifically for Claude Code integration
+Model Context Protocol (MCP) を介した Claude Code 用の強力なプロセス管理サーバー。
 
-## Installation
+## 特徴
 
-### Quick Install (Recommended)
+- 🚀 **プロセス管理**: あらゆるプロセスの起動、停止、監視
+- 📊 **リアルタイムログ**: stdout/stderr 出力のキャプチャとストリーミング
+- 🔍 **ステータス監視**: プロセスの状態とメトリクスの追跡
+- 🎯 **柔軟なフィルタリング**: フィルタを使用したプロセスの一覧表示と検索
+- 💾 **永続化**: SurrealDBインメモリデータベースによるエクスポート/インポート
+- 🌐 **Webダッシュボード**: ブラウザベースの管理用オプションWeb UI
+- 🔄 **自動バックアップ**: 設定可能な間隔での自動エクスポート
+- 🔌 **MCP ネイティブ**: Claude Code 統合に特化して構築
 
-The easiest way to install Ichimi Server:
+## インストール
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/chronista-club/ichimi-server/main/install.sh | bash
-```
-
-This script will:
-- Detect your platform (macOS/Linux, x86_64/ARM)
-- Download the appropriate binary from GitHub releases
-- Install to `~/.local/bin` (or use Homebrew on macOS if available)
-- Fall back to building from source if needed
-
-### Homebrew (macOS/Linux)
+### ソースからのインストール
 
 ```bash
-brew tap chronista-club/tap
-brew install ichimi-server
-```
-
-### Using Cargo
-
-```bash
-cargo install --git https://github.com/chronista-club/ichimi-server --bin ichimi
-```
-
-### From Source
-
-```bash
-# Clone the repository
+# リポジトリをクローン
 git clone https://github.com/chronista-club/ichimi-server
 cd ichimi-server
 
-# Build the server
+# サーバーをビルド
 cargo build --release
 
-# Install to PATH (optional)
-cargo install --path . --bin ichimi
+# バイナリは以下の場所に生成されます:
+# target/release/ichimi
 ```
 
-### Manual Download
+### Cargo を使用
 
-Download pre-built binaries from the [releases page](https://github.com/chronista-club/ichimi-server/releases):
-
-- `ichimi-linux-x86_64.tar.gz` - Linux x86_64
-- `ichimi-linux-aarch64.tar.gz` - Linux ARM64
-- `ichimi-macos-x86_64.tar.gz` - macOS Intel
-- `ichimi-macos-aarch64.tar.gz` - macOS Apple Silicon
-
-Extract and move to your PATH:
 ```bash
-tar xzf ichimi-*.tar.gz
-sudo mv ichimi /usr/local/bin/
+cargo install ichimi-server
+# コマンドは 'ichimi' として利用可能になります
 ```
 
-## Configuration
+## 設定
 
-### Claude Code Configuration
+### Claude Code の設定
 
-Add the server to your `.mcp.json` or Claude Code settings:
+`.mcp.json` または Claude Code の設定にサーバーを追加:
 
 ```json
 {
@@ -92,41 +61,41 @@ Add the server to your `.mcp.json` or Claude Code settings:
 }
 ```
 
-### Verify Connection
+### 接続の確認
 
-In Claude Code, run:
+Claude Code で以下を実行:
 ```
 /mcp
 ```
 
-You should see "ichimi" server as "connected".
+"ichimi" サーバーが "connected" と表示されるはずです。
 
-## Usage
+## 使い方
 
-### Available Tools
+### 利用可能なツール
 
-#### Basic Tools
-- `echo` - Echo back messages for testing
-- `ping` - Simple health check
-- `get_status` - Get server status and uptime
+#### 基本ツール
+- `echo` - テスト用にメッセージをエコーバック
+- `ping` - シンプルなヘルスチェック
+- `get_status` - サーバーステータスと稼働時間を取得
 
-#### Process Management
-- `create_process` - Register a new process configuration
-- `start_process` - Start a registered process
-- `stop_process` - Stop a running process gracefully
-- `get_process_status` - Get detailed process status
-- `get_process_output` - Retrieve process stdout/stderr logs
-- `list_processes` - List all managed processes with filters
-- `remove_process` - Remove a process from management
-- `export_processes` - Export all processes to a .surql file
-- `import_processes` - Import processes from a .surql file
+#### プロセス管理
+- `create_process` - 新しいプロセス設定を登録
+- `start_process` - 登録済みプロセスを起動
+- `stop_process` - 実行中のプロセスを正常停止
+- `get_process_status` - 詳細なプロセスステータスを取得
+- `get_process_output` - プロセスの stdout/stderr ログを取得
+- `list_processes` - フィルタを使用して管理中の全プロセスを一覧表示
+- `remove_process` - 管理からプロセスを削除
+- `export_processes` - 全プロセスを .surql ファイルにエクスポート
+- `import_processes` - .surql ファイルからプロセスをインポート
 
-### Examples
+### 使用例
 
-#### Managing a Web Server
+#### Web サーバーの管理
 
 ```python
-# Register a web server process
+# Web サーバープロセスを登録
 create_process(
     id="webserver",
     command="python",
@@ -135,20 +104,20 @@ create_process(
     cwd="./public"
 )
 
-# Start the server
+# サーバーを起動
 start_process(id="webserver")
 
-# Check the logs
+# ログを確認
 get_process_output(id="webserver", stream="Both", lines=50)
 
-# Stop gracefully
+# 正常停止
 stop_process(id="webserver", grace_period_ms=5000)
 ```
 
-#### Running a Database
+#### データベースの実行
 
 ```python
-# Start PostgreSQL
+# PostgreSQL を起動
 create_process(
     id="postgres",
     command="postgres",
@@ -158,185 +127,185 @@ create_process(
 
 start_process(id="postgres")
 
-# Monitor status
+# ステータスを監視
 get_process_status(id="postgres")
 ```
 
-#### Batch Process Management
+#### バッチプロセス管理
 
 ```python
-# List all running processes
+# 実行中の全プロセスを一覧表示
 list_processes(filter={"state": "Running"})
 
-# Find specific processes by pattern
+# パターンで特定のプロセスを検索
 list_processes(filter={"name_pattern": "worker"})
 
-# Stop all workers
+# 全ワーカーを停止
 for process in list_processes(filter={"name_pattern": "worker"}):
     stop_process(id=process["id"])
 ```
 
-## API Reference
+## API リファレンス
 
-### Process States
+### プロセスの状態
 
-- `NotStarted` - Process registered but not yet started
-- `Running` - Process is currently running with PID
-- `Stopped` - Process terminated normally with exit code
-- `Failed` - Process failed with error message
+- `NotStarted` - プロセスは登録済みだが未起動
+- `Running` - プロセスは PID を持って実行中
+- `Stopped` - プロセスは終了コードで正常終了
+- `Failed` - プロセスはエラーメッセージで失敗
 
-### Output Streams
+### 出力ストリーム
 
-- `Stdout` - Standard output only
-- `Stderr` - Standard error only
-- `Both` - Combined stdout and stderr
+- `Stdout` - 標準出力のみ
+- `Stderr` - 標準エラー出力のみ
+- `Both` - stdout と stderr の結合
 
-### Process Filters
+### プロセスフィルタ
 
-- `state` - Filter by process state (Running/Stopped/Failed/All)
-- `name_pattern` - Filter by ID pattern (supports wildcards)
+- `state` - プロセス状態でフィルタ (Running/Stopped/Failed/All)
+- `name_pattern` - ID パターンでフィルタ (ワイルドカード対応)
 
-## Persistence
+## 永続化
 
-### Automatic Backup
+### 自動バックアップ
 
-Ichimi Server uses an in-memory SurrealDB database for process persistence. Data can be exported/imported to `.surql` files for backup and recovery.
+Ichimi Server はプロセスの永続化にインメモリ SurrealDB データベースを使用します。データはバックアップと復旧のために `.surql` ファイルにエクスポート/インポートできます。
 
 ```bash
-# Enable automatic export every 5 minutes (300 seconds)
+# 5分（300秒）ごとに自動エクスポートを有効化
 ICHIMI_AUTO_EXPORT_INTERVAL=300 ichimi
 
-# Import data on startup
+# 起動時にデータをインポート
 ICHIMI_IMPORT_FILE=/path/to/backup.surql ichimi
 
-# Default export location
+# デフォルトのエクスポート場所
 # ~/.ichimi/data/ichimi_export.surql
 ```
 
-### Manual Export/Import
+### 手動エクスポート/インポート
 
 ```python
-# Export all processes to a file
+# 全プロセスをファイルにエクスポート
 export_processes(file_path="/path/to/backup.surql")
 
-# Export to default location
+# デフォルト場所にエクスポート
 export_processes()
 
-# Import processes from a file
+# ファイルからプロセスをインポート
 import_processes(file_path="/path/to/backup.surql")
 ```
 
-## Web Dashboard
+## Webダッシュボード
 
-Ichimi Server includes an optional web dashboard for browser-based management.
+Ichimi Server にはブラウザベース管理用のオプションのWebダッシュボードが含まれています。
 
-### Accessing the Dashboard
+### ダッシュボードへのアクセス
 
 ```bash
-# Start with web dashboard (default port 12700)
+# Webダッシュボードで起動（デフォルトポート 12700）
 ichimi --web
 
-# Specify custom port
+# カスタムポートを指定
 ichimi --web --web-port 8080
 ```
 
-Then open your browser to `http://localhost:12700`
+その後、ブラウザで `http://localhost:12700` を開きます
 
-### Dashboard Features
+### ダッシュボード機能
 
-- Real-time process status monitoring
-- Start/stop processes with one click
-- View process logs (stdout/stderr)
-- Search and filter processes
-- Responsive design with Tabler UI
+- リアルタイムプロセスステータス監視
+- ワンクリックでプロセスの起動/停止
+- プロセスログ（stdout/stderr）の表示
+- プロセスの検索とフィルタリング
+- Tabler UI によるレスポンシブデザイン
 
-## Development
+## 開発
 
-### Building from Source
+### ソースからのビルド
 
 ```bash
-# Debug build
+# デバッグビルド
 cargo build
 
-# Release build
+# リリースビルド
 cargo build --release
 
-# Run tests
+# テストの実行
 cargo test
 
-# Run with debug logging
+# デバッグログで実行
 RUST_LOG=debug cargo run
 ```
 
-### Project Structure
+### プロジェクト構造
 
 ```
 ichimi-server/
 ├── src/
-│   ├── lib.rs           # Core server implementation
+│   ├── lib.rs           # コアサーバー実装
 │   ├── bin/
-│   │   └── ichimi_server.rs # Binary entry point
+│   │   └── ichimi_server.rs # バイナリエントリーポイント
 │   ├── process/
-│   │   ├── mod.rs       # Process module exports
-│   │   ├── manager.rs   # Process lifecycle management
-│   │   ├── buffer.rs    # Circular buffer for logs
-│   │   └── types.rs     # Type definitions
+│   │   ├── mod.rs       # プロセスモジュールのエクスポート
+│   │   ├── manager.rs   # プロセスライフサイクル管理
+│   │   ├── buffer.rs    # ログ用循環バッファ
+│   │   └── types.rs     # 型定義
 │   ├── web/
-│   │   ├── mod.rs       # Web server module
-│   │   └── server.rs    # Dashboard HTTP server
+│   │   ├── mod.rs       # Webサーバーモジュール
+│   │   └── server.rs    # ダッシュボード HTTPサーバー
 │   ├── messages/
-│   │   ├── mod.rs       # Message types
-│   │   └── process.rs   # Process-related messages
-│   └── persistence.rs   # SurrealDB persistence layer
-├── static/              # Web dashboard assets
-│   ├── index.html       # Dashboard UI
-│   └── favicon.ico      # Icon
-├── examples/            # Usage examples
-└── tests/              # Integration tests
+│   │   ├── mod.rs       # メッセージ型
+│   │   └── process.rs   # プロセス関連メッセージ
+│   └── persistence.rs   # SurrealDB永続化レイヤー
+├── static/              # Webダッシュボードアセット
+│   ├── index.html       # ダッシュボード UI
+│   └── favicon.ico      # アイコン
+├── examples/            # 使用例
+└── tests/              # 統合テスト
 ```
 
-## Contributing
+## コントリビューション
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+コントリビューションを歓迎します！プルリクエストをお気軽に送信してください。
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+1. リポジトリをフォーク
+2. フィーチャーブランチを作成 (`git checkout -b feature/amazing-feature`)
+3. 変更をコミット (`git commit -m 'Add some amazing feature'`)
+4. ブランチにプッシュ (`git push origin feature/amazing-feature`)
+5. プルリクエストを開く
 
-## License
+## ライセンス
 
-This project is dual-licensed under either of:
+このプロジェクトは以下のいずれかのライセンスでデュアルライセンスされています:
 
-- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
-- MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) または http://www.apache.org/licenses/LICENSE-2.0)
+- MIT license ([LICENSE-MIT](LICENSE-MIT) または http://opensource.org/licenses/MIT)
 
-at your option.
+お好みの方をお選びください。
 
-## Environment Variables
+## 環境変数
 
-| Variable | Description | Default |
+| 変数 | 説明 | デフォルト |
 |----------|-------------|---------|  
-| `RUST_LOG` | Log level (error, warn, info, debug, trace) | info |
-| `ICHIMI_AUTO_EXPORT_INTERVAL` | Auto-export interval in seconds | - |
-| `ICHIMI_IMPORT_FILE` | File to import on startup | - |
-| `ICHIMI_DATA_DIR` | Directory for data files | ~/.ichimi/data |
+| `RUST_LOG` | ログレベル (error, warn, info, debug, trace) | info |
+| `ICHIMI_AUTO_EXPORT_INTERVAL` | 自動エクスポート間隔（秒） | - |
+| `ICHIMI_IMPORT_FILE` | 起動時にインポートするファイル | - |
+| `ICHIMI_DATA_DIR` | データファイル用ディレクトリ | ~/.ichimi/data |
 
-## Acknowledgments
+## 謝辞
 
-- Built with [rmcp](https://github.com/modelcontextprotocol/rust-sdk) - Rust MCP SDK
-- Database powered by [SurrealDB](https://surrealdb.com/) - In-memory document database
-- UI framework: [Alpine.js](https://alpinejs.dev/) & [Tabler](https://tabler.io/)
-- Inspired by the Model Context Protocol specification
-- Part of the Chronista Club ecosystem
+- [rmcp](https://github.com/modelcontextprotocol/rust-sdk) - Rust MCP SDK で構築
+- [SurrealDB](https://surrealdb.com/) - インメモリドキュメントデータベース
+- UIフレームワーク: [Alpine.js](https://alpinejs.dev/) & [Tabler](https://tabler.io/)
+- Model Context Protocol 仕様に触発
+- Chronista Club エコシステムの一部
 
-## Support
+## サポート
 
-For issues, questions, or suggestions:
-- Open an issue on [GitHub](https://github.com/chronista-club/ichimi-server/issues)
-- Check the [documentation](https://github.com/chronista-club/ichimi-server/wiki)
+問題、質問、提案については:
+- [GitHub](https://github.com/chronista-club/ichimi-server/issues) で Issue を開く
+- [ドキュメント](https://github.com/chronista-club/ichimi-server/wiki) を確認
 
 ---
 
-*Ichimi Server - Making process management simple and powerful for Claude Code*
+*Ichimi Server - Claude Code のためのシンプルかつ強力なプロセス管理。一味が支えます。*
