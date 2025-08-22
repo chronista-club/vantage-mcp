@@ -4,7 +4,6 @@ use rmcp::{
     model::*,
     tool, tool_handler, tool_router,
 };
-use std::future::Future;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
