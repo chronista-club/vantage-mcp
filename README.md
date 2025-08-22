@@ -15,6 +15,33 @@ A powerful process management server for Claude Code via the Model Context Proto
 
 ## Installation
 
+### Quick Install (Recommended)
+
+The easiest way to install Ichimi Server:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/chronista-club/ichimi-server/main/install.sh | bash
+```
+
+This script will:
+- Detect your platform (macOS/Linux, x86_64/ARM)
+- Download the appropriate binary from GitHub releases
+- Install to `~/.local/bin` (or use Homebrew on macOS if available)
+- Fall back to building from source if needed
+
+### Homebrew (macOS/Linux)
+
+```bash
+brew tap chronista-club/tap
+brew install ichimi-server
+```
+
+### Using Cargo
+
+```bash
+cargo install --git https://github.com/chronista-club/ichimi-server --bin ichimi
+```
+
 ### From Source
 
 ```bash
@@ -25,15 +52,23 @@ cd ichimi-server
 # Build the server
 cargo build --release
 
-# The binary will be available at:
-# target/release/ichimi
+# Install to PATH (optional)
+cargo install --path . --bin ichimi
 ```
 
-### Using Cargo
+### Manual Download
 
+Download pre-built binaries from the [releases page](https://github.com/chronista-club/ichimi-server/releases):
+
+- `ichimi-linux-x86_64.tar.gz` - Linux x86_64
+- `ichimi-linux-aarch64.tar.gz` - Linux ARM64
+- `ichimi-macos-x86_64.tar.gz` - macOS Intel
+- `ichimi-macos-aarch64.tar.gz` - macOS Apple Silicon
+
+Extract and move to your PATH:
 ```bash
-cargo install ichimi-server
-# The command will be available as 'ichimi'
+tar xzf ichimi-*.tar.gz
+sudo mv ichimi /usr/local/bin/
 ```
 
 ## Configuration

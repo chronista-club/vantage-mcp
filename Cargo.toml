@@ -1,6 +1,6 @@
 [package]
 name = "ichimi-server"
-version = "0.1.0-alpha"
+version = "0.1.0-alpha1"
 edition = "2024"
 authors = ["Mako <mito@chronista.club>"]
 description = "A powerful process management server for Claude Code via Model Context Protocol (MCP)"
