@@ -9,6 +9,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 pub mod messages;
+pub mod model;
 pub mod persistence;
 pub mod process;
 #[cfg(feature = "web")]

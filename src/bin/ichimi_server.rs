@@ -9,8 +9,8 @@ async fn main() -> Result<()> {
     // Parse command line arguments
     let args: Vec<String> = env::args().collect();
     let mut web_enabled = false;
-    let mut web_only = false;
-    let mut web_port = 12700u16;
+    let mut _web_only = false;
+    let mut _web_port = 12700u16;
     
     let mut i = 1;
     while i < args.len() {
@@ -19,12 +19,12 @@ async fn main() -> Result<()> {
                 web_enabled = true;
             }
             "--web-only" => {
-                web_only = true;
+                _web_only = true;
                 web_enabled = true;
             }
             "--web-port" => {
                 if i + 1 < args.len() {
-                    web_port = args[i + 1].parse().unwrap_or(12700);
+                    _web_port = args[i + 1].parse().unwrap_or(12700);
                     i += 1;
                 }
             }
