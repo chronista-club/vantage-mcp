@@ -1,5 +1,7 @@
 # Ichimi Server
 
+Process as a Resource
+
 Model Context Protocol (MCP) を介した Claude Code 用の強力なプロセス管理サーバー。
 
 ## 特徴
@@ -304,4 +306,4 @@ ichimi-server/
 
 ---
 
-*Ichimi Server - Claude Code のためのシンプルかつ強力なプロセス管理*
+*Ichimi Server - Claude Code のためのシンプルかつ強力なプロセス管理。一味が支えます。*

@@ -9,7 +9,6 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 pub mod messages;
-pub mod model;
 pub mod persistence;
 pub mod process;
 #[cfg(feature = "web")]
@@ -208,7 +207,7 @@ impl IchimiServer {
         ))]))
     }
     
-    #[tool(description = "Export all processes to a surql file for backup/persistence")]
+    #[tool(description = "Export all processes to a JSON file for backup/persistence")]
     async fn export_processes(
         &self,
         Parameters(ExportProcessesRequest { file_path }): Parameters<ExportProcessesRequest>,
@@ -228,7 +227,7 @@ impl IchimiServer {
         ))]))
     }
     
-    #[tool(description = "Import processes from a surql file")]
+    #[tool(description = "Import processes from a JSON file")]
     async fn import_processes(
         &self,
         Parameters(ImportProcessesRequest { file_path }): Parameters<ImportProcessesRequest>,
