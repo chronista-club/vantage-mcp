@@ -28,19 +28,8 @@ curl -fsSL https://raw.githubusercontent.com/chronista-club/ichimi-server/main/i
 This script will:
 - Detect your platform (macOS/Linux, x86_64/ARM)
 - Download the appropriate binary from GitHub releases
-- Install to `~/.local/bin` (or use Homebrew on macOS if available)
+- Install to `~/.local/bin`
 - Fall back to building from source if needed
-
-### Homebrew (macOS/Linux)
-
-> ⚠️ **Note**: Homebrew tap is currently being prepared. Please use other installation methods for now.
-
-<!--
-```bash
-brew tap chronista-club/tap
-brew install ichimi-server
-```
--->
 
 ### Using Cargo
 

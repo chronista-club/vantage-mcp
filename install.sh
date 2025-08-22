@@ -120,34 +120,16 @@ install_from_source() {
     return 0
 }
 
-# Install using Homebrew (macOS)
+# Install using Homebrew (macOS) - Not implemented
 install_with_homebrew() {
-    # Temporarily disabled until Homebrew tap is available
+    # Homebrew installation is not supported
     return 1
-    
-    # if command -v brew &> /dev/null; then
-    #     info "Installing with Homebrew..."
-    #     brew tap chronista-club/tap 2>/dev/null || true
-    #     brew install ichimi-server
-    #     return $?
-    # fi
-    # return 1
 }
 
 # Main installation flow
 main() {
     echo "Installing Ichimi Server..."
     echo ""
-    
-    # Try Homebrew first on macOS
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        if install_with_homebrew; then
-            echo ""
-            info "Installation complete!"
-            info "Run 'ichimi --help' to get started"
-            exit 0
-        fi
-    fi
     
     # Try binary release
     if install_from_release; then
