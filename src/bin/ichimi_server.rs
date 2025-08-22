@@ -32,7 +32,7 @@ async fn main() -> Result<()> {
                 return Ok(());
             }
             "--version" | "-v" => {
-                println!("ichimi-server v0.1.0-alpha1");
+                println!("ichimi-server v0.1.0-beta1");
                 return Ok(());
             }
             "--web" => {

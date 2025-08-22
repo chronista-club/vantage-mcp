@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-beta1] - 2025-08-22
+
+### Changed
+- **BREAKING**: Removed SurrealDB dependency for simpler in-memory persistence
+- Web dashboard is now enabled by default
+- Browser automatically opens when web dashboard starts
+- Significantly reduced binary size and startup time
+
+### Added
+- `--no-web` option to disable web dashboard
+- `--no-open` option to prevent automatic browser opening
+- Improved CLI argument handling with proper help and version commands
+
+### Removed
+- SurrealDB dependency and all related code
+- Complex ORM model layer (replaced with simple HashMap storage)
+- `.surql` export format (now uses JSON)
+
 ## [0.1.0-alpha1] - 2025-08-22
 
 ### Added
