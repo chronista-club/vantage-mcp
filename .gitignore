@@ -34,4 +34,4 @@ Thumbs.db
 .env.local
 
 # Vendor files (Tabler and other external libraries)
-static/vendor/
+static/vendor/ichimi_export.json
