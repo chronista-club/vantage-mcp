@@ -6,11 +6,11 @@ use axum::{
 };
 use futures::stream::Stream;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use std::convert::Infallible;
 use tokio_stream::StreamExt;
-use crate::process::{ProcessManager, ProcessFilter, ProcessStateFilter, OutputStream};
+use crate::process::{ProcessFilter, ProcessStateFilter, OutputStream};
 use crate::messages::{CreateProcessRequest, StopProcessRequest};
+use crate::web::server::AppState;
 
 #[derive(Serialize)]
 pub struct ServerStatus {
@@ -33,9 +33,9 @@ pub struct LogsQuery {
 }
 
 pub async fn get_status(
-    State(manager): State<Arc<ProcessManager>>,
+    State(state): State<AppState>,
 ) -> Json<ServerStatus> {
-    let processes = manager.list_processes(None).await;
+    let processes = state.process_manager.list_processes(None).await;
     
     Json(ServerStatus {
         status: "running".to_string(),
@@ -46,7 +46,7 @@ pub async fn get_status(
 }
 
 pub async fn list_processes(
-    State(manager): State<Arc<ProcessManager>>,
+    State(state): State<AppState>,
     Query(query): Query<ListProcessesQuery>,
 ) -> Result<Json<Vec<serde_json::Value>>, StatusCode> {
     let filter = if query.state.is_some() || query.name_pattern.is_some() {
@@ -63,7 +63,7 @@ pub async fn list_processes(
         None
     };
     
-    let processes = manager.list_processes(filter).await;
+    let processes = state.process_manager.list_processes(filter).await;
     
     // Convert to JSON values
     let json_processes: Vec<serde_json::Value> = processes
@@ -75,12 +75,12 @@ pub async fn list_processes(
 }
 
 pub async fn create_process(
-    State(manager): State<Arc<ProcessManager>>,
+    State(state): State<AppState>,
     Json(req): Json<CreateProcessRequest>,
 ) -> Result<(StatusCode, Json<serde_json::Value>), (StatusCode, String)> {
     let cwd = req.cwd.map(std::path::PathBuf::from);
     
-    manager
+    state.process_manager
         .create_process(req.id.clone(), req.command, req.args, req.env, cwd)
         .await
         .map(|_| {
@@ -92,10 +92,10 @@ pub async fn create_process(
 }
 
 pub async fn get_process(
-    State(manager): State<Arc<ProcessManager>>,
+    State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
-    manager
+    state.process_manager
         .get_process_status(id)
         .await
         .map(|status| Json(serde_json::to_value(status).unwrap()))
@@ -103,10 +103,10 @@ pub async fn get_process(
 }
 
 pub async fn remove_process(
-    State(manager): State<Arc<ProcessManager>>,
+    State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    manager
+    state.process_manager
         .remove_process(id)
         .await
         .map(|_| StatusCode::NO_CONTENT)
@@ -114,10 +114,10 @@ pub async fn remove_process(
 }
 
 pub async fn start_process(
-    State(manager): State<Arc<ProcessManager>>,
+    State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    manager
+    state.process_manager
         .start_process(id.clone())
         .await
         .map(|pid| {
@@ -129,13 +129,13 @@ pub async fn start_process(
 }
 
 pub async fn stop_process(
-    State(manager): State<Arc<ProcessManager>>,
+    State(state): State<AppState>,
     Path(id): Path<String>,
     Json(req): Json<Option<StopProcessRequest>>,
 ) -> Result<StatusCode, (StatusCode, String)> {
     let grace_period = req.and_then(|r| r.grace_period_ms);
     
-    manager
+    state.process_manager
         .stop_process(id, grace_period)
         .await
         .map(|_| StatusCode::NO_CONTENT)
@@ -143,7 +143,7 @@ pub async fn stop_process(
 }
 
 pub async fn get_process_logs(
-    State(manager): State<Arc<ProcessManager>>,
+    State(state): State<AppState>,
     Path(id): Path<String>,
     Query(query): Query<LogsQuery>,
 ) -> Result<Json<Vec<String>>, StatusCode> {
@@ -153,7 +153,7 @@ pub async fn get_process_logs(
         _ => OutputStream::Both,
     };
     
-    manager
+    state.process_manager
         .get_process_output(id, stream, query.lines)
         .await
         .map(Json)
@@ -161,7 +161,7 @@ pub async fn get_process_logs(
 }
 
 pub async fn stream_logs(
-    State(_manager): State<Arc<ProcessManager>>,
+    State(_state): State<AppState>,
     Path(_id): Path<String>,
 ) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
     // TODO: Implement real-time log streaming

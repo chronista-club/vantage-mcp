@@ -45,10 +45,11 @@ tower-http = { version = "0.6", features = ["cors", "fs"], optional = true }
 axum-extra = { version = "0.9", features = ["typed-header"], optional = true }
 futures = { version = "0.3", optional = true }
 tokio-stream = { version = "0.1", optional = true }
+tera = { version = "1.20", optional = true }
 
 [features]
 default = ["web"]
-web = ["dep:axum", "dep:tower", "dep:tower-http", "dep:axum-extra", "dep:futures", "dep:tokio-stream"]
+web = ["dep:axum", "dep:tower", "dep:tower-http", "dep:axum-extra", "dep:futures", "dep:tokio-stream", "dep:tera"]
 
 [dev-dependencies]
 tempfile = "3.8"

@@ -2,10 +2,9 @@ use axum::{
     Router,
     routing::{get, post, delete},
 };
-use std::sync::Arc;
-use crate::process::ProcessManager;
+use crate::web::server::AppState;
 
-pub fn create_api_routes() -> Router<Arc<ProcessManager>> {
+pub fn create_api_routes() -> Router<AppState> {
     Router::new()
         .route("/status", get(super::handlers::get_status))
         .route("/processes", get(super::handlers::list_processes))

@@ -1,4 +1,8 @@
-use axum::Router;
+use axum::{
+    Router,
+    response::Html,
+    extract::State,
+};
 use tower_http::{
     cors::CorsLayer,
     services::ServeDir,
@@ -6,6 +10,7 @@ use tower_http::{
 use std::net::SocketAddr;
 use std::sync::Arc;
 use crate::process::ProcessManager;
+use tera::{Tera, Context};
 
 pub async fn start_web_server(
     process_manager: ProcessManager,
@@ -60,9 +65,42 @@ async fn bind_to_available_port(preferred_port: u16) -> Result<(tokio::net::TcpL
 }
 
 fn create_app(process_manager: ProcessManager) -> Router {
+    // Teraテンプレートエンジンを初期化
+    let tera = match Tera::new("templates/**/*.tera") {
+        Ok(t) => Arc::new(t),
+        Err(e) => {
+            tracing::error!("テンプレート初期化エラー: {}", e);
+            panic!("テンプレートの初期化に失敗しました: {}", e);
+        }
+    };
+    
+    let app_state = AppState {
+        process_manager: Arc::new(process_manager),
+        tera,
+    };
+    
     Router::new()
+        .route("/", axum::routing::get(index_handler))
         .nest("/api", super::api::create_api_routes())
-        .nest_service("/", ServeDir::new("static"))
+        .nest_service("/static", ServeDir::new("static"))
         .layer(CorsLayer::permissive())
-        .with_state(Arc::new(process_manager))
+        .with_state(app_state)
+}
+
+#[derive(Clone)]
+pub struct AppState {
+    pub process_manager: Arc<ProcessManager>,
+    pub tera: Arc<Tera>,
+}
+
+async fn index_handler(State(state): State<AppState>) -> Result<Html<String>, (axum::http::StatusCode, String)> {
+    let context = Context::new();
+    
+    match state.tera.render("index.tera", &context) {
+        Ok(html) => Ok(Html(html)),
+        Err(e) => {
+            tracing::error!("テンプレートレンダリングエラー: {}", e);
+            Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("テンプレートエラー: {}", e)))
+        }
+    }
 }
