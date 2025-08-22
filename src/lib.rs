@@ -26,10 +26,10 @@ pub struct IchimiServer {
 
 #[tool_router]
 impl IchimiServer {
-    pub fn new() -> Self {
+    pub async fn new() -> Self {
         Self {
             start_time: Arc::new(Mutex::new(chrono::Utc::now())),
-            process_manager: ProcessManager::new(),
+            process_manager: ProcessManager::new().await,
             tool_router: Self::tool_router(),
         }
     }

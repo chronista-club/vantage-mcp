@@ -53,8 +53,14 @@ pub struct ProcessManager {
 }
 
 impl ProcessManager {
-    pub fn new() -> Self {
-        let persistence = Arc::new(PersistenceManager::default());
+    pub async fn new() -> Self {
+        let persistence = match PersistenceManager::new().await {
+            Ok(pm) => Arc::new(pm),
+            Err(e) => {
+                tracing::error!("Failed to initialize persistence: {}", e);
+                panic!("Cannot continue without persistence layer");
+            }
+        };
         
         let manager = Self {
             processes: Arc::new(RwLock::new(HashMap::new())),

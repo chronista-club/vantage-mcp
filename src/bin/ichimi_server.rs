@@ -46,7 +46,7 @@ async fn main() -> Result<()> {
     tracing::info!("Starting Ichimi Server");
     
     // Create a shared process manager
-    let process_manager = ichimi_server::process::ProcessManager::new();
+    let process_manager = ichimi_server::process::ProcessManager::new().await;
     
     // Start web server if enabled
     #[cfg(feature = "web")]
@@ -71,7 +71,7 @@ async fn main() -> Result<()> {
             });
             
             // Run MCP server with shared process manager
-            let mut server = IchimiServer::new();
+            let mut server = IchimiServer::new().await;
             server.set_process_manager(process_manager);
             
             let service = server
@@ -85,7 +85,7 @@ async fn main() -> Result<()> {
         }
     } else {
         // Run MCP server only
-        let mut server = IchimiServer::new();
+        let mut server = IchimiServer::new().await;
         server.set_process_manager(process_manager);
         
         let service = server
@@ -103,7 +103,7 @@ async fn main() -> Result<()> {
         tracing::warn!("Web feature not enabled. Rebuild with --features web to enable dashboard.");
         
         // Run MCP server without web
-        let mut server = IchimiServer::new();
+        let mut server = IchimiServer::new().await;
         server.set_process_manager(process_manager);
         
         let service = server

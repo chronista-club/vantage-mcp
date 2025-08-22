@@ -10,7 +10,7 @@ async fn test_process_manager_export_import() {
     let export_path_str = export_path.to_str().unwrap().to_string();
     
     // Create first manager and add processes
-    let manager1 = ProcessManager::new();
+    let manager1 = ProcessManager::new().await;
     
     // Create multiple processes
     for i in 1..=3 {
@@ -29,7 +29,7 @@ async fn test_process_manager_export_import() {
     assert!(export_path.exists());
     
     // Create new manager and import
-    let manager2 = ProcessManager::new();
+    let manager2 = ProcessManager::new().await;
     
     // Initially should be empty (or with auto-imported processes)
     // Import our test processes
@@ -58,7 +58,7 @@ async fn test_process_manager_export_import() {
 
 #[tokio::test]
 async fn test_process_lifecycle_with_persistence() {
-    let manager = ProcessManager::new();
+    let manager = ProcessManager::new().await;
     
     // Create a process
     manager.create_process(
@@ -98,7 +98,7 @@ async fn test_process_lifecycle_with_persistence() {
 
 #[tokio::test]
 async fn test_export_with_environment_variables() {
-    let manager = ProcessManager::new();
+    let manager = ProcessManager::new().await;
     
     // Create process with environment variables
     let mut env = HashMap::new();
@@ -122,7 +122,7 @@ async fn test_export_with_environment_variables() {
     manager.export_processes(Some(export_path_str.clone())).await.unwrap();
     
     // Create new manager and import
-    let manager2 = ProcessManager::new();
+    let manager2 = ProcessManager::new().await;
     manager2.import_processes(&export_path_str).await.unwrap();
     
     // Verify environment variables were preserved
@@ -140,7 +140,7 @@ async fn test_export_with_environment_variables() {
 
 #[tokio::test]
 async fn test_default_export_path() {
-    let manager = ProcessManager::new();
+    let manager = ProcessManager::new().await;
     
     // Create a test process
     manager.create_process(
@@ -164,7 +164,7 @@ async fn test_default_export_path() {
 
 #[tokio::test]
 async fn test_import_error_handling() {
-    let manager = ProcessManager::new();
+    let manager = ProcessManager::new().await;
     
     // Try to import non-existent file
     let result = manager.import_processes("/this/file/does/not/exist.surql").await;
@@ -181,7 +181,7 @@ async fn test_import_error_handling() {
 
 #[tokio::test]
 async fn test_concurrent_export() {
-    let manager = ProcessManager::new();
+    let manager = ProcessManager::new().await;
     
     // Create multiple processes
     for i in 1..=5 {

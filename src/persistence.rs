@@ -36,17 +36,9 @@ impl PersistenceManager {
         db.use_ns("ichimi").use_db("processes").await
             .map_err(|e| format!("Failed to select namespace/database: {}", e))?;
         
-        // Create table schema
+        // Create table schema - use SCHEMALESS for flexibility
         db.query(r#"
-            DEFINE TABLE process SCHEMAFULL;
-            DEFINE FIELD process_id ON TABLE process TYPE string;
-            DEFINE FIELD command ON TABLE process TYPE string;
-            DEFINE FIELD args ON TABLE process TYPE array;
-            DEFINE FIELD env ON TABLE process TYPE object;
-            DEFINE FIELD cwd ON TABLE process TYPE option<string>;
-            DEFINE FIELD state ON TABLE process TYPE string;
-            DEFINE FIELD created_at ON TABLE process TYPE datetime;
-            DEFINE FIELD updated_at ON TABLE process TYPE datetime;
+            DEFINE TABLE process SCHEMALESS;
             DEFINE INDEX idx_process_id ON TABLE process COLUMNS process_id UNIQUE;
         "#)
         .await
@@ -101,32 +93,40 @@ impl PersistenceManager {
     }
     
     pub async fn save_process(&self, process_info: &ProcessInfo) -> Result<(), String> {
-        // Use UPDATE instead of CREATE to ensure all fields are properly set
+        // Use raw SurrealQL with JSON directly embedded
+        let args_json = serde_json::to_string(&process_info.args)
+            .map_err(|e| format!("Failed to serialize args: {}", e))?;
+        let env_json = serde_json::to_string(&process_info.env)
+            .map_err(|e| format!("Failed to serialize env: {}", e))?;
+        
         let query = format!(
             r#"
-            UPDATE process:`{}` SET
-                process_id = $process_id,
-                command = $command,
-                args = $args,
-                env = $env,
-                cwd = $cwd,
-                state = $state,
-                created_at = $created_at,
-                updated_at = $updated_at
+            DELETE process:`{}`;
+            CREATE process:`{}` SET
+                process_id = '{}',
+                command = '{}',
+                args = {},
+                env = {},
+                cwd = {},
+                state = '{}',
+                created_at = time::now(),
+                updated_at = time::now()
+            RETURN AFTER;
             "#,
-            process_info.id
+            process_info.id,
+            process_info.id,
+            process_info.id.replace("'", "\\'"),
+            process_info.command.replace("'", "\\'"),
+            args_json,
+            env_json,
+            process_info.cwd.as_ref()
+                .map(|p| format!("'{}'", p.to_string_lossy().replace("'", "\\'")))
+                .unwrap_or("null".to_string()),
+            Self::serialize_process_state(&process_info.state).replace("'", "\\'")
         );
         
-        let mut response = self.db
+        self.db
             .query(query)
-            .bind(("process_id", process_info.id.clone()))
-            .bind(("command", process_info.command.clone()))
-            .bind(("args", process_info.args.clone()))
-            .bind(("env", process_info.env.clone()))
-            .bind(("cwd", process_info.cwd.as_ref().map(|p| p.to_string_lossy().to_string())))
-            .bind(("state", Self::serialize_process_state(&process_info.state)))
-            .bind(("created_at", Datetime::from(chrono::Utc::now())))
-            .bind(("updated_at", Datetime::from(chrono::Utc::now())))
             .await
             .map_err(|e| format!("Failed to save process: {}", e))?;
         
@@ -135,30 +135,36 @@ impl PersistenceManager {
     }
     
     pub async fn update_process(&self, process_info: &ProcessInfo) -> Result<(), String> {
-        // Use the same UPDATE query as save_process
+        // Use SurrealQL UPDATE with SET for updates
+        let args_json = serde_json::to_string(&process_info.args)
+            .map_err(|e| format!("Failed to serialize args: {}", e))?;
+        let env_json = serde_json::to_string(&process_info.env)
+            .map_err(|e| format!("Failed to serialize env: {}", e))?;
+        
         let query = format!(
             r#"
             UPDATE process:`{}` SET
-                process_id = $process_id,
-                command = $command,
-                args = $args,
-                env = $env,
-                cwd = $cwd,
-                state = $state,
-                updated_at = $updated_at
+                process_id = '{}',
+                command = '{}',
+                args = {},
+                env = {},
+                cwd = {},
+                state = '{}',
+                updated_at = time::now()
             "#,
-            process_info.id
+            process_info.id,
+            process_info.id.replace("'", "\\'"),
+            process_info.command.replace("'", "\\'"),
+            args_json,
+            env_json,
+            process_info.cwd.as_ref()
+                .map(|p| format!("'{}'", p.to_string_lossy().replace("'", "\\'")))
+                .unwrap_or("null".to_string()),
+            Self::serialize_process_state(&process_info.state).replace("'", "\\'")
         );
         
-        let mut response = self.db
+        self.db
             .query(query)
-            .bind(("process_id", process_info.id.clone()))
-            .bind(("command", process_info.command.clone()))
-            .bind(("args", process_info.args.clone()))
-            .bind(("env", process_info.env.clone()))
-            .bind(("cwd", process_info.cwd.as_ref().map(|p| p.to_string_lossy().to_string())))
-            .bind(("state", Self::serialize_process_state(&process_info.state)))
-            .bind(("updated_at", Datetime::from(chrono::Utc::now())))
             .await
             .map_err(|e| format!("Failed to update process: {}", e))?;
         
@@ -167,8 +173,10 @@ impl PersistenceManager {
     }
     
     pub async fn delete_process(&self, process_id: &str) -> Result<(), String> {
-        let _: Option<ProcessRecord> = self.db
-            .delete(("process", process_id))
+        let query = format!("DELETE process:`{}`", process_id);
+        
+        self.db
+            .query(query)
             .await
             .map_err(|e| format!("Failed to delete process: {}", e))?;
         
@@ -179,10 +187,17 @@ impl PersistenceManager {
     pub async fn load_all_processes(&self) -> Result<HashMap<String, ProcessInfo>, String> {
         let mut processes = HashMap::new();
         
-        let records: Vec<ProcessRecord> = self.db
-            .select("process")
+        // Use SurrealQL to select all processes
+        let query = "SELECT * FROM process";
+        
+        let mut response = self.db
+            .query(query)
             .await
             .map_err(|e| format!("Failed to load processes: {}", e))?;
+        
+        let records: Vec<ProcessRecord> = response
+            .take(0)
+            .map_err(|e| format!("Failed to extract records: {}", e))?;
         
         for record in records {
             let info = ProcessInfo {
@@ -200,12 +215,14 @@ impl PersistenceManager {
         Ok(processes)
     }
     
-    /// Query processes with advanced filters
+    /// Query processes with advanced filters using SurrealQL
     pub async fn query_processes(&self, filter: &str) -> Result<Vec<ProcessInfo>, String> {
-        let query = format!(
-            "SELECT * FROM process WHERE {}",
-            if filter.is_empty() { "true" } else { filter }
-        );
+        // SurrealQLの強力なクエリ機能を活用
+        let query = if filter.is_empty() {
+            "SELECT * FROM process ORDER BY created_at DESC".to_string()
+        } else {
+            format!("SELECT * FROM process WHERE {} ORDER BY created_at DESC", filter)
+        };
         
         let mut response = self.db
             .query(&query)
@@ -215,6 +232,65 @@ impl PersistenceManager {
         let records: Vec<ProcessRecord> = response
             .take(0)
             .map_err(|e| format!("Failed to extract query results: {}", e))?;
+        
+        let processes = records.into_iter().map(|record| {
+            ProcessInfo {
+                id: record.process_id,
+                command: record.command,
+                args: record.args,
+                env: record.env,
+                cwd: record.cwd.map(PathBuf::from),
+                state: Self::deserialize_process_state(&record.state),
+            }
+        }).collect();
+        
+        Ok(processes)
+    }
+    
+    /// Get process statistics using SurrealQL aggregation
+    pub async fn get_process_stats(&self) -> Result<serde_json::Value, String> {
+        let query = r#"
+            SELECT 
+                count() as total_processes,
+                count(state = 'Running') as running_count,
+                count(state = 'Stopped') as stopped_count,
+                count(state = 'Failed') as failed_count
+            FROM process
+            GROUP ALL
+        "#;
+        
+        let mut response = self.db
+            .query(query)
+            .await
+            .map_err(|e| format!("Failed to get stats: {}", e))?;
+        
+        let stats: Vec<serde_json::Value> = response
+            .take(0)
+            .map_err(|e| format!("Failed to extract stats: {}", e))?;
+        
+        Ok(stats.into_iter().next().unwrap_or(serde_json::json!({})))
+    }
+    
+    /// Search processes by command or args using SurrealQL full-text search
+    pub async fn search_processes(&self, search_term: &str) -> Result<Vec<ProcessInfo>, String> {
+        let query = format!(
+            r#"
+            SELECT * FROM process 
+            WHERE command CONTAINS '{}' 
+               OR string::join(' ', args) CONTAINS '{}'
+            ORDER BY updated_at DESC
+            "#,
+            search_term, search_term
+        );
+        
+        let mut response = self.db
+            .query(&query)
+            .await
+            .map_err(|e| format!("Failed to search processes: {}", e))?;
+        
+        let records: Vec<ProcessRecord> = response
+            .take(0)
+            .map_err(|e| format!("Failed to extract search results: {}", e))?;
         
         let processes = records.into_iter().map(|record| {
             ProcessInfo {
@@ -240,11 +316,17 @@ impl PersistenceManager {
             }
         }
         
-        // Export all records from process table
-        let records: Vec<ProcessRecord> = self.db
-            .select("process")
+        // Use SurrealQL to export all records
+        let query = "SELECT * FROM process";
+        
+        let mut response = self.db
+            .query(query)
             .await
             .map_err(|e| format!("Failed to export data: {}", e))?;
+        
+        let records: Vec<ProcessRecord> = response
+            .take(0)
+            .map_err(|e| format!("Failed to extract export records: {}", e))?;
         
         // Generate surql statements
         let mut surql_content = String::new();
@@ -257,17 +339,9 @@ impl PersistenceManager {
         surql_content.push_str("USE NS ichimi;\n");
         surql_content.push_str("USE DB processes;\n\n");
         
-        // Add schema definition
+        // Add schema definition - using SCHEMALESS for flexibility
         surql_content.push_str("-- Define schema\n");
-        surql_content.push_str("DEFINE TABLE process SCHEMAFULL;\n");
-        surql_content.push_str("DEFINE FIELD process_id ON TABLE process TYPE string;\n");
-        surql_content.push_str("DEFINE FIELD command ON TABLE process TYPE string;\n");
-        surql_content.push_str("DEFINE FIELD args ON TABLE process TYPE array;\n");
-        surql_content.push_str("DEFINE FIELD env ON TABLE process TYPE object;\n");
-        surql_content.push_str("DEFINE FIELD cwd ON TABLE process TYPE option<string>;\n");
-        surql_content.push_str("DEFINE FIELD state ON TABLE process TYPE string;\n");
-        surql_content.push_str("DEFINE FIELD created_at ON TABLE process TYPE datetime;\n");
-        surql_content.push_str("DEFINE FIELD updated_at ON TABLE process TYPE datetime;\n");
+        surql_content.push_str("DEFINE TABLE process SCHEMALESS;\n");
         surql_content.push_str("DEFINE INDEX idx_process_id ON TABLE process COLUMNS process_id UNIQUE;\n\n");
         
         // Add data
@@ -321,15 +395,13 @@ impl PersistenceManager {
 impl Default for PersistenceManager {
     fn default() -> Self {
         // Use blocking version for default implementation
-        std::thread::spawn(|| {
-            let rt = tokio::runtime::Runtime::new().unwrap();
-            rt.block_on(async {
+        // This is only used in tests or when we can't use async
+        tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(async {
                 Self::new().await.unwrap_or_else(|e| {
                     panic!("Failed to initialize PersistenceManager: {}", e);
                 })
             })
         })
-        .join()
-        .unwrap()
     }
 }
