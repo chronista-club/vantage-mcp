@@ -1,1 +1,16 @@
-{}
+{
+  "sleep-test": {
+    "id": "sleep-test",
+    "command": "/bin/sleep",
+    "args": [
+      "3600"
+    ],
+    "env": {},
+    "cwd": null,
+    "state": {
+      "state": "Running",
+      "pid": 75375,
+      "started_at": "2025-08-22T17:45:05.963068Z"
+    }
+  }
+}

@@ -300,9 +300,10 @@
             
             processes.forEach(process => {
                 // ステータスカウント
-                if (process.state === 'Running') stats.running++;
-                else if (process.state === 'Stopped') stats.stopped++;
-                else if (process.state === 'Failed') stats.failed++;
+                const processState = process.state?.state || process.state || 'Stopped';
+                if (processState === 'Running') stats.running++;
+                else if (processState === 'Stopped') stats.stopped++;
+                else if (processState === 'Failed') stats.failed++;
                 
                 // プロセスカード作成
                 const card = createProcessCard(process);
@@ -322,9 +323,10 @@
         const card = document.createElement('div');
         card.className = 'card process-card';
         
-        const statusClass = process.state.toLowerCase();
-        const statusText = process.state === 'Running' ? '稼働中' : 
-                          process.state === 'Stopped' ? '停止中' : 'エラー';
+        const processState = process.state?.state || process.state || 'Stopped';
+        const statusClass = processState.toLowerCase();
+        const statusText = processState === 'Running' ? '稼働中' : 
+                          processState === 'Stopped' ? '停止中' : 'エラー';
         
         card.innerHTML = `
             <div class="process-header">
@@ -333,11 +335,11 @@
             </div>
             <div class="process-info">
                 <span>コマンド: ${process.command}</span>
-                ${process.pid ? `<span>PID: ${process.pid}</span>` : ''}
+                ${process.state?.pid ? `<span>PID: ${process.state.pid}</span>` : ''}
                 ${process.args && process.args.length > 0 ? `<span>引数: ${process.args.join(' ')}</span>` : ''}
             </div>
             <div class="process-actions">
-                ${process.state === 'Stopped' ? 
+                ${processState === 'Stopped' ? 
                     `<button class="button button-small" onclick="startProcess('${process.id}')">開始</button>` :
                     `<button class="button button-small button-danger" onclick="stopProcess('${process.id}')">停止</button>`
                 }
