@@ -82,8 +82,18 @@ install_from_release() {
     
     # Download and extract
     cd "$temp_dir"
-    curl -sL "$download_url" -o "${BINARY_NAME}.tar.gz"
-    tar -xzf "${BINARY_NAME}.tar.gz"
+    if ! curl -sL "$download_url" -o "${BINARY_NAME}.tar.gz"; then
+        error "Failed to download from $download_url"
+    fi
+    
+    if ! tar -xzf "${BINARY_NAME}.tar.gz"; then
+        error "Failed to extract archive"
+    fi
+    
+    # Check if binary exists
+    if [ ! -f "$BINARY_NAME" ]; then
+        error "Binary not found after extraction"
+    fi
     
     # Install binary
     mkdir -p "$INSTALL_DIR"
@@ -112,13 +122,16 @@ install_from_source() {
 
 # Install using Homebrew (macOS)
 install_with_homebrew() {
-    if command -v brew &> /dev/null; then
-        info "Installing with Homebrew..."
-        brew tap chronista-club/tap 2>/dev/null || true
-        brew install ichimi-server
-        return $?
-    fi
+    # Temporarily disabled until Homebrew tap is available
     return 1
+    
+    # if command -v brew &> /dev/null; then
+    #     info "Installing with Homebrew..."
+    #     brew tap chronista-club/tap 2>/dev/null || true
+    #     brew install ichimi-server
+    #     return $?
+    # fi
+    # return 1
 }
 
 # Main installation flow
