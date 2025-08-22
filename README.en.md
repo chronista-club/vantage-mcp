@@ -33,10 +33,14 @@ This script will:
 
 ### Homebrew (macOS/Linux)
 
+> ⚠️ **Note**: Homebrew tap is currently being prepared. Please use other installation methods for now.
+
+<!--
 ```bash
 brew tap chronista-club/tap
 brew install ichimi-server
 ```
+-->
 
 ### Using Cargo
 

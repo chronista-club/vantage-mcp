@@ -35,3 +35,4 @@ Thumbs.db
 
 # Vendor files (Tabler and other external libraries)
 static/vendor/ichimi_export.json
+static/
