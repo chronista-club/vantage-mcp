@@ -1,0 +1,167 @@
+use std::collections::HashMap;
+use std::path::PathBuf;
+use serde::{Deserialize, Serialize};
+use facet::Facet;
+
+/// KDL形式のプロセス設定ファイルのルート構造
+#[derive(Debug, Clone, Serialize, Deserialize, Facet)]
+pub struct IchimiConfig {
+    /// メタ情報（バージョンなど）
+    #[facet(child)]
+    pub meta: Option<ConfigMeta>,
+    
+    /// プロセス定義のリスト
+    #[facet(child)]
+    pub process: Vec<ProcessConfig>,
+}
+
+/// 設定ファイルのメタ情報
+#[derive(Debug, Clone, Serialize, Deserialize, Facet)]
+pub struct ConfigMeta {
+    /// ファイルフォーマットのバージョン
+    #[facet(property)]
+    pub version: String,
+    
+    /// スキーマバージョン
+    #[facet(property)]
+    pub schema: Option<String>,
+    
+    /// 作成日時
+    #[facet(property)]
+    pub created_at: Option<String>,
+    
+    /// 更新日時
+    #[facet(property)]
+    pub updated_at: Option<String>,
+}
+
+/// プロセスの設定
+#[derive(Debug, Clone, Serialize, Deserialize, Facet)]
+pub struct ProcessConfig {
+    /// プロセスID（ユニークな識別子）
+    #[facet(argument)]
+    pub id: String,
+    
+    /// 実行コマンド
+    #[facet(property)]
+    pub command: String,
+    
+    /// コマンドライン引数
+    #[serde(default)]
+    #[facet(property)]
+    pub args: Vec<String>,
+    
+    /// 作業ディレクトリ
+    #[facet(property)]
+    pub cwd: Option<PathBuf>,
+    
+    /// 環境変数
+    #[serde(default)]
+    #[facet(child)]
+    pub env: HashMap<String, String>,
+    
+    /// 自動起動フラグ
+    #[serde(default)]
+    #[facet(property)]
+    pub auto_start: bool,
+}
+
+impl Default for IchimiConfig {
+    fn default() -> Self {
+        Self {
+            meta: Some(ConfigMeta {
+                version: "1.0.0".to_string(),
+                schema: Some("ichimi-process-v1".to_string()),
+                created_at: Some(chrono::Utc::now().to_rfc3339()),
+                updated_at: None,
+            }),
+            process: Vec::new(),
+        }
+    }
+}
+
+impl ProcessConfig {
+    /// ProcessInfoから変換
+    pub fn from_process_info(info: &crate::process::types::ProcessInfo) -> Self {
+        Self {
+            id: info.id.clone(),
+            command: info.command.clone(),
+            args: info.args.clone(),
+            cwd: info.cwd.clone(),
+            env: info.env.clone(),
+            auto_start: false, // デフォルトは自動起動しない
+        }
+    }
+    
+    /// ProcessInfoへ変換
+    pub fn to_process_info(&self) -> crate::process::types::ProcessInfo {
+        crate::process::types::ProcessInfo {
+            id: self.id.clone(),
+            command: self.command.clone(),
+            args: self.args.clone(),
+            env: self.env.clone(),
+            cwd: self.cwd.clone(),
+            state: crate::process::types::ProcessState::NotStarted,
+        }
+    }
+}
+
+/// KDL形式のサンプルを生成
+pub fn generate_sample_kdl() -> String {
+    r#"// Ichimi Server Process Configuration
+// Version: 1.0.0
+
+meta {
+    version "1.0.0"
+    schema "ichimi-process-v1"
+    created_at "2025-08-22T18:00:00Z"
+}
+
+// Example process definition
+process "example-app" {
+    command "/usr/bin/node"
+    args "server.js" "--port" "3000"
+    cwd "/var/www/app"
+    
+    env {
+        NODE_ENV "production"
+        PORT "3000"
+    }
+    
+    auto_start false
+}
+
+// Another example
+process "redis-server" {
+    command "/usr/local/bin/redis-server"
+    args "--port" "6379"
+    auto_start true
+}
+"#.to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test]
+    fn test_process_config_conversion() {
+        let info = crate::process::types::ProcessInfo {
+            id: "test".to_string(),
+            command: "/bin/echo".to_string(),
+            args: vec!["hello".to_string()],
+            env: HashMap::new(),
+            cwd: None,
+            state: crate::process::types::ProcessState::NotStarted,
+        };
+        
+        let config = ProcessConfig::from_process_info(&info);
+        assert_eq!(config.id, "test");
+        assert_eq!(config.command, "/bin/echo");
+        assert_eq!(config.args, vec!["hello"]);
+        
+        let info2 = config.to_process_info();
+        assert_eq!(info2.id, info.id);
+        assert_eq!(info2.command, info.command);
+    }
+}
