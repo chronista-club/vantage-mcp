@@ -84,6 +84,7 @@ impl KdlPersistence {
                 kdl.push_str(&format!("    cwd \"{}\"\n", process.cwd));
             }
             
+            // TODO: 環境変数サポート
             // if !process.env.is_empty() {
             //     kdl.push_str("    env {\n");
             //     for (key, value) in &process.env {
@@ -156,7 +157,7 @@ mod tests {
             command: "/usr/bin/test".to_string(),
             args: vec!["arg1".to_string(), "arg2".to_string()],
             cwd: "/tmp".to_string(),
-            // env: [("KEY".to_string(), "VALUE".to_string())].into(),
+            // env: HashMap::from([("KEY".to_string(), "VALUE".to_string())]),
             auto_start: true,
         };
 

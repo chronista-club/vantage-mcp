@@ -42,7 +42,7 @@ pub struct ProcessConfig {
     #[facet(property)]
     pub cwd: String,
     
-    // 環境変数（一時的に削除）
+    // 環境変数（TODO: 後で実装）
     // #[serde(default)]
     // #[facet(child)]
     // pub env: HashMap<String, String>,
@@ -86,7 +86,7 @@ impl ProcessConfig {
             id: self.id.clone(),
             command: self.command.clone(),
             args: self.args.clone(),
-            env: HashMap::new(), // self.env.clone(),
+            env: HashMap::new(), // TODO: 環境変数サポート
             cwd: if self.cwd.is_empty() { None } else { Some(PathBuf::from(&self.cwd)) },
             state: crate::process::types::ProcessState::NotStarted,
         }

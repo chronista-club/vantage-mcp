@@ -1,5 +1,4 @@
-{
-  "sleep-test": {
+{}  "sleep-test": {
     "id": "sleep-test",
     "command": "/bin/sleep",
     "args": [
