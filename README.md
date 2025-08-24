@@ -167,19 +167,55 @@ for process in list_processes(filter={"name_pattern": "worker"}):
 
 ## 永続化
 
-### 自動バックアップ
+### KDL設定ファイル
 
-Ichimi Server はプロセスの永続化にインメモリ SurrealDB データベースを使用します。データはバックアップと復旧のために `.surql` ファイルにエクスポート/インポートできます。
+Ichimi Server は、プロセス設定の永続化に [KDL (Cuddly Data Language)](https://kdl.dev/) フォーマットを使用します。設定ファイルは `.ichimi/processes.kdl` に自動的に保存されます。
+
+#### KDL設定ファイルの例
+
+```kdl
+// Ichimi Server Process Configuration
+meta {
+    version "1.0.0"
+}
+
+// Webサーバープロセス
+process "webserver" {
+    command "python"
+    args "-m" "http.server" "8000"
+    cwd "/path/to/public"
+    auto_start #false
+}
+
+// バックグラウンドワーカー
+process "worker" {
+    command "/usr/local/bin/worker"
+    args "--config" "worker.conf"
+    cwd "/app"
+    auto_start #true
+}
+```
+
+#### 設定項目
+
+- `command` - 実行するコマンドのパス
+- `args` - コマンドライン引数（複数可）
+- `cwd` - 作業ディレクトリ（省略時は現在のディレクトリ）
+- `auto_start` - サーバー起動時の自動起動（#true または #false）
+
+### JSONエクスポート/インポート
+
+プロセス設定はJSON形式でもエクスポート/インポートできます：
 
 ```bash
-# 5分（300秒）ごとに自動エクスポートを有効化
-ICHIMI_AUTO_EXPORT_INTERVAL=300 ichimi
+# プロセスをJSONファイルにエクスポート
+curl http://127.0.0.1:12700/api/export > ichimi_export.json
 
-# 起動時にデータをインポート
-ICHIMI_IMPORT_FILE=/path/to/backup.surql ichimi
+# JSONファイルからプロセスをインポート
+curl -X POST http://127.0.0.1:12700/api/import \
+  -H "Content-Type: application/json" \
+  -d @ichimi_export.json
 
-# デフォルトのエクスポート場所
-# ~/.ichimi/data/ichimi_export.surql
 ```
 
 ### 手動エクスポート/インポート

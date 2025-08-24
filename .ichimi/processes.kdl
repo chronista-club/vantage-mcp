@@ -1,0 +1,21 @@
+// Ichimi Server Process Configuration
+// Auto-generated file - modifications will be preserved
+
+meta {
+    version "1.0.0"
+}
+
+process "test-echo" {
+    command "/bin/echo"
+    args "Hello" "World"
+    cwd "/tmp"
+    auto_start #false
+}
+
+process "test-sleep" {
+    command "/bin/sleep"
+    args "60"
+    cwd "/tmp"
+    auto_start #false
+}
+

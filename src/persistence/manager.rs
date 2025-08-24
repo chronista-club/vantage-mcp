@@ -15,10 +15,8 @@ pub struct PersistenceManager {
 impl PersistenceManager {
     /// Create a new persistence manager with KDL file storage
     pub async fn new() -> Result<Self, String> {
-        // デフォルトの設定ディレクトリを使用
-        let config_dir = dirs::config_dir()
-            .map(|d| d.join("ichimi"))
-            .unwrap_or_else(|| PathBuf::from(".ichimi"));
+        // プロジェクトディレクトリの .ichimi を使用
+        let config_dir = PathBuf::from(".ichimi");
         
         let kdl_persistence = KdlPersistence::new(&config_dir);
         
