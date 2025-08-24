@@ -13,3 +13,19 @@ process "simple-server" {
     auto_start #false
 }
 
+// 単一引数のプロセス
+process "sleep-process" {
+    command "/bin/sleep"
+    args "3600"
+    cwd "/tmp"
+    auto_start #false
+}
+
+// 引数なしのプロセス
+process "date-process" {
+    command "/bin/date"
+    cwd "/tmp"
+    auto_start #true
+}
+
+
