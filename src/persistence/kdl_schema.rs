@@ -8,7 +8,7 @@ use facet::Facet;
 pub struct IchimiConfig {
     /// メタ情報（バージョンなど）
     #[facet(child)]
-    pub meta: Option<ConfigMeta>,
+    pub meta: ConfigMeta,
     
     /// プロセス定義のリスト
     #[facet(child)]
@@ -69,12 +69,12 @@ pub struct ProcessConfig {
 impl Default for IchimiConfig {
     fn default() -> Self {
         Self {
-            meta: Some(ConfigMeta {
+            meta: ConfigMeta {
                 version: "1.0.0".to_string(),
                 schema: Some("ichimi-process-v1".to_string()),
                 created_at: Some(chrono::Utc::now().to_rfc3339()),
                 updated_at: None,
-            }),
+            },
             process: Vec::new(),
         }
     }

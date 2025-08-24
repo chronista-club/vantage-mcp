@@ -63,20 +63,18 @@ impl KdlPersistence {
         kdl.push_str("// Auto-generated file - modifications will be preserved\n\n");
 
         // メタ情報
-        if let Some(meta) = &config.meta {
-            kdl.push_str("meta {\n");
-            kdl.push_str(&format!("    version \"{}\"\n", meta.version));
-            if let Some(schema) = &meta.schema {
-                kdl.push_str(&format!("    schema \"{}\"\n", schema));
-            }
-            if let Some(created_at) = &meta.created_at {
-                kdl.push_str(&format!("    created_at \"{}\"\n", created_at));
-            }
-            if let Some(updated_at) = &meta.updated_at {
-                kdl.push_str(&format!("    updated_at \"{}\"\n", updated_at));
-            }
-            kdl.push_str("}\n\n");
+        kdl.push_str("meta {\n");
+        kdl.push_str(&format!("    version \"{}\"\n", config.meta.version));
+        if let Some(schema) = &config.meta.schema {
+            kdl.push_str(&format!("    schema \"{}\"\n", schema));
         }
+        if let Some(created_at) = &config.meta.created_at {
+            kdl.push_str(&format!("    created_at \"{}\"\n", created_at));
+        }
+        if let Some(updated_at) = &config.meta.updated_at {
+            kdl.push_str(&format!("    updated_at \"{}\"\n", updated_at));
+        }
+        kdl.push_str("}\n\n");
 
         // プロセス定義
         for process in &config.process {
@@ -122,9 +120,7 @@ impl KdlPersistence {
         }
 
         // 更新日時を設定
-        if let Some(meta) = &mut config.meta {
-            meta.updated_at = Some(chrono::Utc::now().to_rfc3339());
-        }
+        config.meta.updated_at = Some(chrono::Utc::now().to_rfc3339());
 
         self.save_config(&config)?;
         Ok(())
@@ -139,9 +135,7 @@ impl KdlPersistence {
         
         if config.process.len() < initial_len {
             // 更新日時を設定
-            if let Some(meta) = &mut config.meta {
-                meta.updated_at = Some(chrono::Utc::now().to_rfc3339());
-            }
+            config.meta.updated_at = Some(chrono::Utc::now().to_rfc3339());
             self.save_config(&config)?;
             Ok(true)
         } else {

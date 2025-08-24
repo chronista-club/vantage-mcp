@@ -1,0 +1,35 @@
+// Ichimi プロセス設定ファイル (KDL形式)
+
+meta {
+    version "1.0.0"
+    // schemaとcreated_at、updated_atは省略（None）
+}
+
+// シンプルなプロセス定義
+process "simple-server" {
+    command "python"
+    args "-m" "http.server" "8080"
+    cwd "/tmp"
+    auto_start #false
+}
+
+// 環境変数を持つプロセス
+process "node-app" {
+    command "node"
+    args "app.js"
+    cwd "/Users/mito/projects/sample-app"
+    auto_start #true
+    
+    env {
+        NODE_ENV "production"
+        PORT "3000"
+        LOG_LEVEL "info"
+    }
+}
+
+// 長時間実行するプロセス
+process "sleep-test" {
+    command "/bin/sleep"
+    args "3600"
+    auto_start #false
+}

@@ -54,5 +54,9 @@ tera = { version = "1.20", optional = true }
 default = ["web"]
 web = ["dep:axum", "dep:tower", "dep:tower-http", "dep:axum-extra", "dep:futures", "dep:tokio-stream", "dep:tera"]
 
+[[example]]
+name = "test_kdl_config"
+path = "examples/test_kdl_config.rs"
+
 [dev-dependencies]
 tempfile = "3.8"
