@@ -92,7 +92,7 @@ impl KdlPersistence {
             //     kdl.push_str("    }\n");
             // }
             
-            kdl.push_str(&format!("    auto_start {}\n", process.auto_start));
+            kdl.push_str(&format!("    auto_start #{}\n", process.auto_start));
             kdl.push_str("}\n\n");
         }
 
@@ -144,7 +144,6 @@ impl KdlPersistence {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashMap;
     use tempfile::TempDir;
 
     #[test]
@@ -156,8 +155,8 @@ mod tests {
             id: "test-process".to_string(),
             command: "/usr/bin/test".to_string(),
             args: vec!["arg1".to_string(), "arg2".to_string()],
-            cwd: Some(PathBuf::from("/tmp")),
-            env: [("KEY".to_string(), "VALUE".to_string())].into(),
+            cwd: "/tmp".to_string(),
+            // env: [("KEY".to_string(), "VALUE".to_string())].into(),
             auto_start: true,
         };
 
@@ -187,8 +186,8 @@ mod tests {
             id: "test-process".to_string(),
             command: "/usr/bin/test".to_string(),
             args: vec![],
-            cwd: None,
-            env: HashMap::new(),
+            cwd: "".to_string(),
+            // env: HashMap::new(),
             auto_start: false,
         };
 

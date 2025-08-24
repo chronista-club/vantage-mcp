@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use facet::Facet;
 
@@ -81,12 +79,15 @@ impl ProcessConfig {
     
     /// ProcessInfoへ変換
     pub fn to_process_info(&self) -> crate::process::types::ProcessInfo {
+        use std::collections::HashMap;
+        use std::path::PathBuf;
+        
         crate::process::types::ProcessInfo {
             id: self.id.clone(),
             command: self.command.clone(),
             args: self.args.clone(),
-            env: std::collections::HashMap::new(), // self.env.clone(),
-            cwd: if self.cwd.is_empty() { None } else { Some(std::path::PathBuf::from(&self.cwd)) },
+            env: HashMap::new(), // self.env.clone(),
+            cwd: if self.cwd.is_empty() { None } else { Some(PathBuf::from(&self.cwd)) },
             state: crate::process::types::ProcessState::NotStarted,
         }
     }
@@ -132,6 +133,8 @@ mod tests {
     
     #[test]
     fn test_process_config_conversion() {
+        use std::collections::HashMap;
+        
         let info = crate::process::types::ProcessInfo {
             id: "test".to_string(),
             command: "/bin/echo".to_string(),
