@@ -13,23 +13,3 @@ process "simple-server" {
     auto_start #false
 }
 
-// 環境変数を持つプロセス
-process "node-app" {
-    command "node"
-    args "app.js"
-    cwd "/Users/mito/projects/sample-app"
-    auto_start #true
-    
-    env {
-        NODE_ENV "production"
-        PORT "3000"
-        LOG_LEVEL "info"
-    }
-}
-
-// 長時間実行するプロセス
-process "sleep-test" {
-    command "/bin/sleep"
-    args "3600"
-    auto_start #false
-}

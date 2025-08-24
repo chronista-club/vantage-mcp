@@ -21,18 +21,6 @@ pub struct ConfigMeta {
     /// ファイルフォーマットのバージョン
     #[facet(property)]
     pub version: String,
-    
-    /// スキーマバージョン
-    #[facet(property)]
-    pub schema: Option<String>,
-    
-    /// 作成日時
-    #[facet(property)]
-    pub created_at: Option<String>,
-    
-    /// 更新日時
-    #[facet(property)]
-    pub updated_at: Option<String>,
 }
 
 /// プロセスの設定
@@ -51,14 +39,15 @@ pub struct ProcessConfig {
     #[facet(property)]
     pub args: Vec<String>,
     
-    /// 作業ディレクトリ
-    #[facet(property)]
-    pub cwd: Option<PathBuf>,
-    
-    /// 環境変数
+    /// 作業ディレクトリ（一時的に簡略化）
     #[serde(default)]
-    #[facet(child)]
-    pub env: HashMap<String, String>,
+    #[facet(property)]
+    pub cwd: String,
+    
+    // 環境変数（一時的に削除）
+    // #[serde(default)]
+    // #[facet(child)]
+    // pub env: HashMap<String, String>,
     
     /// 自動起動フラグ
     #[serde(default)]
@@ -71,9 +60,6 @@ impl Default for IchimiConfig {
         Self {
             meta: ConfigMeta {
                 version: "1.0.0".to_string(),
-                schema: Some("ichimi-process-v1".to_string()),
-                created_at: Some(chrono::Utc::now().to_rfc3339()),
-                updated_at: None,
             },
             process: Vec::new(),
         }
@@ -87,8 +73,8 @@ impl ProcessConfig {
             id: info.id.clone(),
             command: info.command.clone(),
             args: info.args.clone(),
-            cwd: info.cwd.clone(),
-            env: info.env.clone(),
+            cwd: info.cwd.as_ref().map(|p| p.display().to_string()).unwrap_or_default(),
+            // env: info.env.clone(),
             auto_start: false, // デフォルトは自動起動しない
         }
     }
@@ -99,8 +85,8 @@ impl ProcessConfig {
             id: self.id.clone(),
             command: self.command.clone(),
             args: self.args.clone(),
-            env: self.env.clone(),
-            cwd: self.cwd.clone(),
+            env: std::collections::HashMap::new(), // self.env.clone(),
+            cwd: if self.cwd.is_empty() { None } else { Some(std::path::PathBuf::from(&self.cwd)) },
             state: crate::process::types::ProcessState::NotStarted,
         }
     }

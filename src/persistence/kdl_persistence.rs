@@ -65,15 +65,6 @@ impl KdlPersistence {
         // メタ情報
         kdl.push_str("meta {\n");
         kdl.push_str(&format!("    version \"{}\"\n", config.meta.version));
-        if let Some(schema) = &config.meta.schema {
-            kdl.push_str(&format!("    schema \"{}\"\n", schema));
-        }
-        if let Some(created_at) = &config.meta.created_at {
-            kdl.push_str(&format!("    created_at \"{}\"\n", created_at));
-        }
-        if let Some(updated_at) = &config.meta.updated_at {
-            kdl.push_str(&format!("    updated_at \"{}\"\n", updated_at));
-        }
         kdl.push_str("}\n\n");
 
         // プロセス定義
@@ -89,17 +80,17 @@ impl KdlPersistence {
                 kdl.push('\n');
             }
             
-            if let Some(cwd) = &process.cwd {
-                kdl.push_str(&format!("    cwd \"{}\"\n", cwd.display()));
+            if !process.cwd.is_empty() {
+                kdl.push_str(&format!("    cwd \"{}\"\n", process.cwd));
             }
             
-            if !process.env.is_empty() {
-                kdl.push_str("    env {\n");
-                for (key, value) in &process.env {
-                    kdl.push_str(&format!("        {} \"{}\"\n", key, value));
-                }
-                kdl.push_str("    }\n");
-            }
+            // if !process.env.is_empty() {
+            //     kdl.push_str("    env {\n");
+            //     for (key, value) in &process.env {
+            //         kdl.push_str(&format!("        {} \"{}\"\n", key, value));
+            //     }
+            //     kdl.push_str("    }\n");
+            // }
             
             kdl.push_str(&format!("    auto_start {}\n", process.auto_start));
             kdl.push_str("}\n\n");
@@ -119,8 +110,8 @@ impl KdlPersistence {
             config.process.push(process);
         }
 
-        // 更新日時を設定
-        config.meta.updated_at = Some(chrono::Utc::now().to_rfc3339());
+        // 更新日時を設定（今は省略）
+        // config.meta.updated_at = Some(chrono::Utc::now().to_rfc3339());
 
         self.save_config(&config)?;
         Ok(())
@@ -134,8 +125,8 @@ impl KdlPersistence {
         config.process.retain(|p| p.id != process_id);
         
         if config.process.len() < initial_len {
-            // 更新日時を設定
-            config.meta.updated_at = Some(chrono::Utc::now().to_rfc3339());
+            // 更新日時を設定（今は省略）
+            // config.meta.updated_at = Some(chrono::Utc::now().to_rfc3339());
             self.save_config(&config)?;
             Ok(true)
         } else {
