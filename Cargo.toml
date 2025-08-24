@@ -23,6 +23,8 @@ tokio = { version = "1", features = ["full"] }
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+knuffel = "3.2"
+miette = { version = "7.0", features = ["fancy"] }
 
 # Error handling
 anyhow = "1.0"
