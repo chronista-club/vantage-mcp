@@ -2,22 +2,44 @@
 
 [English](./README.en.md) | **日本語**
 
-Process as a Resource
+Process as a Resource - プロセスをリソースとして管理
 
 Model Context Protocol (MCP) を介した Claude Code 用の強力なプロセス管理サーバー。
 
-## 特徴
+![Version](https://img.shields.io/badge/version-0.1.0--beta7-blue.svg)
+![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue)
+![MCP Compatible](https://img.shields.io/badge/MCP-Compatible-green)
 
-- 🚀 **プロセス管理**: あらゆるプロセスの起動、停止、監視
+## ✨ 特徴
+
+### コア機能
+- 🚀 **プロセス管理**: あらゆるプロセスの起動、停止、監視をMCPツール経由で制御
 - 📊 **リアルタイムログ**: stdout/stderr 出力のキャプチャとストリーミング
 - 🔍 **ステータス監視**: プロセスの状態とメトリクスの追跡
-- 🎯 **柔軟なフィルタリング**: フィルタを使用したプロセスの一覧表示と検索
-- 💾 **永続化**: SurrealDBインメモリデータベースによるエクスポート/インポート
-- 🌐 **Webダッシュボード**: ブラウザベースの管理用オプションWeb UI
-- 🔄 **自動バックアップ**: 設定可能な間隔での自動エクスポート
-- 🔌 **MCP ネイティブ**: Claude Code 統合に特化して構築
+- 🎯 **柔軟なフィルタリング**: 状態やパターンでプロセスを検索
+- 💾 **永続化**: KDL形式での設定ファイル管理とJSON形式のエクスポート/インポート
+- 🔄 **自動起動**: `auto_start` フラグでサーバー起動時のプロセス自動起動
 
-## インストール
+### Webダッシュボード (v0.1.0-beta7〜)
+- 🌐 **モダンなUI**: Alpine.js + Tablerによる洗練されたデザイン
+- 📈 **リアルタイム更新**: 5秒ごとの自動更新でプロセス状態を監視
+- 🔍 **検索機能**: プロセスの検索とフィルタリング
+- 🌙 **ダークモード**: ライト/ダークテーマの切り替え対応
+- 📱 **レスポンシブ**: モバイルからデスクトップまで対応
+
+### MCP統合
+- 🔌 **Claude Code ネイティブ**: MCPプロトコルに完全準拠
+- 🛠️ **豊富なツール**: 12種類以上のMCPツールを提供
+- 📡 **Web API**: RESTful APIによる外部統合
+
+## 🚀 インストール
+
+### Cargoを使用（推奨）
+
+```bash
+cargo install ichimi-server
+# コマンドは 'ichimi' として利用可能になります
+```
 
 ### ソースからのインストール
 
@@ -26,23 +48,16 @@ Model Context Protocol (MCP) を介した Claude Code 用の強力なプロセ�
 git clone https://github.com/chronista-club/ichimi-server
 cd ichimi-server
 
-# サーバーをビルド
+# リリースビルド
 cargo build --release
 
 # バイナリは以下の場所に生成されます:
 # target/release/ichimi
 ```
 
-### Cargo を使用
+## 🔧 設定
 
-```bash
-cargo install ichimi-server
-# コマンドは 'ichimi' として利用可能になります
-```
-
-## 設定
-
-### Claude Code の設定
+### Claude Codeの設定
 
 `.mcp.json` または Claude Code の設定にサーバーを追加:
 
@@ -53,8 +68,7 @@ cargo install ichimi-server
             "type": "stdio",
             "command": "ichimi",
             "env": {
-                "RUST_LOG": "info",
-                "ICHIMI_AUTO_EXPORT_INTERVAL": "300"
+                "RUST_LOG": "info"
             }
         }
     }
@@ -70,32 +84,36 @@ Claude Code で以下を実行:
 
 "ichimi" サーバーが "connected" と表示されるはずです。
 
-## 使い方
+## 📚 使い方
 
-### 利用可能なツール
+### 利用可能なMCPツール
 
 #### 基本ツール
-- `echo` - テスト用にメッセージをエコーバック
-- `ping` - シンプルなヘルスチェック
-- `get_status` - サーバーステータスと稼働時間を取得
+| ツール | 説明 |
+|--------|------|
+| `echo` | テスト用にメッセージをエコーバック |
+| `ping` | シンプルなヘルスチェック |
+| `get_status` | サーバーステータスと稼働時間を取得 |
 
-#### プロセス管理
-- `create_process` - 新しいプロセス設定を登録
-- `start_process` - 登録済みプロセスを起動
-- `stop_process` - 実行中のプロセスを正常停止
-- `get_process_status` - 詳細なプロセスステータスを取得
-- `get_process_output` - プロセスの stdout/stderr ログを取得
-- `list_processes` - フィルタを使用して管理中の全プロセスを一覧表示
-- `remove_process` - 管理からプロセスを削除
-- `export_processes` - 全プロセスを .surql ファイルにエクスポート
-- `import_processes` - .surql ファイルからプロセスをインポート
+#### プロセス管理ツール
+| ツール | 説明 |
+|--------|------|
+| `create_process` | 新しいプロセス設定を登録 |
+| `start_process` | 登録済みプロセスを起動 |
+| `stop_process` | 実行中のプロセスを正常停止 |
+| `get_process_status` | 詳細なプロセスステータスを取得 |
+| `get_process_output` | プロセスの stdout/stderr ログを取得 |
+| `list_processes` | フィルタを使用して管理中の全プロセスを一覧表示 |
+| `remove_process` | 管理からプロセスを削除 |
+| `export_processes` | 全プロセスをファイルにエクスポート |
+| `import_processes` | ファイルからプロセスをインポート |
 
 ### 使用例
 
-#### Web サーバーの管理
+#### Webサーバーの管理
 
 ```python
-# Web サーバープロセスを登録
+# Webサーバープロセスを登録
 create_process(
     id="webserver",
     command="python",
@@ -114,21 +132,23 @@ get_process_output(id="webserver", stream="Both", lines=50)
 stop_process(id="webserver", grace_period_ms=5000)
 ```
 
-#### データベースの実行
+#### Node.jsアプリケーションの管理
 
 ```python
-# PostgreSQL を起動
+# Node.jsアプリを登録
 create_process(
-    id="postgres",
-    command="postgres",
-    args=["-D", "/usr/local/var/postgres"],
-    env={"PGDATA": "/usr/local/var/postgres"}
+    id="node-app",
+    command="node",
+    args=["server.js"],
+    env={"NODE_ENV": "production", "PORT": "3000"},
+    cwd="/app"
 )
 
-start_process(id="postgres")
+# アプリを起動
+start_process(id="node-app")
 
 # ステータスを監視
-get_process_status(id="postgres")
+get_process_status(id="node-app")
 ```
 
 #### バッチプロセス管理
@@ -145,27 +165,7 @@ for process in list_processes(filter={"name_pattern": "worker"}):
     stop_process(id=process["id"])
 ```
 
-## API リファレンス
-
-### プロセスの状態
-
-- `NotStarted` - プロセスは登録済みだが未起動
-- `Running` - プロセスは PID を持って実行中
-- `Stopped` - プロセスは終了コードで正常終了
-- `Failed` - プロセスはエラーメッセージで失敗
-
-### 出力ストリーム
-
-- `Stdout` - 標準出力のみ
-- `Stderr` - 標準エラー出力のみ
-- `Both` - stdout と stderr の結合
-
-### プロセスフィルタ
-
-- `state` - プロセス状態でフィルタ (Running/Stopped/Failed/All)
-- `name_pattern` - ID パターンでフィルタ (ワイルドカード対応)
-
-## 永続化
+## 📝 永続化
 
 ### KDL設定ファイル
 
@@ -192,16 +192,18 @@ process "worker" {
     command "/usr/local/bin/worker"
     args "--config" "worker.conf"
     cwd "/app"
-    auto_start #true
+    auto_start #true  // サーバー起動時に自動起動
 }
 ```
 
 #### 設定項目
 
-- `command` - 実行するコマンドのパス
-- `args` - コマンドライン引数（複数可）
-- `cwd` - 作業ディレクトリ（省略時は現在のディレクトリ）
-- `auto_start` - サーバー起動時の自動起動（#true または #false）
+| 項目 | 説明 | 必須 |
+|------|------|------|
+| `command` | 実行するコマンドのパス | ✅ |
+| `args` | コマンドライン引数（複数可） | ❌ |
+| `cwd` | 作業ディレクトリ | ❌ |
+| `auto_start` | サーバー起動時の自動起動 | ❌ |
 
 ### JSONエクスポート/インポート
 
@@ -215,27 +217,11 @@ curl http://127.0.0.1:12700/api/export > ichimi_export.json
 curl -X POST http://127.0.0.1:12700/api/import \
   -H "Content-Type: application/json" \
   -d @ichimi_export.json
-
 ```
 
-### 手動エクスポート/インポート
+## 🌐 Webダッシュボード
 
-```python
-# 全プロセスをファイルにエクスポート
-export_processes(file_path="/path/to/backup.surql")
-
-# デフォルト場所にエクスポート
-export_processes()
-
-# ファイルからプロセスをインポート
-import_processes(file_path="/path/to/backup.surql")
-```
-
-## Webダッシュボード
-
-Ichimi Server にはブラウザベース管理用のオプションのWebダッシュボードが含まれています。
-
-### ダッシュボードへのアクセス
+### ダッシュボードの起動
 
 ```bash
 # Webダッシュボードで起動（デフォルトポート 12700）
@@ -243,66 +229,121 @@ ichimi --web
 
 # カスタムポートを指定
 ichimi --web --web-port 8080
+
+# Webダッシュボードのみ（MCPサーバーなし）
+ichimi --web-only
 ```
 
-その後、ブラウザで `http://localhost:12700` を開きます
+ブラウザで `http://localhost:12700` を開きます。
 
 ### ダッシュボード機能
 
-- リアルタイムプロセスステータス監視
-- ワンクリックでプロセスの起動/停止
-- プロセスログ（stdout/stderr）の表示
-- プロセスの検索とフィルタリング
-- Tabler UI によるレスポンシブデザイン
+#### メイン画面
+- **統計カード**: 総プロセス数、実行中、停止中、エラーの状態を表示
+- **プロセスリスト**: 全プロセスのテーブル表示
+- **リアルタイム更新**: 5秒ごとに自動更新
+- **検索機能**: プロセスID、コマンドで検索
 
-## 開発
+#### プロセス操作
+- **起動/停止**: ワンクリックでプロセス制御
+- **ログ表示**: stdout/stderrの最新ログを表示
+- **削除**: 不要なプロセスを削除
+- **新規追加**: モーダルダイアログでプロセス追加
 
-### ソースからのビルド
+#### UI/UX
+- **レスポンシブデザイン**: モバイル対応
+- **ダークモード**: ライト/ダークテーマ切り替え
+- **モダンなデザイン**: Tabler UIフレームワーク使用
+
+### REST API
+
+| エンドポイント | メソッド | 説明 |
+|--------------|----------|------|
+| `/api/status` | GET | サーバーステータス |
+| `/api/dashboard` | GET | ダッシュボード統計データ |
+| `/api/processes` | GET | プロセス一覧 |
+| `/api/processes` | POST | プロセス追加 |
+| `/api/processes/:id` | GET | プロセス詳細 |
+| `/api/processes/:id` | DELETE | プロセス削除 |
+| `/api/processes/:id/start` | POST | プロセス起動 |
+| `/api/processes/:id/stop` | POST | プロセス停止 |
+| `/api/processes/:id/logs` | GET | ログ取得 |
+
+## 🏗️ プロジェクト構造
+
+```
+ichimi-server/
+├── src/
+│   ├── lib.rs                  # コアサーバー実装
+│   ├── bin/
+│   │   └── ichimi_server.rs    # バイナリエントリーポイント
+│   ├── process/
+│   │   ├── mod.rs              # プロセスモジュールのエクスポート
+│   │   ├── manager.rs          # プロセスライフサイクル管理
+│   │   ├── buffer.rs           # ログ用循環バッファ
+│   │   └── types.rs            # 型定義
+│   ├── web/
+│   │   ├── mod.rs              # Webサーバーモジュール  
+│   │   ├── server.rs           # HTTPサーバー実装
+│   │   ├── handlers.rs         # APIハンドラー
+│   │   └── api.rs              # APIルーティング
+│   ├── messages/
+│   │   └── mod.rs              # MCP メッセージ型
+│   ├── persistence/
+│   │   ├── mod.rs              # 永続化モジュール
+│   │   ├── manager.rs          # 永続化マネージャー
+│   │   ├── kdl_persistence.rs  # KDL形式の永続化
+│   │   └── kdl_schema.rs       # KDLスキーマ定義
+│   ├── db/                     # データベース（将来拡張用）
+│   ├── events/                 # イベントシステム（将来拡張用）
+│   └── learning/               # 学習システム（将来拡張用）
+├── templates/                   # Teraテンプレート
+│   ├── base.tera               # ベーステンプレート
+│   └── index.tera              # ダッシュボード画面
+├── .ichimi/                     # データディレクトリ
+│   └── processes.kdl           # プロセス設定ファイル
+└── examples/                    # 使用例
+```
+
+## 🔑 環境変数
+
+| 変数 | 説明 | デフォルト |
+|------|------|----------|
+| `RUST_LOG` | ログレベル (error, warn, info, debug, trace) | info |
+| `ICHIMI_DATA_DIR` | データファイル用ディレクトリ | .ichimi |
+| `ICHIMI_WEB_PORT` | Webダッシュボードポート | 12700 |
+
+## 🚧 開発
+
+### ローカル開発
 
 ```bash
 # デバッグビルド
 cargo build
-
-# リリースビルド
-cargo build --release
 
 # テストの実行
 cargo test
 
 # デバッグログで実行
 RUST_LOG=debug cargo run
+
+# Webダッシュボードの開発
+RUST_LOG=debug cargo run -- --web
 ```
 
-### プロジェクト構造
+### リリースビルド
 
-```
-ichimi-server/
-├── src/
-│   ├── lib.rs           # コアサーバー実装
-│   ├── bin/
-│   │   └── ichimi_server.rs # バイナリエントリーポイント
-│   ├── process/
-│   │   ├── mod.rs       # プロセスモジュールのエクスポート
-│   │   ├── manager.rs   # プロセスライフサイクル管理
-│   │   ├── buffer.rs    # ログ用循環バッファ
-│   │   └── types.rs     # 型定義
-│   ├── web/
-│   │   ├── mod.rs       # Webサーバーモジュール
-│   │   └── server.rs    # ダッシュボード HTTPサーバー
-│   ├── messages/
-│   │   ├── mod.rs       # メッセージ型
-│   │   └── process.rs   # プロセス関連メッセージ
-│   └── persistence.rs   # SurrealDB永続化レイヤー
-├── static/              # Webダッシュボードアセット
-│   ├── index.html       # ダッシュボード UI
-│   └── favicon.ico      # アイコン
-├── examples/            # 使用例
-└── tests/              # 統合テスト
+```bash
+# 最適化されたリリースビルド
+cargo build --release
+
+# インストール
+cargo install --path .
 ```
 
-## コントリビューション
+## 🤝 コントリビューション
 
-コントリビューションを歓迎します！プルリクエストをお気軽に送信してください。
+コントリビューションを歓迎します！
 
 1. リポジトリをフォーク
 2. フィーチャーブランチを作成 (`git checkout -b feature/amazing-feature`)
@@ -310,7 +351,7 @@ ichimi-server/
 4. ブランチにプッシュ (`git push origin feature/amazing-feature`)
 5. プルリクエストを開く
 
-## ライセンス
+## 📄 ライセンス
 
 このプロジェクトは以下のいずれかのライセンスでデュアルライセンスされています:
 
@@ -319,29 +360,23 @@ ichimi-server/
 
 お好みの方をお選びください。
 
-## 環境変数
+## 🙏 謝辞
 
-| 変数 | 説明 | デフォルト |
-|----------|-------------|---------|  
-| `RUST_LOG` | ログレベル (error, warn, info, debug, trace) | info |
-| `ICHIMI_AUTO_EXPORT_INTERVAL` | 自動エクスポート間隔（秒） | - |
-| `ICHIMI_IMPORT_FILE` | 起動時にインポートするファイル | - |
-| `ICHIMI_DATA_DIR` | データファイル用ディレクトリ | ~/.ichimi/data |
-
-## 謝辞
-
-- [rmcp](https://github.com/modelcontextprotocol/rust-sdk) - Rust MCP SDK で構築
-- [SurrealDB](https://surrealdb.com/) - インメモリドキュメントデータベース
+- [rmcp](https://github.com/modelcontextprotocol/rust-sdk) - Rust MCP SDK
+- [Tera](https://tera.netlify.app/) - テンプレートエンジン
 - UIフレームワーク: [Alpine.js](https://alpinejs.dev/) & [Tabler](https://tabler.io/)
+- [KDL](https://kdl.dev/) - 設定フォーマット
 - Model Context Protocol 仕様に触発
 - Chronista Club エコシステムの一部
 
-## サポート
+## 📞 サポート
 
 問題、質問、提案については:
-- [GitHub](https://github.com/chronista-club/ichimi-server/issues) で Issue を開く
-- [ドキュメント](https://github.com/chronista-club/ichimi-server/wiki) を確認
+- [GitHub Issues](https://github.com/chronista-club/ichimi-server/issues) で Issue を開く
+- [Discussions](https://github.com/chronista-club/ichimi-server/discussions) で議論
 
 ---
 
 *Ichimi Server - Claude Code のためのシンプルかつ強力なプロセス管理。一味が支えます。*
+
+**Latest Release:** v0.1.0-beta7 🎉
