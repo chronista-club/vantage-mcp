@@ -28,7 +28,8 @@ Model Context Protocol (MCP) を介した Claude Code 用の強力なプロセ�
 - 📱 **レスポンシブ**: モバイルからデスクトップまで対応
 
 ### MCP統合
-- 🔌 **Claude Code ネイティブ**: MCPプロトコルに完全準拠
+- 🔌 **MCP準拠サーバー**: Model Context Protocolに完全準拠
+- 🤖 **Claude Code対応**: Claude Codeから直接利用可能
 - 🛠️ **豊富なツール**: 12種類以上のMCPツールを提供
 - 📡 **Web API**: RESTful APIによる外部統合
 
