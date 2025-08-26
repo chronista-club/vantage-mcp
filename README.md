@@ -17,7 +17,7 @@ Model Context Protocol (MCP) を介した Claude Code 用の強力なプロセ�
 - 📊 **リアルタイムログ**: stdout/stderr 出力のキャプチャとストリーミング
 - 🔍 **ステータス監視**: プロセスの状態とメトリクスの追跡
 - 🎯 **柔軟なフィルタリング**: 状態やパターンでプロセスを検索
-- 💾 **永続化**: KDL形式での設定ファイル管理とJSON形式のエクスポート/インポート
+- 💾 **永続化**: KDL形式での設定ファイル管理（`.ichimi/processes.kdl`）
 - 🔄 **自動起動**: `auto_start` フラグでサーバー起動時のプロセス自動起動
 
 ### Webダッシュボード (v0.1.0-beta7〜)
@@ -293,11 +293,11 @@ ichimi-server/
 │   ├── persistence/
 │   │   ├── mod.rs              # 永続化モジュール
 │   │   ├── manager.rs          # 永続化マネージャー
-│   │   ├── kdl_persistence.rs  # KDL形式の永続化
+│   │   ├── kdl_persistence.rs  # KDL形式の永続化（メイン）
 │   │   └── kdl_schema.rs       # KDLスキーマ定義
-│   ├── db/                     # データベース（将来拡張用）
-│   ├── events/                 # イベントシステム（将来拡張用）
-│   └── learning/               # 学習システム（将来拡張用）
+│   ├── db/                     # SurrealDBモジュール（将来拡張用、現在未使用）
+│   ├── events/                 # イベントシステム（将来拡張用、現在未使用）
+│   └── learning/               # 学習システム（将来拡張用、現在未使用）
 ├── templates/                   # Teraテンプレート
 │   ├── base.tera               # ベーステンプレート
 │   └── index.tera              # ダッシュボード画面
