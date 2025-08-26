@@ -7,12 +7,18 @@ use rmcp::{
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
+pub mod db;
+pub mod events;
+pub mod learning;
 pub mod messages;
 pub mod persistence;
 pub mod process;
 #[cfg(feature = "web")]
 pub mod web;
 
+use db::Database;
+use events::EventSystem;
+use learning::LearningEngine;
 use messages::*;
 use process::ProcessManager;
 
@@ -20,15 +26,33 @@ use process::ProcessManager;
 pub struct IchimiServer {
     start_time: Arc<Mutex<chrono::DateTime<chrono::Utc>>>,
     process_manager: ProcessManager,
+    database: Arc<Database>,
+    event_system: Arc<EventSystem>,
+    learning_engine: Arc<LearningEngine>,
     tool_router: ToolRouter<IchimiServer>,
 }
 
 #[tool_router]
 impl IchimiServer {
     pub async fn new() -> Self {
+        // データベースを初期化
+        let database = Arc::new(Database::new().await.expect("Failed to initialize database"));
+        
+        // イベントシステムを初期化
+        let event_system = Arc::new(EventSystem::new(database.clone()));
+        
+        // 学習エンジンを初期化
+        let learning_engine = Arc::new(LearningEngine::new(database.clone(), event_system.clone()));
+        
+        // 学習を開始
+        learning_engine.start_learning().await.expect("Failed to start learning engine");
+        
         Self {
             start_time: Arc::new(Mutex::new(chrono::Utc::now())),
             process_manager: ProcessManager::new().await,
+            database,
+            event_system,
+            learning_engine,
             tool_router: Self::tool_router(),
         }
     }
@@ -244,6 +268,41 @@ impl IchimiServer {
             "Processes imported successfully from {}",
             file_path
         ))]))
+    }
+    
+    #[tool(description = "Get smart suggestions for next actions based on learning")]
+    async fn get_suggestions(
+        &self,
+        Parameters(GetSuggestionsRequest { current_process }): Parameters<GetSuggestionsRequest>,
+    ) -> Result<CallToolResult, McpError> {
+        let suggestions = self.learning_engine
+            .get_suggestions(current_process.as_deref())
+            .await
+            .map_err(|e| McpError {
+                message: format!("{}", e).into(),
+                code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+                data: None,
+            })?;
+        
+        if suggestions.is_empty() {
+            return Ok(CallToolResult::success(vec![Content::text(
+                "No suggestions available at this time."
+            )]));
+        }
+        
+        let mut result = String::from("Smart Suggestions:\n\n");
+        for (i, suggestion) in suggestions.iter().enumerate() {
+            result.push_str(&format!(
+                "{}. {}\n   Action: {:?}\n   Confidence: {:.0}%\n   Reason: {}\n\n",
+                i + 1,
+                suggestion.message,
+                suggestion.action,
+                suggestion.confidence * 100.0,
+                suggestion.reason
+            ));
+        }
+        
+        Ok(CallToolResult::success(vec![Content::text(result)]))
     }
 }
 

@@ -12,6 +12,8 @@ use std::sync::Arc;
 use crate::process::ProcessManager;
 use tera::{Tera, Context};
 
+// テンプレートファイルをバイナリに埋め込む
+
 pub async fn start_web_server(
     process_manager: ProcessManager,
     port: u16,
@@ -65,14 +67,25 @@ async fn bind_to_available_port(preferred_port: u16) -> Result<(tokio::net::TcpL
 }
 
 fn create_app(process_manager: ProcessManager) -> Router {
-    // Teraテンプレートエンジンを初期化
-    let tera = match Tera::new("templates/**/*.tera") {
-        Ok(t) => Arc::new(t),
-        Err(e) => {
-            tracing::error!("テンプレート初期化エラー: {}", e);
-            panic!("テンプレートの初期化に失敗しました: {}", e);
-        }
-    };
+    // Teraテンプレートエンジンを初期化（埋め込みテンプレートを使用）
+    let mut tera = Tera::default();
+    
+    // 実行時にテンプレートファイルを読み込む
+    let base_template = include_str!("../../templates/base.tera");
+    let index_template = include_str!("../../templates/index.tera");
+    
+    // 埋め込んだテンプレートを追加
+    if let Err(e) = tera.add_raw_template("base.tera", base_template) {
+        tracing::error!("baseテンプレートの追加エラー: {}", e);
+        panic!("baseテンプレートの追加に失敗しました: {}", e);
+    }
+    
+    if let Err(e) = tera.add_raw_template("index.tera", index_template) {
+        tracing::error!("indexテンプレートの追加エラー: {}", e);
+        panic!("indexテンプレートの追加に失敗しました: {}", e);
+    }
+    
+    let tera = Arc::new(tera);
     
     let app_state = AppState {
         process_manager: Arc::new(process_manager),

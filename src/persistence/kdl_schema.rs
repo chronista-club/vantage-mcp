@@ -17,7 +17,6 @@ pub struct IchimiConfig {
 #[derive(Debug, Clone, Serialize, Deserialize, Facet)]
 pub struct ConfigMeta {
     /// ファイルフォーマットのバージョン
-    #[facet(property)]
     pub version: String,
 }
 

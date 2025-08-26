@@ -1,454 +1,416 @@
 {% extends "base.tera" %}
 
-{% block title %}Ichimi Server - プロセス管理ダッシュボード{% endblock %}
+{% block title %}Ichimi Server - Dashboard{% endblock %}
 
-{% block content %}
-<div class="dashboard">
-    <div class="dashboard-header">
-        <h2>プロセス管理</h2>
-        <div class="dashboard-actions">
-            <button class="button" id="refreshBtn">
-                <span>🔄 更新</span>
-            </button>
-            <button class="button" id="addProcessBtn">
-                <span>➕ 新規プロセス</span>
-            </button>
-        </div>
-    </div>
-    
-    <div class="stats-grid">
-        <div class="card stat-card">
-            <div class="stat-label">稼働中</div>
-            <div class="stat-value" id="runningCount">0</div>
-        </div>
-        <div class="card stat-card">
-            <div class="stat-label">停止中</div>
-            <div class="stat-value" id="stoppedCount">0</div>
-        </div>
-        <div class="card stat-card">
-            <div class="stat-label">エラー</div>
-            <div class="stat-value" id="failedCount">0</div>
-        </div>
-        <div class="card stat-card">
-            <div class="stat-label">合計</div>
-            <div class="stat-value" id="totalCount">0</div>
-        </div>
-    </div>
-    
-    <div class="processes-section">
-        <h3>プロセス一覧</h3>
-        <div class="process-grid" id="processList">
-            <!-- プロセスカードがここに動的に追加されます -->
-        </div>
-    </div>
-    
-    <div id="emptyState" class="empty-state" style="display: none;">
-        <div class="card">
-            <p>プロセスが登録されていません</p>
-            <button class="button" onclick="document.getElementById('addProcessBtn').click()">
-                最初のプロセスを追加
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- プロセス追加モーダル -->
-<div id="addProcessModal" class="modal" style="display: none;">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>新規プロセス追加</h3>
-            <button class="modal-close" onclick="closeModal()">&times;</button>
-        </div>
-        <div class="modal-body">
-            <form id="addProcessForm">
-                <div class="form-group">
-                    <label for="processId">プロセスID</label>
-                    <input type="text" id="processId" name="id" required placeholder="my-process">
+{% block header %}
+<div class="page-header d-print-none">
+    <div class="container-xl">
+        <div class="row g-2 align-items-center">
+            <div class="col">
+                <div class="page-pretitle">Overview</div>
+                <h2 class="page-title">Process Dashboard</h2>
+            </div>
+            <div class="col-auto ms-auto d-print-none">
+                <div class="btn-list">
+                    <button @click="$refs.dashboard.refresh()" class="btn btn-primary">
+                        <i class="ti ti-refresh"></i> Refresh
+                    </button>
+                    <button @click="$refs.addProcessModal.show()" class="btn btn-primary">
+                        <i class="ti ti-plus"></i> Add Process
+                    </button>
                 </div>
-                <div class="form-group">
-                    <label for="processCommand">コマンド</label>
-                    <input type="text" id="processCommand" name="command" required placeholder="/usr/bin/node">
-                </div>
-                <div class="form-group">
-                    <label for="processArgs">引数（カンマ区切り）</label>
-                    <input type="text" id="processArgs" name="args" placeholder="server.js, --port, 3000">
-                </div>
-                <div class="form-group">
-                    <label for="processCwd">作業ディレクトリ</label>
-                    <input type="text" id="processCwd" name="cwd" placeholder="/path/to/project">
-                </div>
-                <div class="form-actions">
-                    <button type="button" class="button button-secondary" onclick="closeModal()">キャンセル</button>
-                    <button type="submit" class="button">追加</button>
-                </div>
-            </form>
+            </div>
         </div>
     </div>
 </div>
 {% endblock %}
 
-{% block styles %}
-<style>
-    .dashboard-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 2rem;
-    }
-    
-    .dashboard-header h2 {
-        font-size: 1.75rem;
-        font-weight: 600;
-    }
-    
-    .dashboard-actions {
-        display: flex;
-        gap: 0.5rem;
-    }
-    
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 1rem;
-        margin-bottom: 2rem;
-    }
-    
-    .stat-card {
-        text-align: center;
-        padding: 1rem;
-    }
-    
-    .stat-label {
-        font-size: 0.875rem;
-        color: var(--text-secondary);
-        margin-bottom: 0.5rem;
-    }
-    
-    .stat-value {
-        font-size: 2rem;
-        font-weight: bold;
-        color: var(--accent-color);
-    }
-    
-    .processes-section h3 {
-        margin-bottom: 1rem;
-        font-size: 1.25rem;
-    }
-    
-    .process-card {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-    }
-    
-    .process-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    
-    .process-title {
-        font-weight: 600;
-        font-size: 1.1rem;
-    }
-    
-    .process-info {
-        display: flex;
-        flex-direction: column;
-        gap: 0.25rem;
-        font-size: 0.875rem;
-        color: var(--text-secondary);
-    }
-    
-    .process-actions {
-        display: flex;
-        gap: 0.5rem;
-        margin-top: 0.5rem;
-    }
-    
-    .button-small {
-        padding: 0.25rem 0.75rem;
-        font-size: 0.8rem;
-    }
-    
-    .button-secondary {
-        background-color: var(--bg-secondary);
-        color: var(--text-primary);
-        border: 1px solid var(--border-color);
-    }
-    
-    .button-danger {
-        background-color: var(--danger-color);
-    }
-    
-    .empty-state {
-        text-align: center;
-        padding: 3rem 1rem;
-    }
-    
-    .empty-state p {
-        color: var(--text-secondary);
-        margin-bottom: 1rem;
-    }
-    
-    /* モーダルスタイル */
-    .modal {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.5);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 1000;
-    }
-    
-    .modal-content {
-        background-color: var(--card-bg);
-        border-radius: 8px;
-        width: 90%;
-        max-width: 500px;
-        max-height: 90vh;
-        overflow-y: auto;
-    }
-    
-    .modal-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 1.5rem;
-        border-bottom: 1px solid var(--border-color);
-    }
-    
-    .modal-close {
-        background: none;
-        border: none;
-        font-size: 1.5rem;
-        cursor: pointer;
-        color: var(--text-secondary);
-    }
-    
-    .modal-body {
-        padding: 1.5rem;
-    }
-    
-    .form-group {
-        margin-bottom: 1rem;
-    }
-    
-    .form-group label {
-        display: block;
-        margin-bottom: 0.25rem;
-        font-size: 0.875rem;
-        font-weight: 500;
-    }
-    
-    .form-group input {
-        width: 100%;
-        padding: 0.5rem;
-        border: 1px solid var(--border-color);
-        border-radius: 4px;
-        background-color: var(--bg-primary);
-        color: var(--text-primary);
-    }
-    
-    .form-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: 0.5rem;
-        margin-top: 1.5rem;
-    }
-</style>
+{% block content %}
+<div x-data="dashboard()" x-ref="dashboard" x-init="init()">
+    <!-- Stats Cards -->
+    <div class="row row-deck row-cards mb-4">
+        <div class="col-sm-6 col-lg-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="subheader">Total Processes</div>
+                    </div>
+                    <div class="h1 mb-0" x-text="stats.total">0</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="subheader">Running</div>
+                    </div>
+                    <div class="d-flex align-items-baseline">
+                        <div class="h1 mb-0 me-2 text-success" x-text="stats.running">0</div>
+                        <div class="me-auto">
+                            <span class="text-success d-inline-flex align-items-center lh-1">
+                                <i class="ti ti-trending-up"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="subheader">Stopped</div>
+                    </div>
+                    <div class="d-flex align-items-baseline">
+                        <div class="h1 mb-0 me-2 text-warning" x-text="stats.stopped">0</div>
+                        <div class="me-auto">
+                            <span class="text-warning d-inline-flex align-items-center lh-1">
+                                <i class="ti ti-minus"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="subheader">Failed</div>
+                    </div>
+                    <div class="d-flex align-items-baseline">
+                        <div class="h1 mb-0 me-2 text-danger" x-text="stats.failed">0</div>
+                        <div class="me-auto">
+                            <span class="text-danger d-inline-flex align-items-center lh-1">
+                                <i class="ti ti-trending-down"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Process List -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Processes</h3>
+            <div class="card-actions">
+                <div class="input-icon">
+                    <input type="text" x-model="searchTerm" class="form-control form-control-sm" placeholder="Search...">
+                    <span class="input-icon-addon">
+                        <i class="ti ti-search"></i>
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-vcenter card-table">
+                <thead>
+                    <tr>
+                        <th>Process ID</th>
+                        <th>Status</th>
+                        <th>Command</th>
+                        <th>PID</th>
+                        <th>Auto Start</th>
+                        <th class="w-1"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="process in filteredProcesses" :key="process.id">
+                        <tr>
+                            <td>
+                                <div class="text-reset" x-text="process.id"></div>
+                            </td>
+                            <td>
+                                <span class="badge" 
+                                      :class="{
+                                          'bg-success': getProcessState(process) === 'Running',
+                                          'bg-warning': getProcessState(process) === 'Stopped',
+                                          'bg-danger': getProcessState(process) === 'Failed'
+                                      }"
+                                      x-text="getProcessState(process)">
+                                </span>
+                            </td>
+                            <td class="text-secondary">
+                                <code x-text="process.command"></code>
+                                <template x-if="process.args && process.args.length > 0">
+                                    <span class="text-muted" x-text="' ' + process.args.join(' ')"></span>
+                                </template>
+                            </td>
+                            <td>
+                                <span x-text="getProcessPid(process) || '-'"></span>
+                            </td>
+                            <td>
+                                <template x-if="process.auto_start">
+                                    <span class="badge bg-blue-lt">Enabled</span>
+                                </template>
+                                <template x-if="!process.auto_start">
+                                    <span class="badge bg-secondary-lt">Disabled</span>
+                                </template>
+                            </td>
+                            <td>
+                                <div class="btn-list flex-nowrap">
+                                    <template x-if="getProcessState(process) === 'Stopped'">
+                                        <button @click="startProcess(process.id)" class="btn btn-sm btn-success">
+                                            <i class="ti ti-player-play"></i> Start
+                                        </button>
+                                    </template>
+                                    <template x-if="getProcessState(process) === 'Running'">
+                                        <button @click="stopProcess(process.id)" class="btn btn-sm btn-warning">
+                                            <i class="ti ti-player-stop"></i> Stop
+                                        </button>
+                                    </template>
+                                    <button @click="viewLogs(process.id)" class="btn btn-sm btn-info">
+                                        <i class="ti ti-file-text"></i> Logs
+                                    </button>
+                                    <button @click="removeProcess(process.id)" class="btn btn-sm btn-danger">
+                                        <i class="ti ti-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+            <template x-if="filteredProcesses.length === 0">
+                <div class="empty">
+                    <div class="empty-img"><img src="https://tabler.io/static/illustrations/undraw_printing_invoices_-5-r4r.svg" height="128" alt="">
+                    </div>
+                    <p class="empty-title">No processes found</p>
+                    <p class="empty-subtitle text-secondary">
+                        Try adjusting your search or add a new process.
+                    </p>
+                    <div class="empty-action">
+                        <button @click="$refs.addProcessModal.show()" class="btn btn-primary">
+                            <i class="ti ti-plus"></i> Add your first process
+                        </button>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <!-- Add Process Modal -->
+    <div class="modal modal-blur fade" id="addProcessModal" tabindex="-1" x-ref="addProcessModal">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add New Process</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form @submit.prevent="addProcess()">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label required">Process ID</label>
+                            <input type="text" class="form-control" x-model="newProcess.id" placeholder="my-process" required>
+                            <small class="form-hint">Unique identifier for this process</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label required">Command</label>
+                            <input type="text" class="form-control" x-model="newProcess.command" placeholder="/usr/bin/node" required>
+                            <small class="form-hint">Full path to the executable</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Arguments</label>
+                            <input type="text" class="form-control" x-model="newProcess.args" placeholder="server.js --port 3000">
+                            <small class="form-hint">Space-separated command arguments</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Working Directory</label>
+                            <input type="text" class="form-control" x-model="newProcess.cwd" placeholder="/path/to/project">
+                            <small class="form-hint">Directory to run the process in</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" x-model="newProcess.auto_start">
+                                <span class="form-check-label">Auto-start on server launch</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn me-auto" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Add Process</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logs Modal -->
+    <div class="modal modal-blur fade" id="logsModal" tabindex="-1" x-ref="logsModal">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Process Logs: <span x-text="selectedProcess"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="card bg-dark text-white">
+                        <div class="card-body">
+                            <pre class="mb-0" style="max-height: 60vh; overflow-y: auto;"><code x-html="logs"></code></pre>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn me-auto" data-bs-dismiss="modal">Close</button>
+                    <button @click="refreshLogs()" class="btn btn-primary">
+                        <i class="ti ti-refresh"></i> Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    let processes = [];
-    
-    // プロセス一覧を取得
-    async function fetchProcesses() {
-        try {
-            const response = await fetch('/api/processes');
-            if (response.ok) {
-                processes = await response.json();
-                updateUI();
-            }
-        } catch (error) {
-            console.error('プロセス一覧の取得に失敗:', error);
-        }
-    }
-    
-    // UI更新
-    function updateUI() {
-        const stats = {
+function dashboard() {
+    return {
+        processes: [],
+        searchTerm: '',
+        stats: {
+            total: 0,
             running: 0,
             stopped: 0,
             failed: 0
-        };
+        },
+        newProcess: {
+            id: '',
+            command: '',
+            args: '',
+            cwd: '',
+            auto_start: false
+        },
+        selectedProcess: null,
+        logs: '',
+        refreshInterval: null,
         
-        const processList = document.getElementById('processList');
-        processList.innerHTML = '';
-        
-        if (processes.length === 0) {
-            document.getElementById('emptyState').style.display = 'block';
-            document.querySelector('.processes-section').style.display = 'none';
-        } else {
-            document.getElementById('emptyState').style.display = 'none';
-            document.querySelector('.processes-section').style.display = 'block';
+        async init() {
+            await this.fetchDashboard();
+            // Auto-refresh every 5 seconds
+            this.refreshInterval = setInterval(() => this.fetchDashboard(), 5000);
             
-            processes.forEach(process => {
-                // ステータスカウント
-                const processState = process.state?.state || process.state || 'Stopped';
-                if (processState === 'Running') stats.running++;
-                else if (processState === 'Stopped') stats.stopped++;
-                else if (processState === 'Failed') stats.failed++;
-                
-                // プロセスカード作成
-                const card = createProcessCard(process);
-                processList.appendChild(card);
-            });
-        }
+            // Initialize modals
+            this.$refs.addProcessModal = new bootstrap.Modal(this.$refs.addProcessModal);
+            this.$refs.logsModal = new bootstrap.Modal(this.$refs.logsModal);
+        },
         
-        // 統計更新
-        document.getElementById('runningCount').textContent = stats.running;
-        document.getElementById('stoppedCount').textContent = stats.stopped;
-        document.getElementById('failedCount').textContent = stats.failed;
-        document.getElementById('totalCount').textContent = processes.length;
-    }
-    
-    // プロセスカード作成
-    function createProcessCard(process) {
-        const card = document.createElement('div');
-        card.className = 'card process-card';
-        
-        const processState = process.state?.state || process.state || 'Stopped';
-        const statusClass = processState.toLowerCase();
-        const statusText = processState === 'Running' ? '稼働中' : 
-                          processState === 'Stopped' ? '停止中' : 'エラー';
-        
-        card.innerHTML = `
-            <div class="process-header">
-                <span class="process-title">${process.id}</span>
-                <span class="status-badge status-${statusClass}">${statusText}</span>
-            </div>
-            <div class="process-info">
-                <span>コマンド: ${process.command}</span>
-                ${process.state?.pid ? `<span>PID: ${process.state.pid}</span>` : ''}
-                ${process.args && process.args.length > 0 ? `<span>引数: ${process.args.join(' ')}</span>` : ''}
-            </div>
-            <div class="process-actions">
-                ${processState === 'Stopped' ? 
-                    `<button class="button button-small" onclick="startProcess('${process.id}')">開始</button>` :
-                    `<button class="button button-small button-danger" onclick="stopProcess('${process.id}')">停止</button>`
-                }
-                <button class="button button-small button-secondary" onclick="viewLogs('${process.id}')">ログ</button>
-                <button class="button button-small button-secondary" onclick="removeProcess('${process.id}')">削除</button>
-            </div>
-        `;
-        
-        return card;
-    }
-    
-    // プロセス開始
-    async function startProcess(id) {
-        try {
-            const response = await fetch(`/api/processes/${id}/start`, { method: 'POST' });
-            if (response.ok) {
-                fetchProcesses();
-            }
-        } catch (error) {
-            console.error('プロセスの開始に失敗:', error);
-        }
-    }
-    
-    // プロセス停止
-    async function stopProcess(id) {
-        try {
-            const response = await fetch(`/api/processes/${id}/stop`, { 
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({})
-            });
-            if (response.ok) {
-                fetchProcesses();
-            }
-        } catch (error) {
-            console.error('プロセスの停止に失敗:', error);
-        }
-    }
-    
-    // プロセス削除
-    async function removeProcess(id) {
-        if (confirm(`プロセス "${id}" を削除しますか？`)) {
+        async fetchDashboard() {
             try {
-                const response = await fetch(`/api/processes/${id}`, { method: 'DELETE' });
-                if (response.ok) {
-                    fetchProcesses();
-                }
+                const data = await Alpine.store('app').fetchData('/dashboard');
+                this.processes = data.processes;
+                this.stats = data.stats;
             } catch (error) {
-                console.error('プロセスの削除に失敗:', error);
+                console.error('Failed to fetch dashboard:', error);
             }
-        }
-    }
-    
-    // ログ表示（今後実装）
-    function viewLogs(id) {
-        alert(`プロセス "${id}" のログ表示機能は今後実装予定です`);
-    }
-    
-    // モーダル表示
-    document.getElementById('addProcessBtn').addEventListener('click', () => {
-        document.getElementById('addProcessModal').style.display = 'flex';
-    });
-    
-    // モーダル非表示
-    function closeModal() {
-        document.getElementById('addProcessModal').style.display = 'none';
-        document.getElementById('addProcessForm').reset();
-    }
-    
-    // プロセス追加フォーム送信
-    document.getElementById('addProcessForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
+        },
         
-        const formData = new FormData(e.target);
-        const args = formData.get('args').split(',').map(a => a.trim()).filter(a => a);
+        async refresh() {
+            await this.fetchDashboard();
+        },
         
-        const processData = {
-            id: formData.get('id'),
-            command: formData.get('command'),
-            args: args.length > 0 ? args : undefined,
-            cwd: formData.get('cwd') || undefined
-        };
-        
-        try {
-            const response = await fetch('/api/processes', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(processData)
-            });
+        get filteredProcesses() {
+            if (!this.searchTerm) return this.processes;
             
-            if (response.ok) {
-                closeModal();
-                fetchProcesses();
-            } else {
-                alert('プロセスの追加に失敗しました');
+            const term = this.searchTerm.toLowerCase();
+            return this.processes.filter(p => 
+                p.id.toLowerCase().includes(term) || 
+                p.command.toLowerCase().includes(term)
+            );
+        },
+        
+        getProcessState(process) {
+            return process.state?.state || 'Stopped';
+        },
+        
+        getProcessPid(process) {
+            return process.state?.pid || null;
+        },
+        
+        async startProcess(id) {
+            try {
+                await Alpine.store('app').postData(`/processes/${id}/start`);
+                await this.fetchDashboard();
+            } catch (error) {
+                alert('Failed to start process: ' + error.message);
             }
-        } catch (error) {
-            console.error('プロセスの追加に失敗:', error);
-            alert('プロセスの追加に失敗しました');
+        },
+        
+        async stopProcess(id) {
+            try {
+                await Alpine.store('app').postData(`/processes/${id}/stop`, {});
+                await this.fetchDashboard();
+            } catch (error) {
+                alert('Failed to stop process: ' + error.message);
+            }
+        },
+        
+        async removeProcess(id) {
+            if (confirm(`Are you sure you want to remove process "${id}"?`)) {
+                try {
+                    await Alpine.store('app').deleteData(`/processes/${id}`);
+                    await this.fetchDashboard();
+                } catch (error) {
+                    alert('Failed to remove process: ' + error.message);
+                }
+            }
+        },
+        
+        async addProcess() {
+            try {
+                const processData = {
+                    id: this.newProcess.id,
+                    command: this.newProcess.command,
+                    args: this.newProcess.args ? this.newProcess.args.split(' ').filter(a => a) : undefined,
+                    cwd: this.newProcess.cwd || undefined,
+                    auto_start: this.newProcess.auto_start
+                };
+                
+                await Alpine.store('app').postData('/processes', processData);
+                this.$refs.addProcessModal.hide();
+                this.resetNewProcess();
+                await this.fetchDashboard();
+            } catch (error) {
+                alert('Failed to add process: ' + error.message);
+            }
+        },
+        
+        resetNewProcess() {
+            this.newProcess = {
+                id: '',
+                command: '',
+                args: '',
+                cwd: '',
+                auto_start: false
+            };
+        },
+        
+        async viewLogs(id) {
+            this.selectedProcess = id;
+            await this.refreshLogs();
+            this.$refs.logsModal.show();
+        },
+        
+        async refreshLogs() {
+            if (!this.selectedProcess) return;
+            
+            try {
+                const logs = await Alpine.store('app').fetchData(`/processes/${this.selectedProcess}/logs?lines=100`);
+                this.logs = logs.join('\n') || 'No logs available';
+            } catch (error) {
+                this.logs = 'Failed to fetch logs: ' + error.message;
+            }
+        },
+        
+        destroy() {
+            if (this.refreshInterval) {
+                clearInterval(this.refreshInterval);
+            }
         }
-    });
-    
-    // 更新ボタン
-    document.getElementById('refreshBtn').addEventListener('click', fetchProcesses);
-    
-    // 初期ロード
-    fetchProcesses();
-    
-    // 定期更新（5秒ごと）
-    setInterval(fetchProcesses, 5000);
+    };
+}
 </script>
 {% endblock %}

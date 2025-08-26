@@ -7,6 +7,7 @@ use crate::web::server::AppState;
 pub fn create_api_routes() -> Router<AppState> {
     Router::new()
         .route("/status", get(super::handlers::get_status))
+        .route("/dashboard", get(super::handlers::get_dashboard))
         .route("/processes", get(super::handlers::list_processes))
         .route("/processes", post(super::handlers::create_process))
         .route("/processes/:id", get(super::handlers::get_process))

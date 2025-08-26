@@ -7,6 +7,7 @@ use axum::{
 use futures::stream::Stream;
 use serde::{Deserialize, Serialize};
 use std::convert::Infallible;
+use std::time::{SystemTime, UNIX_EPOCH};
 use tokio_stream::StreamExt;
 use crate::process::{ProcessFilter, ProcessStateFilter, OutputStream};
 use crate::messages::{CreateProcessRequest, StopProcessRequest};
@@ -18,6 +19,47 @@ pub struct ServerStatus {
     version: String,
     uptime_seconds: u64,
     process_count: usize,
+}
+
+#[derive(Serialize)]
+pub struct DashboardData {
+    server: ServerInfo,
+    stats: ProcessStats,
+    processes: Vec<serde_json::Value>,
+    recent_events: Vec<RecentEvent>,
+    system_metrics: SystemMetrics,
+}
+
+#[derive(Serialize)]
+pub struct ServerInfo {
+    status: String,
+    version: String,
+    uptime_seconds: u64,
+    current_time: u64,
+}
+
+#[derive(Serialize)]
+pub struct ProcessStats {
+    total: usize,
+    running: usize,
+    stopped: usize,
+    failed: usize,
+    auto_start_enabled: usize,
+}
+
+#[derive(Serialize)]
+pub struct RecentEvent {
+    timestamp: u64,
+    process_id: String,
+    event_type: String,
+    message: String,
+}
+
+#[derive(Serialize)]
+pub struct SystemMetrics {
+    cpu_usage: f32,
+    memory_usage: f32,
+    process_manager_memory: usize,
 }
 
 #[derive(Deserialize)]
@@ -42,6 +84,76 @@ pub async fn get_status(
         version: env!("CARGO_PKG_VERSION").to_string(),
         uptime_seconds: 0, // TODO: Track actual uptime
         process_count: processes.len(),
+    })
+}
+
+pub async fn get_dashboard(
+    State(state): State<AppState>,
+) -> Json<DashboardData> {
+    let processes = state.process_manager.list_processes(None).await;
+    
+    // 統計を計算
+    let mut stats = ProcessStats {
+        total: processes.len(),
+        running: 0,
+        stopped: 0,
+        failed: 0,
+        auto_start_enabled: 0,
+    };
+    
+    for process in &processes {
+        match &process.state {
+            crate::process::types::ProcessState::Running { .. } => stats.running += 1,
+            crate::process::types::ProcessState::Stopped { .. } => stats.stopped += 1,
+            crate::process::types::ProcessState::Failed { .. } => stats.failed += 1,
+            crate::process::types::ProcessState::NotStarted => stats.stopped += 1,
+        }
+        
+        // TODO: auto_startフラグは現在ProcessInfoに存在しないため、将来的に追加する必要がある
+        // if process.auto_start {
+        //     stats.auto_start_enabled += 1;
+        // }
+    }
+    
+    let current_time = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+    
+    // ダミーのイベントデータ（将来的には実際のイベントを追跡）
+    let recent_events = vec![
+        RecentEvent {
+            timestamp: current_time - 300,
+            process_id: "example".to_string(),
+            event_type: "started".to_string(),
+            message: "プロセスが正常に開始されました".to_string(),
+        },
+    ];
+    
+    // システムメトリクス（ダミーデータ、将来的には実際の値を取得）
+    let system_metrics = SystemMetrics {
+        cpu_usage: 12.5,
+        memory_usage: 35.2,
+        process_manager_memory: 1024 * 1024 * 50, // 50MB
+    };
+    
+    // ProcessInfoをJSONに変換
+    let processes_json: Vec<serde_json::Value> = processes
+        .into_iter()
+        .map(|p| serde_json::to_value(p).unwrap())
+        .collect();
+    
+    Json(DashboardData {
+        server: ServerInfo {
+            status: "running".to_string(),
+            version: env!("CARGO_PKG_VERSION").to_string(),
+            uptime_seconds: 0, // TODO: Track actual uptime
+            current_time,
+        },
+        stats,
+        processes: processes_json,
+        recent_events,
+        system_metrics,
     })
 }
 
