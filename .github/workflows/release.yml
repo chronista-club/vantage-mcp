@@ -13,10 +13,45 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
 
 jobs:
+  # First run all tests to ensure quality
+  test:
+    name: Test Suite
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        rust: [stable]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ matrix.rust }}
+      
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+      
+      - name: Run tests
+        run: cargo test --verbose
+      
+      - name: Run doc tests
+        run: cargo test --doc --verbose
+
   build:
     name: Build ${{ matrix.target }}
+    needs: test  # Only build if tests pass
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -78,7 +113,7 @@ jobs:
 
   release:
     name: Create Release
-    needs: build
+    needs: [test, build]  # Only release if both tests and builds pass
     runs-on: ubuntu-latest
     permissions:
       contents: write
