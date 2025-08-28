@@ -143,12 +143,14 @@
                                 <span x-text="getProcessPid(process) || '-'"></span>
                             </td>
                             <td>
-                                <template x-if="process.auto_start">
-                                    <span class="badge bg-blue-lt">Enabled</span>
-                                </template>
-                                <template x-if="!process.auto_start">
-                                    <span class="badge bg-secondary-lt">Disabled</span>
-                                </template>
+                                <label class="form-check form-switch mb-0">
+                                    <input class="form-check-input" 
+                                           type="checkbox" 
+                                           :checked="process.auto_start"
+                                           @change="toggleAutoStart(process.id, $event.target.checked)"
+                                           title="Toggle auto-start on server launch">
+                                    <span class="form-check-label" x-text="process.auto_start ? 'Enabled' : 'Disabled'"></span>
+                                </label>
                             </td>
                             <td>
                                 <div class="btn-list flex-nowrap">
@@ -402,6 +404,33 @@ function dashboard() {
                 this.logs = logs.join('\n') || 'No logs available';
             } catch (error) {
                 this.logs = 'Failed to fetch logs: ' + error.message;
+            }
+        },
+        
+        async toggleAutoStart(processId, enabled) {
+            try {
+                const response = await fetch(`/api/processes/${processId}/config`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ auto_start: enabled })
+                });
+                
+                if (response.ok) {
+                    Alpine.store('app').showToast('success', `Auto-start ${enabled ? 'enabled' : 'disabled'} for ${processId}`);
+                    // Update local process data
+                    const process = this.processes.find(p => p.id === processId);
+                    if (process) {
+                        process.auto_start = enabled;
+                    }
+                } else {
+                    throw new Error(`Failed to update auto-start: ${response.statusText}`);
+                }
+            } catch (error) {
+                Alpine.store('app').showToast('error', error.message);
+                // Revert the checkbox on error
+                await this.fetchDashboard();
             }
         },
         

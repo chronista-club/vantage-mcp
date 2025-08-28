@@ -36,17 +36,24 @@ pub struct IchimiServer {
 impl IchimiServer {
     pub async fn new() -> Self {
         // データベースを初期化
-        let database = Arc::new(Database::new().await.expect("Failed to initialize database"));
-        
+        let database = Arc::new(
+            Database::new()
+                .await
+                .expect("Failed to initialize database"),
+        );
+
         // イベントシステムを初期化
         let event_system = Arc::new(EventSystem::new(database.clone()));
-        
+
         // 学習エンジンを初期化
         let learning_engine = Arc::new(LearningEngine::new(database.clone(), event_system.clone()));
-        
+
         // 学習を開始
-        learning_engine.start_learning().await.expect("Failed to start learning engine");
-        
+        learning_engine
+            .start_learning()
+            .await
+            .expect("Failed to start learning engine");
+
         Self {
             start_time: Arc::new(Mutex::new(chrono::Utc::now())),
             process_manager: ProcessManager::new().await,
@@ -56,7 +63,7 @@ impl IchimiServer {
             tool_router: Self::tool_router(),
         }
     }
-    
+
     pub fn set_process_manager(&mut self, manager: ProcessManager) {
         self.process_manager = manager;
     }
@@ -81,7 +88,7 @@ impl IchimiServer {
     async fn get_status(&self) -> Result<CallToolResult, McpError> {
         let start_time = self.start_time.lock().await;
         let uptime = chrono::Utc::now() - *start_time;
-        
+
         Ok(CallToolResult::success(vec![Content::text(format!(
             "Status: running\nVersion: 0.1.0\nUptime: {} seconds\nTools: echo, ping, get_status, create_process, start_process, stop_process, get_process_status, get_process_output, list_processes, remove_process",
             uptime.num_seconds()
@@ -91,10 +98,16 @@ impl IchimiServer {
     #[tool(description = "Create and register a new process")]
     async fn create_process(
         &self,
-        Parameters(CreateProcessRequest { id, command, args, env, cwd }): Parameters<CreateProcessRequest>,
+        Parameters(CreateProcessRequest {
+            id,
+            command,
+            args,
+            env,
+            cwd,
+        }): Parameters<CreateProcessRequest>,
     ) -> Result<CallToolResult, McpError> {
         let cwd_path = cwd.map(std::path::PathBuf::from);
-        
+
         self.process_manager
             .create_process(id.clone(), command, args, env, cwd_path)
             .await
@@ -103,7 +116,7 @@ impl IchimiServer {
                 code: rmcp::model::ErrorCode::INTERNAL_ERROR,
                 data: None,
             })?;
-        
+
         Ok(CallToolResult::success(vec![Content::text(format!(
             "Process '{}' created successfully",
             id
@@ -115,7 +128,8 @@ impl IchimiServer {
         &self,
         Parameters(StartProcessRequest { id }): Parameters<StartProcessRequest>,
     ) -> Result<CallToolResult, McpError> {
-        let pid = self.process_manager
+        let pid = self
+            .process_manager
             .start_process(id.clone())
             .await
             .map_err(|e| McpError {
@@ -123,7 +137,7 @@ impl IchimiServer {
                 code: rmcp::model::ErrorCode::INTERNAL_ERROR,
                 data: None,
             })?;
-        
+
         Ok(CallToolResult::success(vec![Content::text(format!(
             "Process '{}' started with PID {}",
             id, pid
@@ -133,7 +147,10 @@ impl IchimiServer {
     #[tool(description = "Stop a running process")]
     async fn stop_process(
         &self,
-        Parameters(StopProcessRequest { id, grace_period_ms }): Parameters<StopProcessRequest>,
+        Parameters(StopProcessRequest {
+            id,
+            grace_period_ms,
+        }): Parameters<StopProcessRequest>,
     ) -> Result<CallToolResult, McpError> {
         self.process_manager
             .stop_process(id.clone(), grace_period_ms)
@@ -143,7 +160,7 @@ impl IchimiServer {
                 code: rmcp::model::ErrorCode::INTERNAL_ERROR,
                 data: None,
             })?;
-        
+
         Ok(CallToolResult::success(vec![Content::text(format!(
             "Process '{}' stopped successfully",
             id
@@ -155,7 +172,8 @@ impl IchimiServer {
         &self,
         Parameters(GetProcessStatusRequest { id }): Parameters<GetProcessStatusRequest>,
     ) -> Result<CallToolResult, McpError> {
-        let status = self.process_manager
+        let status = self
+            .process_manager
             .get_process_status(id)
             .await
             .map_err(|e| McpError {
@@ -163,23 +181,25 @@ impl IchimiServer {
                 code: rmcp::model::ErrorCode::INTERNAL_ERROR,
                 data: None,
             })?;
-        
-        let json = serde_json::to_string_pretty(&status)
-            .map_err(|e| McpError {
-                message: format!("Failed to serialize status: {}", e).into(),
-                code: rmcp::model::ErrorCode::INTERNAL_ERROR,
-                data: None,
-            })?;
-        
+
+        let json = serde_json::to_string_pretty(&status).map_err(|e| McpError {
+            message: format!("Failed to serialize status: {}", e).into(),
+            code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+            data: None,
+        })?;
+
         Ok(CallToolResult::success(vec![Content::text(json)]))
     }
 
     #[tool(description = "Get process output (stdout/stderr)")]
     async fn get_process_output(
         &self,
-        Parameters(GetProcessOutputRequest { id, stream, lines }): Parameters<GetProcessOutputRequest>,
+        Parameters(GetProcessOutputRequest { id, stream, lines }): Parameters<
+            GetProcessOutputRequest,
+        >,
     ) -> Result<CallToolResult, McpError> {
-        let output = self.process_manager
+        let output = self
+            .process_manager
             .get_process_output(id, stream, lines)
             .await
             .map_err(|e| McpError {
@@ -187,8 +207,10 @@ impl IchimiServer {
                 code: rmcp::model::ErrorCode::INTERNAL_ERROR,
                 data: None,
             })?;
-        
-        Ok(CallToolResult::success(vec![Content::text(output.join("\n"))]))
+
+        Ok(CallToolResult::success(vec![Content::text(
+            output.join("\n"),
+        )]))
     }
 
     #[tool(description = "List all managed processes")]
@@ -196,17 +218,14 @@ impl IchimiServer {
         &self,
         Parameters(ListProcessesRequest { filter }): Parameters<ListProcessesRequest>,
     ) -> Result<CallToolResult, McpError> {
-        let processes = self.process_manager
-            .list_processes(filter)
-            .await;
-        
-        let json = serde_json::to_string_pretty(&processes)
-            .map_err(|e| McpError {
-                message: format!("Failed to serialize processes: {}", e).into(),
-                code: rmcp::model::ErrorCode::INTERNAL_ERROR,
-                data: None,
-            })?;
-        
+        let processes = self.process_manager.list_processes(filter).await;
+
+        let json = serde_json::to_string_pretty(&processes).map_err(|e| McpError {
+            message: format!("Failed to serialize processes: {}", e).into(),
+            code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+            data: None,
+        })?;
+
         Ok(CallToolResult::success(vec![Content::text(json)]))
     }
 
@@ -223,19 +242,20 @@ impl IchimiServer {
                 code: rmcp::model::ErrorCode::INTERNAL_ERROR,
                 data: None,
             })?;
-        
+
         Ok(CallToolResult::success(vec![Content::text(format!(
             "Process '{}' removed successfully",
             id
         ))]))
     }
-    
+
     #[tool(description = "Export all processes to a JSON file for backup/persistence")]
     async fn export_processes(
         &self,
         Parameters(ExportProcessesRequest { file_path }): Parameters<ExportProcessesRequest>,
     ) -> Result<CallToolResult, McpError> {
-        let path = self.process_manager
+        let path = self
+            .process_manager
             .export_processes(file_path)
             .await
             .map_err(|e| McpError {
@@ -243,13 +263,13 @@ impl IchimiServer {
                 code: rmcp::model::ErrorCode::INTERNAL_ERROR,
                 data: None,
             })?;
-        
+
         Ok(CallToolResult::success(vec![Content::text(format!(
             "Processes exported successfully to {}",
             path
         ))]))
     }
-    
+
     #[tool(description = "Import processes from a JSON file")]
     async fn import_processes(
         &self,
@@ -263,19 +283,42 @@ impl IchimiServer {
                 code: rmcp::model::ErrorCode::INTERNAL_ERROR,
                 data: None,
             })?;
-        
+
         Ok(CallToolResult::success(vec![Content::text(format!(
             "Processes imported successfully from {}",
             file_path
         ))]))
     }
-    
+
+    #[tool(description = "Update process configuration (e.g., auto_start flag)")]
+    async fn update_process_config(
+        &self,
+        Parameters(UpdateProcessConfigRequest { id, auto_start }): Parameters<UpdateProcessConfigRequest>,
+    ) -> Result<CallToolResult, McpError> {
+        self.process_manager
+            .update_process_config(id.clone(), auto_start)
+            .await
+            .map_err(|e| McpError {
+                message: e.into(),
+                code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+                data: None,
+            })?;
+
+        let mut message = format!("Process '{}' configuration updated", id);
+        if let Some(auto_start_value) = auto_start {
+            message.push_str(&format!(" - auto_start set to {}", auto_start_value));
+        }
+
+        Ok(CallToolResult::success(vec![Content::text(message)]))
+    }
+
     #[tool(description = "Get smart suggestions for next actions based on learning")]
     async fn get_suggestions(
         &self,
         Parameters(GetSuggestionsRequest { current_process }): Parameters<GetSuggestionsRequest>,
     ) -> Result<CallToolResult, McpError> {
-        let suggestions = self.learning_engine
+        let suggestions = self
+            .learning_engine
             .get_suggestions(current_process.as_deref())
             .await
             .map_err(|e| McpError {
@@ -283,13 +326,13 @@ impl IchimiServer {
                 code: rmcp::model::ErrorCode::INTERNAL_ERROR,
                 data: None,
             })?;
-        
+
         if suggestions.is_empty() {
             return Ok(CallToolResult::success(vec![Content::text(
-                "No suggestions available at this time."
+                "No suggestions available at this time.",
             )]));
         }
-        
+
         let mut result = String::from("Smart Suggestions:\n\n");
         for (i, suggestion) in suggestions.iter().enumerate() {
             result.push_str(&format!(
@@ -301,7 +344,7 @@ impl IchimiServer {
                 suggestion.reason
             ));
         }
-        
+
         Ok(CallToolResult::success(vec![Content::text(result)]))
     }
 }
@@ -311,9 +354,7 @@ impl ServerHandler for IchimiServer {
     fn get_info(&self) -> ServerInfo {
         ServerInfo {
             protocol_version: ProtocolVersion::V_2024_11_05,
-            capabilities: ServerCapabilities::builder()
-                .enable_tools()
-                .build(),
+            capabilities: ServerCapabilities::builder().enable_tools().build(),
             server_info: Implementation {
                 name: "ichimi-server".to_string(),
                 version: "0.1.0".to_string(),

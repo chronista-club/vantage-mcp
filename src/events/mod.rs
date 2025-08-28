@@ -55,10 +55,10 @@ impl EventSystem {
         let (sender, _) = broadcast::channel(100);
         Self { db, sender }
     }
-    
+
     pub async fn emit(&self, event: ProcessEvent) -> Result<()> {
         debug!("Emitting event: {:?}", event.event_type);
-        
+
         // データベースに記録
         let event_type_str = match &event.event_type {
             EventType::ProcessStarted => "start",
@@ -68,7 +68,7 @@ impl EventSystem {
             EventType::ProcessCreated => "create",
             EventType::ProcessRemoved => "remove",
         };
-        
+
         self.db
             .record_event(
                 event_type_str,
@@ -77,23 +77,23 @@ impl EventSystem {
                 event.metadata.clone(),
             )
             .await?;
-        
+
         // ブロードキャスト（リスナーがいなくてもエラーにしない）
         let _ = self.sender.send(event);
-        
+
         Ok(())
     }
-    
+
     pub fn subscribe(&self) -> broadcast::Receiver<ProcessEvent> {
         self.sender.subscribe()
     }
-    
+
     pub async fn emit_process_started(&self, process_id: String, pid: Option<u32>) -> Result<()> {
         let mut context = serde_json::Map::new();
         if let Some(pid) = pid {
             context.insert("pid".to_string(), serde_json::Value::Number(pid.into()));
         }
-        
+
         self.emit(ProcessEvent::new(
             EventType::ProcessStarted,
             process_id,
@@ -102,13 +102,20 @@ impl EventSystem {
         ))
         .await
     }
-    
-    pub async fn emit_process_stopped(&self, process_id: String, exit_code: Option<i32>) -> Result<()> {
+
+    pub async fn emit_process_stopped(
+        &self,
+        process_id: String,
+        exit_code: Option<i32>,
+    ) -> Result<()> {
         let mut context = serde_json::Map::new();
         if let Some(code) = exit_code {
-            context.insert("exit_code".to_string(), serde_json::Value::Number(code.into()));
+            context.insert(
+                "exit_code".to_string(),
+                serde_json::Value::Number(code.into()),
+            );
         }
-        
+
         self.emit(ProcessEvent::new(
             EventType::ProcessStopped,
             process_id,
@@ -117,11 +124,11 @@ impl EventSystem {
         ))
         .await
     }
-    
+
     pub async fn emit_process_error(&self, process_id: String, error: String) -> Result<()> {
         let mut context = serde_json::Map::new();
         context.insert("error".to_string(), serde_json::Value::String(error));
-        
+
         self.emit(ProcessEvent::new(
             EventType::ProcessError,
             process_id,

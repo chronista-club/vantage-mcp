@@ -32,6 +32,8 @@ pub struct ProcessInfo {
     pub env: HashMap<String, String>,
     pub cwd: Option<PathBuf>,
     pub state: ProcessState,
+    #[serde(default)]
+    pub auto_start: bool,
 }
 
 /// プロセスの詳細ステータス

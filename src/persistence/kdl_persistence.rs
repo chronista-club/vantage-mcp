@@ -1,7 +1,7 @@
+use super::kdl_schema::{IchimiConfig, ProcessConfig};
+use anyhow::{Context, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
-use anyhow::{Context, Result};
-use super::kdl_schema::{IchimiConfig, ProcessConfig};
 
 /// KDL形式での永続化を扱うモジュール
 pub struct KdlPersistence {
@@ -42,7 +42,7 @@ impl KdlPersistence {
 
         // 現時点ではKDLのシリアライズは手動で行う
         let kdl_content = self.generate_kdl(config);
-        
+
         // アトミックな書き込みのため、一時ファイルを使用
         let temp_path = self.config_path.with_extension("kdl.tmp");
         fs::write(&temp_path, kdl_content)
@@ -57,7 +57,7 @@ impl KdlPersistence {
     /// IchimiConfigからKDL文字列を生成（手動実装）
     fn generate_kdl(&self, config: &IchimiConfig) -> String {
         let mut kdl = String::new();
-        
+
         // ヘッダーコメント
         kdl.push_str("// Ichimi Server Process Configuration\n");
         kdl.push_str("// Auto-generated file - modifications will be preserved\n\n");
@@ -71,7 +71,7 @@ impl KdlPersistence {
         for process in &config.process {
             kdl.push_str(&format!("process \"{}\" {{\n", process.id));
             kdl.push_str(&format!("    command \"{}\"\n", process.command));
-            
+
             if !process.args.is_empty() {
                 kdl.push_str("    args");
                 for arg in &process.args {
@@ -79,11 +79,11 @@ impl KdlPersistence {
                 }
                 kdl.push('\n');
             }
-            
+
             if !process.cwd.is_empty() {
                 kdl.push_str(&format!("    cwd \"{}\"\n", process.cwd));
             }
-            
+
             // TODO: 環境変数サポート
             // if !process.env.is_empty() {
             //     kdl.push_str("    env {\n");
@@ -92,7 +92,7 @@ impl KdlPersistence {
             //     }
             //     kdl.push_str("    }\n");
             // }
-            
+
             kdl.push_str(&format!("    auto_start #{}\n", process.auto_start));
             kdl.push_str("}\n\n");
         }
@@ -103,7 +103,7 @@ impl KdlPersistence {
     /// プロセス設定を追加または更新
     pub fn add_or_update_process(&self, process: ProcessConfig) -> Result<()> {
         let mut config = self.load_config()?;
-        
+
         // 既存のプロセスを更新するか、新規追加
         if let Some(existing) = config.process.iter_mut().find(|p| p.id == process.id) {
             *existing = process;
@@ -122,9 +122,9 @@ impl KdlPersistence {
     pub fn remove_process(&self, process_id: &str) -> Result<bool> {
         let mut config = self.load_config()?;
         let initial_len = config.process.len();
-        
+
         config.process.retain(|p| p.id != process_id);
-        
+
         if config.process.len() < initial_len {
             // 更新日時を設定（今は省略）
             // config.meta.updated_at = Some(chrono::Utc::now().to_rfc3339());
@@ -163,7 +163,7 @@ mod tests {
 
         // プロセスを追加
         persistence.add_or_update_process(process.clone()).unwrap();
-        
+
         // デバッグ用: KDLファイルの内容を表示
         let kdl_path = temp_dir.path().join("processes.kdl");
         if kdl_path.exists() {

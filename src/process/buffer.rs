@@ -29,13 +29,7 @@ impl CircularBuffer {
     /// 最新のN行を取得
     pub async fn get_last_n(&self, n: usize) -> Vec<String> {
         let buffer = self.buffer.read().await;
-        buffer
-            .iter()
-            .rev()
-            .take(n)
-            .rev()
-            .cloned()
-            .collect()
+        buffer.iter().rev().take(n).rev().cloned().collect()
     }
 
     /// すべての行を取得

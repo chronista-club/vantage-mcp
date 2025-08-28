@@ -36,6 +36,7 @@ impl ManagedProcess {
                 env,
                 cwd,
                 state: ProcessState::NotStarted,
+                auto_start: false,
             },
             stdout_buffer: CircularBuffer::new(1000),
             stderr_buffer: CircularBuffer::new(1000),
@@ -61,12 +62,12 @@ impl ProcessManager {
                 panic!("Cannot continue without persistence layer");
             }
         };
-        
+
         let manager = Self {
             processes: Arc::new(RwLock::new(HashMap::new())),
             persistence: persistence.clone(),
         };
-        
+
         // Load persisted processes on startup
         let manager_clone = manager.clone();
         tokio::spawn(async move {
@@ -74,16 +75,15 @@ impl ProcessManager {
                 tracing::warn!("Failed to load persisted processes: {}", e);
             }
         });
-        
+
         // Start auto-export if enabled
         if let Ok(interval_str) = std::env::var("ICHIMI_AUTO_EXPORT_INTERVAL") {
             if let Ok(interval_secs) = interval_str.parse::<u64>() {
                 if interval_secs > 0 {
                     let manager_clone = manager.clone();
                     tokio::spawn(async move {
-                        let mut interval = tokio::time::interval(
-                            tokio::time::Duration::from_secs(interval_secs)
-                        );
+                        let mut interval =
+                            tokio::time::interval(tokio::time::Duration::from_secs(interval_secs));
                         loop {
                             interval.tick().await;
                             if let Err(e) = manager_clone.export_processes(None).await {
@@ -97,14 +97,14 @@ impl ProcessManager {
                 }
             }
         }
-        
+
         manager
     }
-    
+
     async fn load_persisted_processes(&self) -> Result<(), String> {
         let loaded_processes = self.persistence.load_all_processes().await?;
         let mut processes = self.processes.write().await;
-        
+
         for (id, info) in loaded_processes {
             let managed = ManagedProcess {
                 info,
@@ -115,7 +115,7 @@ impl ProcessManager {
             };
             processes.insert(id, Arc::new(RwLock::new(managed)));
         }
-        
+
         tracing::info!("Loaded {} persisted processes", processes.len());
         Ok(())
     }
@@ -130,7 +130,7 @@ impl ProcessManager {
         cwd: Option<PathBuf>,
     ) -> Result<(), String> {
         let mut processes = self.processes.write().await;
-        
+
         if processes.contains_key(&id) {
             return Err(format!("Process with id '{}' already exists", id));
         }
@@ -138,12 +138,12 @@ impl ProcessManager {
         let process = ManagedProcess::new(id.clone(), command, args, env, cwd);
         let process_info = process.info.clone();
         processes.insert(id, Arc::new(RwLock::new(process)));
-        
+
         // Persist the process
         if let Err(e) = self.persistence.save_process(&process_info).await {
             tracing::warn!("Failed to persist process: {}", e);
         }
-        
+
         Ok(())
     }
 
@@ -157,7 +157,7 @@ impl ProcessManager {
         drop(processes);
 
         let mut process = process_arc.write().await;
-        
+
         // すでに実行中の場合はエラー
         if matches!(process.info.state, ProcessState::Running { .. }) {
             return Err(format!("Process '{}' is already running", id));
@@ -181,14 +181,23 @@ impl ProcessManager {
         }
 
         // プロセスを起動
-        let mut child = cmd.spawn()
+        let mut child = cmd
+            .spawn()
             .map_err(|e| format!("Failed to start process: {}", e))?;
 
-        let pid = child.id().ok_or_else(|| "Failed to get process ID".to_string())?;
-        
+        let pid = child
+            .id()
+            .ok_or_else(|| "Failed to get process ID".to_string())?;
+
         // 標準出力と標準エラー出力を処理
-        let stdout = child.stdout.take().ok_or_else(|| "Failed to capture stdout".to_string())?;
-        let stderr = child.stderr.take().ok_or_else(|| "Failed to capture stderr".to_string())?;
+        let stdout = child
+            .stdout
+            .take()
+            .ok_or_else(|| "Failed to capture stdout".to_string())?;
+        let stderr = child
+            .stderr
+            .take()
+            .ok_or_else(|| "Failed to capture stderr".to_string())?;
 
         let stdout_buffer = process.stdout_buffer.clone();
         let stderr_buffer = process.stderr_buffer.clone();
@@ -217,7 +226,7 @@ impl ProcessManager {
         };
         process.child = Some(child);
         process.output_handles = Some((stdout_handle, stderr_handle));
-        
+
         // Persist the updated state
         if let Err(e) = self.persistence.update_process(&process.info).await {
             tracing::warn!("Failed to persist process state: {}", e);
@@ -228,7 +237,11 @@ impl ProcessManager {
     }
 
     /// プロセスを停止
-    pub async fn stop_process(&self, id: String, grace_period_ms: Option<u64>) -> Result<(), String> {
+    pub async fn stop_process(
+        &self,
+        id: String,
+        grace_period_ms: Option<u64>,
+    ) -> Result<(), String> {
         let processes = self.processes.read().await;
         let process_arc = processes
             .get(&id)
@@ -237,7 +250,7 @@ impl ProcessManager {
         drop(processes);
 
         let mut process = process_arc.write().await;
-        
+
         // 実行中でない場合はエラー
         if !matches!(process.info.state, ProcessState::Running { .. }) {
             return Err(format!("Process '{}' is not running", id));
@@ -246,15 +259,19 @@ impl ProcessManager {
         if let Some(mut child) = process.child.take() {
             // グレースフルシャットダウンを試みる
             if let Some(grace_ms) = grace_period_ms {
-                child.kill().await
+                child
+                    .kill()
+                    .await
                     .map_err(|e| format!("Failed to kill process: {}", e))?;
-                
+
                 // 指定時間待機
                 let timeout = tokio::time::Duration::from_millis(grace_ms);
                 let _ = tokio::time::timeout(timeout, child.wait()).await;
             } else {
                 // 即座に終了
-                child.kill().await
+                child
+                    .kill()
+                    .await
                     .map_err(|e| format!("Failed to kill process: {}", e))?;
             }
 
@@ -269,7 +286,7 @@ impl ProcessManager {
                 exit_code: None,
                 stopped_at: chrono::Utc::now(),
             };
-            
+
             // Persist the updated state
             if let Err(e) = self.persistence.update_process(&process.info).await {
                 tracing::warn!("Failed to persist process state: {}", e);
@@ -287,9 +304,9 @@ impl ProcessManager {
         let process_arc = processes
             .get(&id)
             .ok_or_else(|| format!("Process '{}' not found", id))?;
-        
+
         let process = process_arc.read().await;
-        
+
         let uptime_seconds = match &process.info.state {
             ProcessState::Running { started_at, .. } => {
                 Some((chrono::Utc::now() - *started_at).num_seconds() as u64)
@@ -299,8 +316,8 @@ impl ProcessManager {
 
         Ok(ProcessStatus {
             info: process.info.clone(),
-            cpu_usage: None,  // TODO: 実装
-            memory_usage: None,  // TODO: 実装
+            cpu_usage: None,    // TODO: 実装
+            memory_usage: None, // TODO: 実装
             uptime_seconds,
         })
     }
@@ -316,17 +333,17 @@ impl ProcessManager {
         let process_arc = processes
             .get(&id)
             .ok_or_else(|| format!("Process '{}' not found", id))?;
-        
+
         let process = process_arc.read().await;
-        
+
         let n = lines.unwrap_or(100) as usize;
-        
+
         let output = match stream {
             OutputStream::Stdout => process.stdout_buffer.get_last_n(n).await,
             OutputStream::Stderr => process.stderr_buffer.get_last_n(n).await,
             OutputStream::Both => {
-                let mut combined = process.stdout_buffer.get_last_n(n/2).await;
-                combined.extend(process.stderr_buffer.get_last_n(n/2).await);
+                let mut combined = process.stdout_buffer.get_last_n(n / 2).await;
+                combined.extend(process.stderr_buffer.get_last_n(n / 2).await);
                 combined
             }
         };
@@ -348,9 +365,15 @@ impl ProcessManager {
                 // 状態フィルタ
                 if let Some(ref state_filter) = f.state {
                     let matches = match state_filter {
-                        ProcessStateFilter::Running => matches!(info.state, ProcessState::Running { .. }),
-                        ProcessStateFilter::Stopped => matches!(info.state, ProcessState::Stopped { .. }),
-                        ProcessStateFilter::Failed => matches!(info.state, ProcessState::Failed { .. }),
+                        ProcessStateFilter::Running => {
+                            matches!(info.state, ProcessState::Running { .. })
+                        }
+                        ProcessStateFilter::Stopped => {
+                            matches!(info.state, ProcessState::Stopped { .. })
+                        }
+                        ProcessStateFilter::Failed => {
+                            matches!(info.state, ProcessState::Failed { .. })
+                        }
                         ProcessStateFilter::All => true,
                     };
                     if !matches {
@@ -376,19 +399,20 @@ impl ProcessManager {
     pub async fn remove_process(&self, id: String) -> Result<(), String> {
         // まず停止を試みる
         let _ = self.stop_process(id.clone(), Some(5000)).await;
-        
+
         let mut processes = self.processes.write().await;
-        processes.remove(&id)
+        processes
+            .remove(&id)
             .ok_or_else(|| format!("Process '{}' not found", id))?;
-        
+
         // Delete from persistence
         if let Err(e) = self.persistence.delete_process(&id).await {
             tracing::warn!("Failed to delete persisted process: {}", e);
         }
-        
+
         Ok(())
     }
-    
+
     /// Export processes to surql file
     pub async fn export_processes(&self, file_path: Option<String>) -> Result<String, String> {
         match file_path {
@@ -396,20 +420,45 @@ impl ProcessManager {
                 self.persistence.export_to_file(&path).await?;
                 Ok(path)
             }
-            None => {
-                self.persistence.export_default().await
-            }
+            None => self.persistence.export_default().await,
         }
     }
-    
+
     /// Import processes from surql file
     pub async fn import_processes(&self, file_path: &str) -> Result<(), String> {
         // Import to database
         self.persistence.import_from_file(file_path).await?;
-        
+
         // Reload processes into memory
         self.load_persisted_processes().await?;
+
+        Ok(())
+    }
+
+    /// Update process configuration (e.g., auto_start flag)
+    pub async fn update_process_config(
+        &self,
+        id: String,
+        auto_start: Option<bool>,
+    ) -> Result<(), String> {
+        let processes = self.processes.read().await;
+        let process_arc = processes
+            .get(&id)
+            .ok_or_else(|| format!("Process '{}' not found", id))?;
+
+        let mut process = process_arc.write().await;
         
+        // Update auto_start if provided
+        if let Some(auto_start_value) = auto_start {
+            process.info.auto_start = auto_start_value;
+            info!("Updated process '{}' auto_start to {}", id, auto_start_value);
+        }
+
+        // Persist the updated configuration
+        if let Err(e) = self.persistence.update_process(&process.info).await {
+            return Err(format!("Failed to persist process config update: {}", e));
+        }
+
         Ok(())
     }
 }

@@ -1,5 +1,5 @@
+use crate::process::{OutputStream, ProcessFilter};
 use rmcp::schemars;
-use crate::process::{ProcessFilter, OutputStream};
 
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
 pub struct CreateProcessRequest {
@@ -53,4 +53,10 @@ pub struct ExportProcessesRequest {
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
 pub struct ImportProcessesRequest {
     pub file_path: String,
+}
+
+#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
+pub struct UpdateProcessConfigRequest {
+    pub id: String,
+    pub auto_start: Option<bool>,
 }
