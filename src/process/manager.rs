@@ -450,11 +450,14 @@ impl ProcessManager {
             .ok_or_else(|| format!("Process '{}' not found", id))?;
 
         let mut process = process_arc.write().await;
-        
+
         // Update auto_start if provided
         if let Some(auto_start_value) = auto_start {
             process.info.auto_start = auto_start_value;
-            info!("Updated process '{}' auto_start to {}", id, auto_start_value);
+            info!(
+                "Updated process '{}' auto_start to {}",
+                id, auto_start_value
+            );
         }
 
         // Persist the updated configuration

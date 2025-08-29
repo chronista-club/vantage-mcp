@@ -118,10 +118,11 @@ impl IchimiServer {
                 code: rmcp::model::ErrorCode::INTERNAL_ERROR,
                 data: None,
             })?;
-        
+
         // Update auto_start if provided
         if auto_start {
-            if let Err(e) = self.process_manager
+            if let Err(e) = self
+                .process_manager
                 .update_process_config(id.clone(), Some(auto_start))
                 .await
             {
@@ -305,7 +306,9 @@ impl IchimiServer {
     #[tool(description = "Update process configuration (e.g., auto_start flag)")]
     async fn update_process_config(
         &self,
-        Parameters(UpdateProcessConfigRequest { id, auto_start }): Parameters<UpdateProcessConfigRequest>,
+        Parameters(UpdateProcessConfigRequest { id, auto_start }): Parameters<
+            UpdateProcessConfigRequest,
+        >,
     ) -> Result<CallToolResult, McpError> {
         self.process_manager
             .update_process_config(id.clone(), auto_start)

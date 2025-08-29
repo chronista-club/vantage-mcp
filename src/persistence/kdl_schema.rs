@@ -150,6 +150,7 @@ mod tests {
             env: HashMap::new(),
             cwd: None,
             state: crate::process::types::ProcessState::NotStarted,
+            auto_start: false,
         };
 
         let config = ProcessConfig::from_process_info(&info);

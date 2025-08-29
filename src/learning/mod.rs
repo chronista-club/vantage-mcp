@@ -3,9 +3,8 @@ use chrono::{Datelike, Timelike};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use surrealdb::Response;
 use tokio::sync::RwLock;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info};
 
 use crate::db::Database;
 use crate::events::{EventSystem, EventType, ProcessEvent};

@@ -5,7 +5,7 @@ use surrealdb::{
     engine::local::{Db, RocksDb},
 };
 use tokio::sync::RwLock;
-use tracing::{debug, error, info};
+use tracing::{debug, info};
 
 #[derive(Clone)]
 pub struct Database {
@@ -21,8 +21,7 @@ impl Database {
 
         // dataディレクトリが存在しない場合は作成
         if let Some(parent) = db_path.parent() {
-            std::fs::create_dir_all(parent)
-                .context("Failed to create data directory")?;
+            std::fs::create_dir_all(parent).context("Failed to create data directory")?;
         }
 
         let db = Surreal::new::<RocksDb>(db_path.to_str().unwrap())
@@ -50,7 +49,7 @@ impl Database {
         if let Ok(custom_path) = std::env::var("ICHIMI_DB_PATH") {
             return Ok(PathBuf::from(custom_path));
         }
-        
+
         // プロジェクトルートのdata/ichimi.dbをデフォルトとする
         let current_dir = std::env::current_dir().context("Failed to get current directory")?;
         Ok(current_dir.join("data").join("ichimi.db"))

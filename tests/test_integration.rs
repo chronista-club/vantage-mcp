@@ -1,4 +1,4 @@
-use ichimi_server::process::ProcessManager;
+use ichimi_server::process::{OutputStream, ProcessFilter, ProcessManager, ProcessStateFilter};
 use std::collections::HashMap;
 use std::time::Duration;
 use tokio::time::timeout;
@@ -31,11 +31,7 @@ async fn test_process_basic_lifecycle() {
 
     // Get output
     let output = manager
-        .get_process_output(
-            "basic-test".to_string(),
-            ichimi_server::process::types::LogStream::Stdout,
-            Some(10),
-        )
+        .get_process_output("basic-test".to_string(), OutputStream::Stdout, Some(10))
         .await
         .expect("Failed to get output");
 
@@ -81,11 +77,7 @@ async fn test_process_with_environment() {
 
     // Check output contains environment variable values
     let output = manager
-        .get_process_output(
-            "env-test".to_string(),
-            ichimi_server::process::types::LogStream::Stdout,
-            Some(10),
-        )
+        .get_process_output("env-test".to_string(), OutputStream::Stdout, Some(10))
         .await
         .expect("Failed to get output");
 
@@ -140,11 +132,7 @@ async fn test_long_running_process_management() {
 
     // Get output to verify it's producing logs
     let output = manager
-        .get_process_output(
-            "long-runner".to_string(),
-            ichimi_server::process::types::LogStream::Stdout,
-            Some(5),
-        )
+        .get_process_output("long-runner".to_string(), OutputStream::Stdout, Some(5))
         .await
         .expect("Failed to get output");
     assert!(!output.is_empty());
@@ -224,11 +212,7 @@ async fn test_multiple_concurrent_processes() {
     // Verify all processes have output
     for i in 1..=num_processes {
         let output = manager
-            .get_process_output(
-                format!("concurrent-{}", i),
-                ichimi_server::process::types::LogStream::Stdout,
-                Some(10),
-            )
+            .get_process_output(format!("concurrent-{}", i), OutputStream::Stdout, Some(10))
             .await
             .expect(&format!("Failed to get output for process {}", i));
 
@@ -333,15 +317,15 @@ async fn test_process_filtering() {
     tokio::time::sleep(Duration::from_millis(500)).await;
 
     // Test filtering by state
-    let filter = ichimi_server::messages::ProcessFilter {
-        state: Some("Running".to_string()),
+    let filter = ProcessFilter {
+        state: Some(ProcessStateFilter::Running),
         name_pattern: None,
     };
     let running_processes = manager.list_processes(Some(filter)).await;
     assert!(running_processes.iter().any(|p| p.id == "filter-running"));
 
     // Test filtering by name pattern
-    let filter = ichimi_server::messages::ProcessFilter {
+    let filter = ProcessFilter {
         state: None,
         name_pattern: Some("special".to_string()),
     };
@@ -386,11 +370,7 @@ async fn test_process_restart() {
 
     // Get first output
     let output1 = manager
-        .get_process_output(
-            "restart-test".to_string(),
-            ichimi_server::process::types::LogStream::Stdout,
-            Some(10),
-        )
+        .get_process_output("restart-test".to_string(), OutputStream::Stdout, Some(10))
         .await
         .expect("Failed to get first output");
     assert!(output1.iter().any(|line| line.contains("First run")));
@@ -419,11 +399,7 @@ async fn test_process_restart() {
     // Wait and get new output
     tokio::time::sleep(Duration::from_millis(200)).await;
     let output2 = manager
-        .get_process_output(
-            "restart-test".to_string(),
-            ichimi_server::process::types::LogStream::Stdout,
-            Some(10),
-        )
+        .get_process_output("restart-test".to_string(), OutputStream::Stdout, Some(10))
         .await
         .expect("Failed to get second output");
 
@@ -470,22 +446,14 @@ async fn test_process_output_buffering() {
 
     // Test getting limited number of lines
     let output_10 = manager
-        .get_process_output(
-            "buffer-test".to_string(),
-            ichimi_server::process::types::LogStream::Stdout,
-            Some(10),
-        )
+        .get_process_output("buffer-test".to_string(), OutputStream::Stdout, Some(10))
         .await
         .expect("Failed to get 10 lines");
     assert!(output_10.len() <= 10);
 
     // Test getting all lines (up to buffer limit)
     let output_all = manager
-        .get_process_output(
-            "buffer-test".to_string(),
-            ichimi_server::process::types::LogStream::Stdout,
-            None,
-        )
+        .get_process_output("buffer-test".to_string(), OutputStream::Stdout, None)
         .await
         .expect("Failed to get all lines");
     assert!(output_all.len() >= 10);
@@ -497,7 +465,7 @@ async fn test_process_output_buffering() {
         .expect("Failed to remove process");
 }
 
-#[cfg(feature = "web")]
+#[cfg(all(feature = "web", feature = "integration-tests-with-deps"))]
 #[tokio::test]
 async fn test_web_server_startup() {
     use ichimi_server::web;

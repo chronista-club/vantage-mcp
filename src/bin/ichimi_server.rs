@@ -65,7 +65,7 @@ async fn main() -> Result<()> {
         .add_directive("ichimi=info".parse().unwrap())
         .add_directive("ichimi_server=info".parse().unwrap())
         .add_directive("facet_kdl=warn".parse().unwrap());
-    
+
     tracing_subscriber::fmt()
         .with_env_filter(filter)
         .with_writer(std::io::stderr)

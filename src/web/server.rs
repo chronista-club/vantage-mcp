@@ -85,7 +85,7 @@ fn create_app(process_manager: ProcessManager) -> Router {
     }
 
     let tera = Arc::new(tera);
-    
+
     // 現在の作業ディレクトリを取得
     let working_directory = std::env::current_dir()
         .ok()
