@@ -10,6 +10,8 @@ pub struct CreateProcessRequest {
     #[serde(default)]
     pub env: std::collections::HashMap<String, String>,
     pub cwd: Option<String>,
+    #[serde(default)]
+    pub auto_start: bool,
 }
 
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]

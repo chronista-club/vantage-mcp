@@ -191,19 +191,30 @@ pub async fn create_process(
 ) -> Result<(StatusCode, Json<serde_json::Value>), (StatusCode, String)> {
     let cwd = req.cwd.map(std::path::PathBuf::from);
 
+    // Create process first
     state
         .process_manager
         .create_process(req.id.clone(), req.command, req.args, req.env, cwd)
         .await
-        .map(|_| {
-            (
-                StatusCode::CREATED,
-                Json(serde_json::json!({
-                    "message": format!("Process '{}' created successfully", req.id)
-                })),
-            )
-        })
-        .map_err(|e| (StatusCode::BAD_REQUEST, e))
+        .map_err(|e| (StatusCode::BAD_REQUEST, e.clone()))?;
+    
+    // Update auto_start if provided
+    if req.auto_start {
+        if let Err(e) = state
+            .process_manager
+            .update_process_config(req.id.clone(), Some(req.auto_start))
+            .await
+        {
+            tracing::warn!("Failed to set auto_start on creation: {}", e);
+        }
+    }
+    
+    Ok((
+        StatusCode::CREATED,
+        Json(serde_json::json!({
+            "message": format!("Process '{}' created successfully", req.id)
+        })),
+    ))
 }
 
 pub async fn get_process(

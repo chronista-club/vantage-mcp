@@ -85,10 +85,17 @@ fn create_app(process_manager: ProcessManager) -> Router {
     }
 
     let tera = Arc::new(tera);
+    
+    // 現在の作業ディレクトリを取得
+    let working_directory = std::env::current_dir()
+        .ok()
+        .and_then(|p| p.to_str().map(String::from))
+        .unwrap_or_else(|| "Unknown".to_string());
 
     let app_state = AppState {
         process_manager: Arc::new(process_manager),
         tera,
+        working_directory,
     };
 
     Router::new()
@@ -103,12 +110,14 @@ fn create_app(process_manager: ProcessManager) -> Router {
 pub struct AppState {
     pub process_manager: Arc<ProcessManager>,
     pub tera: Arc<Tera>,
+    pub working_directory: String,
 }
 
 async fn index_handler(
     State(state): State<AppState>,
 ) -> Result<Html<String>, (axum::http::StatusCode, String)> {
-    let context = Context::new();
+    let mut context = Context::new();
+    context.insert("working_directory", &state.working_directory);
 
     match state.tera.render("index.tera", &context) {
         Ok(html) => Ok(Html(html)),

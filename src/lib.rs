@@ -104,10 +104,12 @@ impl IchimiServer {
             args,
             env,
             cwd,
+            auto_start,
         }): Parameters<CreateProcessRequest>,
     ) -> Result<CallToolResult, McpError> {
         let cwd_path = cwd.map(std::path::PathBuf::from);
 
+        // Create the process
         self.process_manager
             .create_process(id.clone(), command, args, env, cwd_path)
             .await
@@ -116,6 +118,16 @@ impl IchimiServer {
                 code: rmcp::model::ErrorCode::INTERNAL_ERROR,
                 data: None,
             })?;
+        
+        // Update auto_start if provided
+        if auto_start {
+            if let Err(e) = self.process_manager
+                .update_process_config(id.clone(), Some(auto_start))
+                .await
+            {
+                tracing::warn!("Failed to set auto_start on creation: {}", e);
+            }
+        }
 
         Ok(CallToolResult::success(vec![Content::text(format!(
             "Process '{}' created successfully",
