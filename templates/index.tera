@@ -7,7 +7,10 @@
     <div class="container-xl">
         <div class="row g-2 align-items-center">
             <div class="col">
-                <div class="page-pretitle">Overview</div>
+                <div class="page-pretitle">
+                    <span class="text-muted">Working Directory:</span> 
+                    <span class="text-primary">{{ working_directory }}</span>
+                </div>
                 <h2 class="page-title">Process Dashboard</h2>
             </div>
             <div class="col-auto ms-auto d-print-none">

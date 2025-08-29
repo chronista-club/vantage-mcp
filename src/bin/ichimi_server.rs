@@ -60,8 +60,14 @@ async fn main() -> Result<()> {
     }
 
     // Initialize tracing to stderr to avoid interfering with stdio protocol
+    // Default to INFO level, but suppress verbose facet-kdl logs
+    let filter = EnvFilter::from_default_env()
+        .add_directive("ichimi=info".parse().unwrap())
+        .add_directive("ichimi_server=info".parse().unwrap())
+        .add_directive("facet_kdl=warn".parse().unwrap());
+    
     tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::from_default_env().add_directive(tracing::Level::DEBUG.into()))
+        .with_env_filter(filter)
         .with_writer(std::io::stderr)
         .with_ansi(false)
         .init();

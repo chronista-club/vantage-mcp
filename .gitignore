@@ -40,3 +40,6 @@ static/
 # フォークしたリポジトリ（別途管理）
 facet-kdl/
 facet-toml/
+
+# データベースファイル
+data/

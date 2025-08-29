@@ -129,6 +129,7 @@ impl ProcessManager {
         env: HashMap<String, String>,
         cwd: Option<PathBuf>,
     ) -> Result<(), String> {
+        info!("Creating process '{}': {} {:?}", id, command, args);
         let mut processes = self.processes.write().await;
 
         if processes.contains_key(&id) {
@@ -149,6 +150,7 @@ impl ProcessManager {
 
     /// プロセスを起動
     pub async fn start_process(&self, id: String) -> Result<u32, String> {
+        info!("Starting process '{}'...", id);
         let processes = self.processes.read().await;
         let process_arc = processes
             .get(&id)
@@ -242,6 +244,7 @@ impl ProcessManager {
         id: String,
         grace_period_ms: Option<u64>,
     ) -> Result<(), String> {
+        info!("Stopping process '{}'...", id);
         let processes = self.processes.read().await;
         let process_arc = processes
             .get(&id)

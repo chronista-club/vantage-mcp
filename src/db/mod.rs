@@ -19,8 +19,11 @@ impl Database {
 
         info!("Initializing SurrealDB at: {}", db_path.display());
 
-        std::fs::create_dir_all(&db_path.parent().unwrap())
-            .context("Failed to create .ichimi directory")?;
+        // dataディレクトリが存在しない場合は作成
+        if let Some(parent) = db_path.parent() {
+            std::fs::create_dir_all(parent)
+                .context("Failed to create data directory")?;
+        }
 
         let db = Surreal::new::<RocksDb>(db_path.to_str().unwrap())
             .await
@@ -43,8 +46,14 @@ impl Database {
     }
 
     fn get_db_path() -> Result<PathBuf> {
-        let home = dirs::home_dir().context("Failed to get home directory")?;
-        Ok(home.join(".ichimi").join("database.db"))
+        // 環境変数からカスタムパスを取得、なければデフォルト
+        if let Ok(custom_path) = std::env::var("ICHIMI_DB_PATH") {
+            return Ok(PathBuf::from(custom_path));
+        }
+        
+        // プロジェクトルートのdata/ichimi.dbをデフォルトとする
+        let current_dir = std::env::current_dir().context("Failed to get current directory")?;
+        Ok(current_dir.join("data").join("ichimi.db"))
     }
 
     pub async fn client(&self) -> tokio::sync::RwLockReadGuard<'_, Surreal<Db>> {
