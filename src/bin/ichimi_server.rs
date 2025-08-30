@@ -9,7 +9,8 @@ use tracing_subscriber::{self, EnvFilter};
 async fn main() -> Result<()> {
     // Parse command line arguments
     let args: Vec<String> = env::args().collect();
-    let mut web_enabled = cfg!(feature = "web"); // Default to true if web feature is enabled
+    let mut web_enabled = false; // Web is disabled by default (MCP mode is default)
+    let mut web_only = false; // Flag to run only web server without MCP
     let mut web_port = 12700u16;
     let mut auto_open = true; // Default to auto-open browser
 
@@ -21,11 +22,13 @@ async fn main() -> Result<()> {
                 println!();
                 println!("Usage: ichimi [OPTIONS]");
                 println!();
+                println!("Default: Run as MCP server for Claude/Cline");
+                println!();
                 println!("Options:");
                 println!("  --help, -h       Show this help message");
                 println!("  --version, -v    Show version information");
-                println!("  --web            Enable web dashboard (default: enabled)");
-                println!("  --no-web         Disable web dashboard");
+                println!("  --web            Enable web dashboard alongside MCP server");
+                println!("  --web-only       Run only web dashboard (no MCP server)");
                 println!("  --web-port PORT  Set web dashboard port (default: 12700)");
                 println!("  --no-open        Don't automatically open browser for web dashboard");
                 return Ok(());
@@ -37,8 +40,9 @@ async fn main() -> Result<()> {
             "--web" => {
                 web_enabled = true;
             }
-            "--no-web" => {
-                web_enabled = false;
+            "--web-only" => {
+                web_enabled = true;
+                web_only = true;
             }
             "--web-port" => {
                 if i + 1 < args.len() {
@@ -54,13 +58,14 @@ async fn main() -> Result<()> {
         i += 1;
     }
 
-    // Detect if running as MCP server
-    let is_mcp = env::var("MCP_SERVER_NAME").is_ok() || env::var("CLAUDE_CODE").is_ok();
-
+    // Determine operation mode
+    let run_mcp = !web_only;  // Run MCP server by default unless --web-only is specified
+    
     // Setup logging based on environment
     let log_level = env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string());
 
-    if is_mcp {
+    // When running as MCP (default), log to file to avoid interfering with stdio
+    if run_mcp && !web_enabled {
         // When running as MCP, log to file to avoid interfering with stdio
         let log_dir = dirs::home_dir()
             .unwrap_or_else(|| std::path::PathBuf::from("."))
@@ -99,19 +104,12 @@ async fn main() -> Result<()> {
             .with_line_number(true)
             .init();
 
-        tracing::info!("=== Ichimi MCP Server Starting ===");
+        tracing::info!("=== Ichimi MCP Server Starting (silent mode) ===");
         tracing::info!("Log file: {:?}", log_file);
-        tracing::info!(
-            "Environment: MCP_SERVER_NAME={:?}",
-            env::var("MCP_SERVER_NAME").ok()
-        );
         tracing::info!("Arguments: {:?}", args);
         tracing::info!("Working directory: {:?}", env::current_dir());
-
-        // Also write startup info to stderr for debugging
-        eprintln!("[ICHIMI] MCP mode detected, logging to: {log_file:?}");
     } else {
-        // Normal mode - log to stderr
+        // Web mode or MCP with web - log to stderr
         let filter = EnvFilter::from_default_env()
             .add_directive(format!("ichimi={log_level}").parse().unwrap())
             .add_directive(format!("ichimi_server={log_level}").parse().unwrap())
@@ -123,7 +121,13 @@ async fn main() -> Result<()> {
             .with_ansi(false)
             .init();
 
-        tracing::info!("Starting Ichimi Server (console mode)");
+        if web_only {
+            tracing::info!("Starting Ichimi Server (web-only mode)");
+        } else if run_mcp && web_enabled {
+            tracing::info!("Starting Ichimi Server (MCP + web mode)");
+        } else {
+            tracing::info!("Starting Ichimi Server (MCP mode)");
+        }
     }
 
     // Create a shared process manager
@@ -206,8 +210,8 @@ async fn main() -> Result<()> {
             }
         };
 
-        // Open browser with actual port
-        if auto_open && !is_mcp {
+        // Open browser with actual port (only in web-only mode)
+        if auto_open && web_only {
             // Don't open browser in MCP mode
             let url = format!("http://localhost:{}", actual_port);
             tokio::spawn(async move {
@@ -221,8 +225,8 @@ async fn main() -> Result<()> {
         }
     }
 
-    // Run MCP server if possible
-    if is_mcp || isatty::stderr_isatty() {
+    // Run MCP server unless --web-only is specified
+    if run_mcp {
         tracing::info!("Starting MCP server");
         let server = IchimiServer::with_process_manager(process_manager.clone()).await;
         let server_arc = std::sync::Arc::new(server);
