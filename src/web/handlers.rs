@@ -195,7 +195,15 @@ pub async fn create_process(
     // Create process with auto_start flags
     state
         .process_manager
-        .create_process(req.id.clone(), req.command, req.args, req.env, cwd, req.auto_start_on_create, req.auto_start_on_restore)
+        .create_process(
+            req.id.clone(),
+            req.command,
+            req.args,
+            req.env,
+            cwd,
+            req.auto_start_on_create,
+            req.auto_start_on_restore,
+        )
         .await
         .map_err(|e| (StatusCode::BAD_REQUEST, e.clone()))?;
 
@@ -254,7 +262,11 @@ pub async fn update_process_config(
 ) -> Result<StatusCode, (StatusCode, String)> {
     state
         .process_manager
-        .update_process_config(id, config.auto_start_on_create, config.auto_start_on_restore)
+        .update_process_config(
+            id,
+            config.auto_start_on_create,
+            config.auto_start_on_restore,
+        )
         .await
         .map(|_| StatusCode::OK)
         .map_err(|e| (StatusCode::BAD_REQUEST, e))

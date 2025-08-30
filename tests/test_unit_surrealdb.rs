@@ -1,7 +1,6 @@
 /// Unit tests for SurrealDB direct operations
-/// 
+///
 /// Tests SurrealDB-specific functionality and direct database operations
-
 use ichimi_server::db::Database;
 use ichimi_server::persistence::PersistenceManager;
 use ichimi_server::process::types::{ProcessInfo, ProcessState};
@@ -33,14 +32,23 @@ async fn test_surrealdb_direct_save_and_load() {
     let persistence = PersistenceManager::with_database(database.clone());
 
     let process = create_test_process("test-direct-save");
-    
+
     // Save and immediately load
-    persistence.save_process(&process).await.expect("Failed to save process");
-    let loaded = persistence.load_all_processes().await.expect("Failed to load processes");
-    
+    persistence
+        .save_process(&process)
+        .await
+        .expect("Failed to save process");
+    let loaded = persistence
+        .load_all_processes()
+        .await
+        .expect("Failed to load processes");
+
     assert_eq!(loaded.len(), 1, "Should have exactly one process");
-    assert!(loaded.contains_key("test-direct-save"), "Process should exist with correct ID");
-    
+    assert!(
+        loaded.contains_key("test-direct-save"),
+        "Process should exist with correct ID"
+    );
+
     let loaded_process = &loaded["test-direct-save"];
     assert_eq!(loaded_process.id, "test-direct-save");
     assert_eq!(loaded_process.command, "echo");
@@ -58,20 +66,26 @@ async fn test_surrealdb_multiple_processes() {
     for i in 1..=5 {
         let mut process = create_test_process(&format!("test-process-{}", i));
         process.command = format!("cmd-{}", i);
-        process.auto_start_on_create = i % 2 == 0;  // Even numbers are true
-        
-        persistence.save_process(&process).await.expect("Failed to save process");
+        process.auto_start_on_create = i % 2 == 0; // Even numbers are true
+
+        persistence
+            .save_process(&process)
+            .await
+            .expect("Failed to save process");
     }
-    
-    let loaded = persistence.load_all_processes().await.expect("Failed to load processes");
-    
+
+    let loaded = persistence
+        .load_all_processes()
+        .await
+        .expect("Failed to load processes");
+
     assert_eq!(loaded.len(), 5, "Should have 5 processes");
-    
+
     // Verify each process
     for i in 1..=5 {
         let id = format!("test-process-{}", i);
         assert!(loaded.contains_key(&id), "Process {} should exist", id);
-        
+
         let process = &loaded[&id];
         assert_eq!(process.command, format!("cmd-{}", i));
         assert_eq!(process.auto_start_on_create, i % 2 == 0);
@@ -87,16 +101,25 @@ async fn test_surrealdb_update_existing() {
     // Save initial process
     let mut process = create_test_process("test-update");
     process.command = "original-command".to_string();
-    persistence.save_process(&process).await.expect("Failed to save process");
-    
+    persistence
+        .save_process(&process)
+        .await
+        .expect("Failed to save process");
+
     // Update with same ID
     process.command = "updated-command".to_string();
     process.args = vec!["new-arg".to_string()];
-    persistence.save_process(&process).await.expect("Failed to update process");
-    
+    persistence
+        .save_process(&process)
+        .await
+        .expect("Failed to update process");
+
     // Load and verify
-    let loaded = persistence.load_all_processes().await.expect("Failed to load processes");
-    
+    let loaded = persistence
+        .load_all_processes()
+        .await
+        .expect("Failed to load processes");
+
     assert_eq!(loaded.len(), 1, "Should still have only one process");
     let loaded_process = &loaded["test-update"];
     assert_eq!(loaded_process.command, "updated-command");
@@ -120,13 +143,18 @@ async fn test_surrealdb_query_processes() {
     for (id, cmd) in test_data {
         let mut process = create_test_process(id);
         process.command = cmd.to_string();
-        persistence.save_process(&process).await.expect("Failed to save process");
+        persistence
+            .save_process(&process)
+            .await
+            .expect("Failed to save process");
     }
 
     // Query with filter
-    let python_processes = persistence.query_processes("python").await
+    let python_processes = persistence
+        .query_processes("python")
+        .await
         .expect("Failed to query processes");
-    
+
     assert_eq!(python_processes.len(), 2, "Should find 2 python processes");
     for process in &python_processes {
         assert_eq!(process.command, "python");
@@ -142,23 +170,41 @@ async fn test_surrealdb_search_processes() {
     // Create processes with searchable content in command
     let mut process1 = create_test_process("search-1");
     process1.command = "grep-pattern".to_string();
-    persistence.save_process(&process1).await.expect("Failed to save process");
+    persistence
+        .save_process(&process1)
+        .await
+        .expect("Failed to save process");
 
     let mut process2 = create_test_process("search-2");
     process2.command = "echo-pattern".to_string();
-    persistence.save_process(&process2).await.expect("Failed to save process");
+    persistence
+        .save_process(&process2)
+        .await
+        .expect("Failed to save process");
 
     let mut process3 = create_test_process("search-3");
     process3.command = "other-command".to_string();
-    persistence.save_process(&process3).await.expect("Failed to save process");
+    persistence
+        .save_process(&process3)
+        .await
+        .expect("Failed to save process");
 
     // Search for "pattern" - query_processes uses command CONTAINS filter
-    let results = persistence.query_processes("pattern").await
+    let results = persistence
+        .query_processes("pattern")
+        .await
         .expect("Failed to query processes");
-    
+
     // Both processes with "pattern" in command should be found
-    assert_eq!(results.len(), 2, "Should find 2 processes with 'pattern' in command");
+    assert_eq!(
+        results.len(),
+        2,
+        "Should find 2 processes with 'pattern' in command"
+    );
     for process in &results {
-        assert!(process.command.contains("pattern"), "Command should contain 'pattern'");
+        assert!(
+            process.command.contains("pattern"),
+            "Command should contain 'pattern'"
+        );
     }
 }

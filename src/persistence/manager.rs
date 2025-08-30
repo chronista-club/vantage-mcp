@@ -73,7 +73,7 @@ impl PersistenceManager {
         );
         let record = ProcessInfoRecord::from(process_info);
         let client = self.database.client().await;
-        
+
         // 完全なクエリを一度に実行
         let query = r#"
             USE NS ichimi DB main;
@@ -101,27 +101,28 @@ impl PersistenceManager {
             .bind(("auto_start_on_restore", record.auto_start_on_restore))
             .await
             .context("Failed to save process to SurrealDB")?;
-        
+
         // 結果を取得してログに出力
-        let _: Option<()> = qr.take(0).ok().flatten();  // USE文の結果
-        let _: Option<()> = qr.take(1).ok().flatten();  // DELETE文の結果
-        let created: Vec<serde_json::Value> = qr.take(2).unwrap_or_default();  // CREATE文の結果
+        let _: Option<()> = qr.take(0).ok().flatten(); // USE文の結果
+        let _: Option<()> = qr.take(1).ok().flatten(); // DELETE文の結果
+        let created: Vec<serde_json::Value> = qr.take(2).unwrap_or_default(); // CREATE文の結果
         tracing::debug!("Created {} records", created.len());
 
         tracing::debug!("Saved process {} to SurrealDB", process_info.id);
-        
+
         // Verify the save by immediately querying it back
-        let verify_query = "USE NS ichimi DB main; SELECT * FROM process WHERE process_id = $process_id";
+        let verify_query =
+            "USE NS ichimi DB main; SELECT * FROM process WHERE process_id = $process_id";
         let mut verify_result = client
             .query(verify_query)
             .bind(("process_id", record.process_id.clone()))
             .await
             .context("Failed to verify save")?;
-        
-        let _: Option<()> = verify_result.take(0).ok().flatten();  // USE文の結果をスキップ
+
+        let _: Option<()> = verify_result.take(0).ok().flatten(); // USE文の結果をスキップ
         let verified: Vec<serde_json::Value> = verify_result.take(1).unwrap_or_default();
         tracing::debug!("Verification query returned {} records", verified.len());
-        
+
         Ok(())
     }
 
@@ -133,7 +134,7 @@ impl PersistenceManager {
     /// Delete a process from SurrealDB
     pub async fn delete_process(&self, process_id: &str) -> Result<()> {
         let client = self.database.client().await;
-        
+
         let query = "USE NS ichimi DB main; DELETE process WHERE process_id = $process_id";
         client
             .query(query)
@@ -148,7 +149,7 @@ impl PersistenceManager {
     /// Load all processes from SurrealDB
     pub async fn load_all_processes(&self) -> Result<HashMap<String, ProcessInfo>, String> {
         let client = self.database.client().await;
-        
+
         let query = "USE NS ichimi DB main; SELECT * FROM process";
         let mut response = client
             .query(query)
@@ -156,8 +157,8 @@ impl PersistenceManager {
             .map_err(|e| format!("Failed to query processes: {e}"))?;
 
         // USE文の結果をスキップして、SELECT文の結果を取得
-        let _ = response.take::<Option<()>>(0);  // USE文の結果をスキップ
-        
+        let _ = response.take::<Option<()>>(0); // USE文の結果をスキップ
+
         // ProcessInfoRecord構造体として直接デシリアライズ
         let records: Vec<ProcessInfoRecord> = response
             .take(1)

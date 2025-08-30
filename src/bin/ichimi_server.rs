@@ -55,8 +55,7 @@ async fn main() -> Result<()> {
     }
 
     // Detect if running as MCP server
-    let is_mcp = env::var("MCP_SERVER_NAME").is_ok()
-        || env::var("CLAUDE_CODE").is_ok();
+    let is_mcp = env::var("MCP_SERVER_NAME").is_ok() || env::var("CLAUDE_CODE").is_ok();
 
     // Setup logging based on environment
     let log_level = env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string());
@@ -160,7 +159,7 @@ async fn main() -> Result<()> {
     tokio::spawn(async move {
         let _ = signal::ctrl_c().await;
         tracing::info!("Received shutdown signal, exporting processes...");
-        
+
         // Auto-export processes on shutdown
         let export_file = env::var("ICHIMI_EXPORT_FILE").unwrap_or_else(|_| {
             dirs::home_dir()
@@ -171,17 +170,20 @@ async fn main() -> Result<()> {
                 .to_string_lossy()
                 .to_string()
         });
-        
+
         // Create directory if it doesn't exist
         if let Some(parent) = std::path::Path::new(&export_file).parent() {
             let _ = std::fs::create_dir_all(parent);
         }
-        
-        match pm_for_shutdown.export_processes(Some(export_file.clone())).await {
+
+        match pm_for_shutdown
+            .export_processes(Some(export_file.clone()))
+            .await
+        {
             Ok(_) => tracing::info!("Successfully exported processes to {}", export_file),
             Err(e) => tracing::error!("Failed to export processes on shutdown: {}", e),
         }
-        
+
         std::process::exit(0);
     });
 
@@ -189,15 +191,14 @@ async fn main() -> Result<()> {
     #[cfg(feature = "web")]
     if web_enabled {
         tracing::info!("Web dashboard enabled on port {}", web_port);
-        
+
         let web_manager = process_manager.clone();
         let web_port_clone = web_port;
 
         // Spawn web server in background
         tokio::spawn(async move {
             tracing::debug!("Starting web server in background");
-            if let Err(e) =
-                ichimi_server::web::start_web_server(web_manager, web_port_clone).await
+            if let Err(e) = ichimi_server::web::start_web_server(web_manager, web_port_clone).await
             {
                 tracing::error!("Web server error: {:?}", e);
             }
@@ -233,7 +234,10 @@ async fn main() -> Result<()> {
                 (*server_arc).shutdown().await.ok();
             }
             Err(e) => {
-                tracing::warn!("MCP Server not available: {:?}. Web server will continue running.", e);
+                tracing::warn!(
+                    "MCP Server not available: {:?}. Web server will continue running.",
+                    e
+                );
                 // Keep the process alive for web server
                 // Signal handler already set up above, just wait forever
                 loop {

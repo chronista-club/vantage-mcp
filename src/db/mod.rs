@@ -82,7 +82,7 @@ impl Database {
     pub async fn export_to_file(&self, path: &std::path::Path) -> Result<()> {
         use serde::{Deserialize, Serialize};
         use std::collections::HashMap;
-        
+
         // エクスポート用の構造体を定義（persistence/manager.rsのProcessInfoRecordと同じ）
         #[derive(Debug, Clone, Serialize, Deserialize)]
         struct ProcessRecord {
@@ -96,7 +96,7 @@ impl Database {
             #[serde(default)]
             auto_start_on_restore: bool,
         }
-        
+
         #[derive(Debug, Clone, Serialize, Deserialize)]
         struct EventRecord {
             #[serde(rename = "type")]
@@ -105,11 +105,11 @@ impl Database {
             context: Option<serde_json::Value>,
             metadata: Option<serde_json::Value>,
         }
-        
+
         info!("Exporting database to: {}", path.display());
 
         let client = self.client().await;
-        
+
         // すべてのデータを取得（USE文を含む）
         let query = "USE NS ichimi DB main; SELECT * FROM process; SELECT * FROM process_event;";
         debug!("Executing export query: {}", query);
@@ -126,12 +126,10 @@ impl Database {
 
         // USE文の結果をスキップ
         let _ = result.take::<Option<()>>(0);
-        
+
         // プロセスデータのエクスポート（ProcessRecord構造体として直接デシリアライズ）
-        let processes: Vec<ProcessRecord> = result
-            .take(1)
-            .unwrap_or_default();
-        
+        let processes: Vec<ProcessRecord> = result.take(1).unwrap_or_default();
+
         debug!("Found {} processes to export", processes.len());
         for process in processes {
             export_content.push_str(&format!(
@@ -141,10 +139,8 @@ impl Database {
         }
 
         // イベントデータのエクスポート（EventRecord構造体として直接デシリアライズ）
-        let events: Vec<EventRecord> = result
-            .take(2)
-            .unwrap_or_default();
-        
+        let events: Vec<EventRecord> = result.take(2).unwrap_or_default();
+
         debug!("Found {} events to export", events.len());
         for event in events {
             export_content.push_str(&format!(
@@ -202,7 +198,8 @@ impl Database {
         let import_path = Self::get_default_data_path();
         if import_path.exists() {
             info!("Restoring data from: {}", import_path.display());
-            self.import_from_file(&import_path).await
+            self.import_from_file(&import_path)
+                .await
                 .context("Failed to restore data on startup")?;
         } else {
             info!("No existing data file found at: {}", import_path.display());
@@ -214,7 +211,8 @@ impl Database {
     pub async fn backup_on_shutdown(&self) -> Result<()> {
         let export_path = Self::get_default_data_path();
         info!("Backing up data to: {}", export_path.display());
-        self.export_to_file(&export_path).await
+        self.export_to_file(&export_path)
+            .await
             .context("Failed to backup data on shutdown")?;
         Ok(())
     }

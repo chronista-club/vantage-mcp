@@ -68,7 +68,7 @@ impl ProcessManager {
 
         Self::with_database(database).await
     }
-    
+
     /// Get the database instance
     pub fn database(&self) -> Arc<Database> {
         self.database.clone()
@@ -152,10 +152,18 @@ impl ProcessManager {
             for process_id in auto_start_processes {
                 match self.start_process(process_id.clone()).await {
                     Ok(pid) => {
-                        tracing::info!("Auto-started process '{}' with PID {} on restore", process_id, pid);
+                        tracing::info!(
+                            "Auto-started process '{}' with PID {} on restore",
+                            process_id,
+                            pid
+                        );
                     }
                     Err(e) => {
-                        tracing::warn!("Failed to auto-start process '{}' on restore: {}", process_id, e);
+                        tracing::warn!(
+                            "Failed to auto-start process '{}' on restore: {}",
+                            process_id,
+                            e
+                        );
                     }
                 }
             }
@@ -165,6 +173,7 @@ impl ProcessManager {
     }
 
     /// プロセスを作成・登録
+    #[allow(clippy::too_many_arguments)]
     pub async fn create_process(
         &self,
         id: String,
@@ -175,8 +184,10 @@ impl ProcessManager {
         auto_start_on_create: bool,
         auto_start_on_restore: bool,
     ) -> Result<(), String> {
-        info!("Creating process '{}': {} {:?} (auto_start_on_create: {}, auto_start_on_restore: {})", 
-              id, command, args, auto_start_on_create, auto_start_on_restore);
+        info!(
+            "Creating process '{}': {} {:?} (auto_start_on_create: {}, auto_start_on_restore: {})",
+            id, command, args, auto_start_on_create, auto_start_on_restore
+        );
         let mut processes = self.processes.write().await;
 
         if processes.contains_key(&id) {
@@ -186,11 +197,11 @@ impl ProcessManager {
         let mut process = ManagedProcess::new(id.clone(), command, args, env, cwd);
         process.info.auto_start_on_create = auto_start_on_create;
         process.info.auto_start_on_restore = auto_start_on_restore;
-        
+
         let process_info = process.info.clone();
         let process_arc = Arc::new(RwLock::new(process));
         processes.insert(id.clone(), process_arc.clone());
-        
+
         // Release the write lock before persistence and auto-start
         drop(processes);
 
@@ -485,19 +496,19 @@ impl ProcessManager {
             Some(p) => std::path::PathBuf::from(p),
             None => Database::get_default_data_path(),
         };
-        
+
         self.database
             .export_to_file(&path)
             .await
             .map_err(|e| format!("Failed to export processes: {e}"))?;
-        
+
         Ok(path.to_string_lossy().to_string())
     }
 
     /// Import processes from surql file
     pub async fn import_processes(&self, file_path: &str) -> Result<(), String> {
         let path = std::path::Path::new(file_path);
-        
+
         // Import to database using Database's import method which handles .surql format
         self.database
             .import_from_file(path)
@@ -523,15 +534,12 @@ impl ProcessManager {
             .ok_or_else(|| format!("Process '{id}' not found"))?;
 
         let mut process = process_arc.write().await;
-        
+
         if let Some(value) = auto_start_on_create {
             process.info.auto_start_on_create = value;
-            info!(
-                "Updated process '{}' auto_start_on_create to {}",
-                id, value
-            );
+            info!("Updated process '{}' auto_start_on_create to {}", id, value);
         }
-        
+
         if let Some(value) = auto_start_on_restore {
             process.info.auto_start_on_restore = value;
             info!(

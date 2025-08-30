@@ -14,6 +14,8 @@ async fn test_process_basic_lifecycle() {
             vec!["Hello, Ichimi!".to_string()],
             HashMap::new(),
             None,
+            false,
+            false,
         )
         .await
         .expect("Failed to create process");
@@ -60,6 +62,8 @@ async fn test_process_with_environment() {
             vec!["-c".to_string(), "echo $TEST_VAR $ICHIMI_TEST".to_string()],
             env,
             None,
+            false,
+            false,
         )
         .await
         .expect("Failed to create process");
@@ -105,6 +109,8 @@ async fn test_long_running_process_management() {
             ],
             HashMap::new(),
             None,
+            false,
+            false,
         )
         .await
         .expect("Failed to create process");
@@ -182,6 +188,8 @@ async fn test_multiple_concurrent_processes() {
                 ],
                 HashMap::new(),
                 None,
+                false,
+                false,
             )
             .await
             .unwrap_or_else(|_| panic!("Failed to create process {i}"));
@@ -244,6 +252,8 @@ async fn test_process_error_handling() {
             vec!["-c".to_string(), "echo 'Starting...'; exit 1".to_string()],
             HashMap::new(),
             None,
+            false,
+            false,
         )
         .await
         .expect("Failed to create process");
@@ -309,6 +319,8 @@ async fn test_process_filtering() {
                 args.iter().map(|s| s.to_string()).collect(),
                 HashMap::new(),
                 None,
+                false,
+                false,
             )
             .await
             .unwrap_or_else(|_| panic!("Failed to create {id}"));
@@ -366,6 +378,8 @@ async fn test_process_restart() {
             vec!["First run".to_string()],
             HashMap::new(),
             None,
+            false,
+            false,
         )
         .await
         .expect("Failed to create process");
@@ -399,6 +413,8 @@ async fn test_process_restart() {
             vec!["Second run".to_string()],
             HashMap::new(),
             None,
+            false,
+            false,
         )
         .await
         .expect("Failed to recreate process");
@@ -447,6 +463,8 @@ async fn test_process_output_buffering() {
             vec!["-c".to_string(), script.to_string()],
             HashMap::new(),
             None,
+            false,
+            false,
         )
         .await
         .expect("Failed to create process");

@@ -11,9 +11,9 @@ pub struct CreateProcessRequest {
     pub env: std::collections::HashMap<String, String>,
     pub cwd: Option<String>,
     #[serde(default)]
-    pub auto_start_on_create: bool,  // 作成時に自動起動
+    pub auto_start_on_create: bool, // 作成時に自動起動
     #[serde(default)]
-    pub auto_start_on_restore: bool,  // サーバー起動時に自動起動
+    pub auto_start_on_restore: bool, // サーバー起動時に自動起動
 }
 
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]

@@ -48,12 +48,9 @@ impl IchimiServer {
         tracing::debug!("Database initialized successfully");
 
         // 起動時に既存データを復元
-        database
-            .restore_on_startup()
-            .await
-            .unwrap_or_else(|e| {
-                tracing::warn!("Failed to restore data on startup: {}", e);
-            });
+        database.restore_on_startup().await.unwrap_or_else(|e| {
+            tracing::warn!("Failed to restore data on startup: {}", e);
+        });
 
         // イベントシステムを初期化
         tracing::debug!("Initializing event system");
@@ -93,23 +90,23 @@ impl IchimiServer {
     /// Create IchimiServer with existing ProcessManager (shares database)
     pub async fn with_process_manager(process_manager: ProcessManager) -> Self {
         tracing::info!("Initializing IchimiServer with existing ProcessManager");
-        
+
         // Get database from ProcessManager
         let database = process_manager.database();
-        
+
         // Initialize event system with shared database
         let event_system = Arc::new(EventSystem::new(database.clone()));
-        
+
         // Initialize learning engine with shared database
         let learning_engine = Arc::new(LearningEngine::new(database.clone(), event_system.clone()));
-        
+
         // Start learning
         learning_engine
             .start_learning()
             .await
             .expect("Failed to start learning engine");
         tracing::info!("Learning engine started successfully");
-        
+
         tracing::info!("IchimiServer initialization complete");
         Self {
             start_time: Arc::new(Mutex::new(chrono::Utc::now())),
@@ -178,7 +175,15 @@ impl IchimiServer {
 
         // Create the process with auto_start flags
         self.process_manager
-            .create_process(id.clone(), command, args, env, cwd_path, auto_start_on_create, auto_start_on_restore)
+            .create_process(
+                id.clone(),
+                command,
+                args,
+                env,
+                cwd_path,
+                auto_start_on_create,
+                auto_start_on_restore,
+            )
             .await
             .map_err(|e| McpError {
                 message: e.into(),
@@ -356,8 +361,8 @@ impl IchimiServer {
     #[tool(description = "Update process configuration (auto_start flags)")]
     async fn update_process_config(
         &self,
-        Parameters(UpdateProcessConfigRequest { 
-            id, 
+        Parameters(UpdateProcessConfigRequest {
+            id,
             auto_start_on_create,
             auto_start_on_restore,
         }): Parameters<UpdateProcessConfigRequest>,
