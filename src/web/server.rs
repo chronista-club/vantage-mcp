@@ -10,7 +10,7 @@ use tower_http::{cors::CorsLayer, services::ServeDir};
 pub async fn start_web_server(
     process_manager: ProcessManager,
     port: u16,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<u16, Box<dyn std::error::Error>> {
     let app = create_app(process_manager);
 
     // Try to bind to the specified port, or find an available one
@@ -19,9 +19,14 @@ pub async fn start_web_server(
     let addr = SocketAddr::from(([127, 0, 0, 1], actual_port));
     tracing::info!("Web dashboard started on http://{}", addr);
 
-    axum::serve(listener, app).await?;
+    // Spawn the server in a background task
+    tokio::spawn(async move {
+        if let Err(e) = axum::serve(listener, app).await {
+            tracing::error!("Web server error: {}", e);
+        }
+    });
 
-    Ok(())
+    Ok(actual_port)
 }
 
 async fn bind_to_available_port(

@@ -193,21 +193,23 @@ async fn main() -> Result<()> {
         tracing::info!("Web dashboard enabled on port {}", web_port);
 
         let web_manager = process_manager.clone();
-        let web_port_clone = web_port;
 
-        // Spawn web server in background
-        tokio::spawn(async move {
-            tracing::debug!("Starting web server in background");
-            if let Err(e) = ichimi_server::web::start_web_server(web_manager, web_port_clone).await
-            {
-                tracing::error!("Web server error: {:?}", e);
+        // Start web server and get actual port
+        let actual_port = match ichimi_server::web::start_web_server(web_manager, web_port).await {
+            Ok(port) => {
+                tracing::debug!("Web server started on actual port {}", port);
+                port
             }
-        });
+            Err(e) => {
+                tracing::error!("Failed to start web server: {:?}", e);
+                web_port // Fall back to requested port
+            }
+        };
 
-        // Open browser after a short delay to allow server to start
+        // Open browser with actual port
         if auto_open && !is_mcp {
             // Don't open browser in MCP mode
-            let url = format!("http://localhost:{web_port}");
+            let url = format!("http://localhost:{}", actual_port);
             tokio::spawn(async move {
                 tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
                 if let Err(e) = open::that(&url) {
