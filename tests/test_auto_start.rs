@@ -146,10 +146,7 @@ async fn test_auto_start_persistence() {
             .find(|p| p.id == "persist-auto-test")
             .expect("Process not found after import");
 
-        assert!(
-            process.auto_start,
-            "auto_start not preserved after import"
-        );
+        assert!(process.auto_start, "auto_start not preserved after import");
     }
 }
 

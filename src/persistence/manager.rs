@@ -287,8 +287,7 @@ impl PersistenceManager {
         let json = serde_json::to_string_pretty(&processes)
             .map_err(|e| format!("Failed to serialize processes: {e}"))?;
 
-        std::fs::write(file_path, json)
-            .map_err(|e| format!("Failed to write export file: {e}"))?;
+        std::fs::write(file_path, json).map_err(|e| format!("Failed to write export file: {e}"))?;
 
         tracing::info!("Exported {} processes to {}", processes.len(), file_path);
         Ok(())

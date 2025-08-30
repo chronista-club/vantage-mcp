@@ -191,11 +191,10 @@ async fn test_multiple_concurrent_processes() {
     let mut handles = vec![];
     for i in 1..=num_processes {
         let manager_clone = manager.clone();
-        let handle = tokio::spawn(async move {
-            manager_clone
-                .start_process(format!("concurrent-{i}"))
-                .await
-        });
+        let handle =
+            tokio::spawn(
+                async move { manager_clone.start_process(format!("concurrent-{i}")).await },
+            );
         handles.push(handle);
     }
 
