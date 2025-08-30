@@ -158,3 +158,45 @@ cargo test test_export_import # 特定のテストを実行
 3. **永続化を変更する場合**：
    - `src/persistence.rs` の `PersistenceManager` を更新
    - SurrealDB スキーマ定義に注意
+
+## リリース手順
+
+### バージョン管理とリリースの作成
+
+1. **Cargo.tomlのバージョン更新**（重要）:
+   ```bash
+   # Cargo.tomlのversionフィールドを更新
+   # 例: version = "0.1.0-beta11" → version = "0.1.0-beta12"
+   ```
+
+2. **ビルドとテスト**:
+   ```bash
+   # バージョン更新後、必ずビルドとテストを実行
+   cargo build --release
+   cargo test
+   ```
+
+3. **コミットとタグ作成**:
+   ```bash
+   # Cargo.tomlの変更をコミット
+   git add Cargo.toml Cargo.lock
+   git commit -m "chore: bump version to v0.1.0-betaXX"
+   
+   # タグを作成
+   git tag -a v0.1.0-betaXX -m "Release v0.1.0-betaXX - 簡潔な説明"
+   git push origin main
+   git push origin v0.1.0-betaXX
+   ```
+
+4. **GitHubリリースの作成**:
+   ```bash
+   gh release create v0.1.0-betaXX \
+     --title "v0.1.0-betaXX - タイトル" \
+     --notes-file release-notes.md \
+     --prerelease
+   ```
+
+### 重要な注意事項
+- **必ずCargo.tomlのバージョンを更新してからリリースすること**
+- バージョン番号はCargo.tomlとGitタグで一致させる
+- cargo installコマンドが正しく動作するよう、タグ名は`v`プレフィックスを付ける

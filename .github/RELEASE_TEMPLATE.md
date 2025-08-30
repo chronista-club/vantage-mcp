@@ -2,6 +2,13 @@
 
 以下のテンプレートを使用してGitHubリリースを作成してください。
 
+## リリース前チェックリスト
+
+- [ ] Cargo.tomlのバージョンを更新した
+- [ ] cargo build --release が成功する
+- [ ] cargo test が全て成功する
+- [ ] Cargo.lockが更新されている
+
 ## リリースノートテンプレート
 
 ```markdown
@@ -64,16 +71,29 @@ cargo build --release
 **Full Changelog**: https://github.com/chronista-club/ichimi-server/compare/vX.X.X-betaXX...vX.X.X-betaXX
 ```
 
-## コマンド例
+## リリース作成手順
 
 ```bash
-# タグを作成
+# 1. Cargo.tomlのバージョンを更新
+# 例: version = "0.1.0-beta11" → version = "0.1.0-beta12"
+vim Cargo.toml
+
+# 2. ビルドとテスト
+cargo build --release
+cargo test
+
+# 3. バージョン更新をコミット
+git add Cargo.toml Cargo.lock
+git commit -m "chore: bump version to vX.X.X-betaXX"
+
+# 4. タグを作成
 git tag -a vX.X.X-betaXX -m "Release vX.X.X-betaXX - 簡潔な説明"
 
-# タグをプッシュ
+# 5. プッシュ
+git push origin main
 git push origin vX.X.X-betaXX
 
-# GitHubリリースを作成
+# 6. GitHubリリースを作成
 gh release create vX.X.X-betaXX \
   --title "vX.X.X-betaXX - タイトル" \
   --notes "$(cat release-notes.md)" \
