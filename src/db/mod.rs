@@ -188,6 +188,6 @@ impl Database {
     /// デフォルトのデータファイルパスを取得
     pub fn get_default_data_path() -> std::path::PathBuf {
         // プロジェクトルートの .ichimi ディレクトリに保存
-        std::path::PathBuf::from(".ichimi").join("data.surql")
+        std::path::PathBuf::from(".ichimi").join("ichimi.db")
     }
 }
