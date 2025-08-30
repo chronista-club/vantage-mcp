@@ -1,5 +1,3 @@
-use super::kdl_persistence::KdlPersistence;
-use super::kdl_schema::ProcessConfig;
 use crate::db::Database;
 use crate::process::types::{ProcessInfo, ProcessState};
 use anyhow::{Context, Result};
@@ -216,69 +214,6 @@ impl PersistenceManager {
             .map_err(|e| format!("Failed to parse search results: {e}"))?;
 
         Ok(records.into_iter().map(|r| r.to_process_info()).collect())
-    }
-
-    /// Export processes to KDL file
-    pub async fn export_to_kdl(&self, file_path: &str) -> Result<(), String> {
-        let processes = self.load_all_processes().await?;
-
-        // KDL形式でエクスポート
-        let config_dir = PathBuf::from(".ichimi_export");
-        let kdl_persistence = KdlPersistence::new(&config_dir);
-
-        for (_, info) in processes.iter() {
-            let process_config = ProcessConfig::from_process_info(info);
-            kdl_persistence
-                .add_or_update_process(process_config)
-                .map_err(|e| format!("Failed to export process to KDL: {e}"))?;
-        }
-
-        // エクスポートディレクトリから指定パスにコピー
-        let export_file = config_dir.join("processes.kdl");
-        std::fs::copy(&export_file, file_path)
-            .map_err(|e| format!("Failed to copy export file: {e}"))?;
-
-        // 一時ディレクトリをクリーンアップ
-        let _ = std::fs::remove_dir_all(&config_dir);
-
-        tracing::info!(
-            "Exported {} processes to KDL file: {}",
-            processes.len(),
-            file_path
-        );
-        Ok(())
-    }
-
-    /// Import processes from KDL file
-    pub async fn import_from_kdl(&self, file_path: &str) -> Result<(), String> {
-        // 一時ディレクトリを作成してKDLファイルをコピー
-        let config_dir = PathBuf::from(".ichimi_import");
-        std::fs::create_dir_all(&config_dir)
-            .map_err(|e| format!("Failed to create import directory: {e}"))?;
-
-        let import_dest = config_dir.join("processes.kdl");
-        std::fs::copy(file_path, &import_dest)
-            .map_err(|e| format!("Failed to copy import file: {e}"))?;
-
-        // KDLファイルを読み込み
-        let kdl_persistence = KdlPersistence::new(&config_dir);
-        let imported_processes = kdl_persistence
-            .get_all_processes()
-            .map_err(|e| format!("Failed to read KDL file: {e}"))?;
-
-        // SurrealDBに保存
-        for process_config in imported_processes {
-            let info = process_config.to_process_info();
-            self.save_process(&info)
-                .await
-                .map_err(|e| format!("Failed to save imported process: {e}"))?;
-        }
-
-        // 一時ディレクトリをクリーンアップ
-        let _ = std::fs::remove_dir_all(&config_dir);
-
-        tracing::info!("Imported processes from KDL file: {}", file_path);
-        Ok(())
     }
 
     /// Export to JSON file (compatibility)

@@ -49,4 +49,10 @@ impl CircularBuffer {
         let buffer = self.buffer.read().await;
         buffer.len()
     }
+
+    /// バッファが空かどうかを確認
+    pub async fn is_empty(&self) -> bool {
+        let buffer = self.buffer.read().await;
+        buffer.is_empty()
+    }
 }
