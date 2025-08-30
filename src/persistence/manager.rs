@@ -8,23 +8,27 @@ use std::sync::Arc;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct ProcessInfoRecord {
-    id: String,
+    process_id: String,
     command: String,
     args: Vec<String>,
     env: HashMap<String, String>,
     cwd: Option<String>,
-    auto_start: bool,
+    #[serde(default)]
+    auto_start_on_create: bool,
+    #[serde(default)]
+    auto_start_on_restore: bool,
 }
 
 impl From<&ProcessInfo> for ProcessInfoRecord {
     fn from(info: &ProcessInfo) -> Self {
         Self {
-            id: info.id.clone(),
+            process_id: info.id.clone(),
             command: info.command.clone(),
             args: info.args.clone(),
             env: info.env.clone(),
             cwd: info.cwd.as_ref().map(|p| p.to_string_lossy().to_string()),
-            auto_start: info.auto_start,
+            auto_start_on_create: info.auto_start_on_create,
+            auto_start_on_restore: info.auto_start_on_restore,
         }
     }
 }
@@ -32,13 +36,14 @@ impl From<&ProcessInfo> for ProcessInfoRecord {
 impl ProcessInfoRecord {
     fn to_process_info(&self) -> ProcessInfo {
         ProcessInfo {
-            id: self.id.clone(),
+            id: self.process_id.clone(),
             command: self.command.clone(),
             args: self.args.clone(),
             env: self.env.clone(),
             cwd: self.cwd.as_ref().map(PathBuf::from),
             state: ProcessState::NotStarted,
-            auto_start: self.auto_start,
+            auto_start_on_create: self.auto_start_on_create,
+            auto_start_on_restore: self.auto_start_on_restore,
         }
     }
 }
@@ -68,32 +73,55 @@ impl PersistenceManager {
         );
         let record = ProcessInfoRecord::from(process_info);
         let client = self.database.client().await;
-
-        // UPSERTを使用して、存在する場合は更新、しない場合は作成
+        
+        // 完全なクエリを一度に実行
         let query = r#"
-            UPSERT process_info:[$id] CONTENT {
-                id: $id,
+            USE NS ichimi DB main;
+            DELETE process WHERE process_id = $process_id;
+            CREATE process CONTENT {
+                process_id: $process_id,
                 command: $command,
                 args: $args,
                 env: $env,
                 cwd: $cwd,
-                auto_start: $auto_start,
+                auto_start_on_create: $auto_start_on_create,
+                auto_start_on_restore: $auto_start_on_restore,
                 updated_at: time::now()
-            }
+            };
         "#;
 
-        client
+        let mut qr = client
             .query(query)
-            .bind(("id", record.id.clone()))
+            .bind(("process_id", record.process_id.clone()))
             .bind(("command", record.command.clone()))
             .bind(("args", record.args.clone()))
             .bind(("env", record.env.clone()))
             .bind(("cwd", record.cwd.clone()))
-            .bind(("auto_start", record.auto_start))
+            .bind(("auto_start_on_create", record.auto_start_on_create))
+            .bind(("auto_start_on_restore", record.auto_start_on_restore))
             .await
             .context("Failed to save process to SurrealDB")?;
+        
+        // 結果を取得してログに出力
+        let _: Option<()> = qr.take(0).ok().flatten();  // USE文の結果
+        let _: Option<()> = qr.take(1).ok().flatten();  // DELETE文の結果
+        let created: Vec<serde_json::Value> = qr.take(2).unwrap_or_default();  // CREATE文の結果
+        tracing::debug!("Created {} records", created.len());
 
         tracing::debug!("Saved process {} to SurrealDB", process_info.id);
+        
+        // Verify the save by immediately querying it back
+        let verify_query = "USE NS ichimi DB main; SELECT * FROM process WHERE process_id = $process_id";
+        let mut verify_result = client
+            .query(verify_query)
+            .bind(("process_id", record.process_id.clone()))
+            .await
+            .context("Failed to verify save")?;
+        
+        let _: Option<()> = verify_result.take(0).ok().flatten();  // USE文の結果をスキップ
+        let verified: Vec<serde_json::Value> = verify_result.take(1).unwrap_or_default();
+        tracing::debug!("Verification query returned {} records", verified.len());
+        
         Ok(())
     }
 
@@ -105,11 +133,11 @@ impl PersistenceManager {
     /// Delete a process from SurrealDB
     pub async fn delete_process(&self, process_id: &str) -> Result<()> {
         let client = self.database.client().await;
-
-        let query = "DELETE process_info:[$id]";
+        
+        let query = "USE NS ichimi DB main; DELETE process WHERE process_id = $process_id";
         client
             .query(query)
-            .bind(("id", process_id.to_string()))
+            .bind(("process_id", process_id.to_string()))
             .await
             .context("Failed to delete process from SurrealDB")?;
 
@@ -120,16 +148,20 @@ impl PersistenceManager {
     /// Load all processes from SurrealDB
     pub async fn load_all_processes(&self) -> Result<HashMap<String, ProcessInfo>, String> {
         let client = self.database.client().await;
-
-        let query = "SELECT * FROM process_info";
+        
+        let query = "USE NS ichimi DB main; SELECT * FROM process";
         let mut response = client
             .query(query)
             .await
             .map_err(|e| format!("Failed to query processes: {e}"))?;
 
+        // USE文の結果をスキップして、SELECT文の結果を取得
+        let _ = response.take::<Option<()>>(0);  // USE文の結果をスキップ
+        
+        // ProcessInfoRecord構造体として直接デシリアライズ
         let records: Vec<ProcessInfoRecord> = response
-            .take(0)
-            .map_err(|e| format!("Failed to parse process records: {e}"))?;
+            .take(1)
+            .map_err(|e| format!("Failed to deserialize process records: {e}"))?;
 
         let mut result = HashMap::new();
         for record in records {
@@ -146,10 +178,10 @@ impl PersistenceManager {
         let client = self.database.client().await;
 
         let (query, bind_filter) = if filter.is_empty() {
-            ("SELECT * FROM process_info".to_string(), false)
+            ("SELECT * FROM process".to_string(), false)
         } else {
             (
-                "SELECT * FROM process_info WHERE command CONTAINS $filter".to_string(),
+                "SELECT * FROM process WHERE command CONTAINS $filter".to_string(),
                 true,
             )
         };
@@ -174,7 +206,7 @@ impl PersistenceManager {
     pub async fn get_process_stats(&self) -> Result<serde_json::Value, String> {
         let client = self.database.client().await;
 
-        let query = "SELECT count() as total FROM process_info GROUP ALL";
+        let query = "SELECT count() as total FROM process GROUP ALL";
         let mut response = client
             .query(query)
             .await
@@ -197,7 +229,7 @@ impl PersistenceManager {
         let client = self.database.client().await;
 
         let query = r#"
-            SELECT * FROM process_info 
+            SELECT * FROM process 
             WHERE command CONTAINS $term 
                OR array::any(args, |arg| string::lowercase(arg) CONTAINS $term_lower)
         "#;

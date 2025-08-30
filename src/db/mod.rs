@@ -5,7 +5,7 @@ use surrealdb::{
     engine::local::{Db, Mem},
 };
 use tokio::sync::RwLock;
-use tracing::info;
+use tracing::{debug, info};
 
 #[derive(Clone)]
 pub struct Database {
@@ -74,13 +74,41 @@ impl Database {
 
     /// データをSurrealQLファイルにエクスポート
     pub async fn export_to_file(&self, path: &std::path::Path) -> Result<()> {
+        use serde::{Deserialize, Serialize};
+        use std::collections::HashMap;
+        
+        // エクスポート用の構造体を定義（persistence/manager.rsのProcessInfoRecordと同じ）
+        #[derive(Debug, Clone, Serialize, Deserialize)]
+        struct ProcessRecord {
+            process_id: String,
+            command: String,
+            args: Vec<String>,
+            env: HashMap<String, String>,
+            cwd: Option<String>,
+            #[serde(default)]
+            auto_start_on_create: bool,
+            #[serde(default)]
+            auto_start_on_restore: bool,
+        }
+        
+        #[derive(Debug, Clone, Serialize, Deserialize)]
+        struct EventRecord {
+            #[serde(rename = "type")]
+            event_type: String,
+            process_id: String,
+            context: Option<serde_json::Value>,
+            metadata: Option<serde_json::Value>,
+        }
+        
         info!("Exporting database to: {}", path.display());
 
         let client = self.client().await;
-
-        // すべてのデータを取得
+        
+        // すべてのデータを取得（USE文を含む）
+        let query = "USE NS ichimi DB main; SELECT * FROM process; SELECT * FROM process_event;";
+        debug!("Executing export query: {}", query);
         let mut result = client
-            .query("SELECT * FROM process; SELECT * FROM process_event;")
+            .query(query)
             .await
             .context("Failed to fetch data for export")?;
 
@@ -88,9 +116,17 @@ impl Database {
         let mut export_content = String::new();
         export_content.push_str("-- Ichimi Server Database Export\n");
         export_content.push_str(&format!("-- Generated at: {}\n\n", chrono::Utc::now()));
+        export_content.push_str("USE NS ichimi DB main;\n\n");
 
-        // プロセスデータのエクスポート
-        let processes: Vec<serde_json::Value> = result.take(0)?;
+        // USE文の結果をスキップ
+        let _ = result.take::<Option<()>>(0);
+        
+        // プロセスデータのエクスポート（ProcessRecord構造体として直接デシリアライズ）
+        let processes: Vec<ProcessRecord> = result
+            .take(1)
+            .unwrap_or_default();
+        
+        debug!("Found {} processes to export", processes.len());
         for process in processes {
             export_content.push_str(&format!(
                 "CREATE process CONTENT {};\n",
@@ -98,8 +134,12 @@ impl Database {
             ));
         }
 
-        // イベントデータのエクスポート
-        let events: Vec<serde_json::Value> = result.take(1)?;
+        // イベントデータのエクスポート（EventRecord構造体として直接デシリアライズ）
+        let events: Vec<EventRecord> = result
+            .take(2)
+            .unwrap_or_default();
+        
+        debug!("Found {} events to export", events.len());
         for event in events {
             export_content.push_str(&format!(
                 "CREATE process_event CONTENT {};\n",
@@ -127,6 +167,13 @@ impl Database {
         let content = std::fs::read_to_string(path).context("Failed to read import file")?;
 
         let client = self.client().await;
+
+        // ネームスペースとデータベースを設定
+        client
+            .use_ns("ichimi")
+            .use_db("main")
+            .await
+            .context("Failed to set namespace and database")?;
 
         // SurrealQLを実行
         client

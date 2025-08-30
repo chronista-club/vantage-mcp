@@ -33,7 +33,9 @@ pub struct ProcessInfo {
     pub cwd: Option<PathBuf>,
     pub state: ProcessState,
     #[serde(default)]
-    pub auto_start: bool,
+    pub auto_start_on_create: bool,
+    #[serde(default)]
+    pub auto_start_on_restore: bool,
 }
 
 /// プロセスの詳細ステータス

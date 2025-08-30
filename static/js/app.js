@@ -1,267 +1,451 @@
-// Alpine.js Process Manager Application
-document.addEventListener('alpine:init', () => {
-    Alpine.data('processManager', () => ({
-        // Data
+// Alpine.js Global State Management for Ichimi Server Dashboard
+
+// グローバルステートストア
+window.IchimiStore = {
+    // アプリケーション全体の状態
+    state: Alpine.reactive({
+        // サーバー情報
+        server: {
+            status: 'loading',
+            version: '',
+            uptime: 0,
+            lastUpdate: null
+        },
+        
+        // プロセスリスト
         processes: [],
-        filteredProcesses: [],
-        searchQuery: '',
-        showCreateModal: false,
-        showLogsModal: false,
-        currentProcessId: '',
-        currentLogs: '',
-        logStream: 'both',
         
-        // New process form
-        newProcess: {
-            id: '',
-            command: '',
-            argsString: '',
-            cwd: '',
-            envString: '',
+        // UI状態
+        ui: {
+            searchQuery: '',
+            selectedProcessId: null,
+            autoRefreshEnabled: true,
+            refreshInterval: 5000,
+            theme: 'light'
         },
         
-        // Computed properties
-        get runningCount() {
-            return this.processes.filter(p => p.info.state.state === 'Running').length;
+        // モーダル状態
+        modals: {
+            createProcess: {
+                visible: false,
+                form: {
+                    id: '',
+                    command: '',
+                    args: [],
+                    env: {},
+                    cwd: '',
+                    auto_start: false
+                },
+                errors: {}
+            },
+            viewLogs: {
+                visible: false,
+                processId: null,
+                logs: [],
+                stream: 'both',
+                autoScroll: true,
+                loading: false
+            },
+            confirmDelete: {
+                visible: false,
+                processId: null,
+                processName: ''
+            }
         },
         
-        get stoppedCount() {
-            return this.processes.filter(p => p.info.state.state === 'Stopped').length;
-        },
+        // 通知
+        notifications: [],
         
-        get failedCount() {
-            return this.processes.filter(p => p.info.state.state === 'Failed').length;
-        },
-        
-        // Initialize
-        init() {
-            this.loadProcesses();
-            this.filteredProcesses = this.processes;
+        // エラー状態
+        errors: {
+            lastError: null,
+            connectionError: false
+        }
+    }),
+    
+    // 算出プロパティ
+    getters: {
+        // フィルタリングされたプロセスリスト
+        filteredProcesses() {
+            const query = IchimiStore.state.ui.searchQuery.toLowerCase();
+            if (!query) return IchimiStore.state.processes;
             
-            // Auto-refresh every 5 seconds
-            setInterval(() => {
-                this.refreshData();
-            }, 5000);
+            return IchimiStore.state.processes.filter(p => {
+                return p.info.id.toLowerCase().includes(query) ||
+                       p.info.command.toLowerCase().includes(query) ||
+                       (p.info.args && p.info.args.join(' ').toLowerCase().includes(query));
+            });
         },
         
-        // Load processes from API
+        // ステータス別カウント
+        processStats() {
+            const stats = {
+                total: IchimiStore.state.processes.length,
+                running: 0,
+                stopped: 0,
+                failed: 0,
+                notStarted: 0
+            };
+            
+            IchimiStore.state.processes.forEach(p => {
+                switch (p.info.state.state) {
+                    case 'Running':
+                        stats.running++;
+                        break;
+                    case 'Stopped':
+                        stats.stopped++;
+                        break;
+                    case 'Failed':
+                        stats.failed++;
+                        break;
+                    case 'NotStarted':
+                        stats.notStarted++;
+                        break;
+                }
+            });
+            
+            return stats;
+        },
+        
+        // 選択されたプロセス
+        selectedProcess() {
+            const id = IchimiStore.state.ui.selectedProcessId;
+            if (!id) return null;
+            return IchimiStore.state.processes.find(p => p.info.id === id);
+        }
+    },
+    
+    // アクション
+    actions: {
+        // 初期化
+        async init() {
+            await this.loadServerInfo();
+            await this.loadProcesses();
+            this.startAutoRefresh();
+        },
+        
+        // サーバー情報の読み込み
+        async loadServerInfo() {
+            try {
+                const response = await fetch('/api/status');
+                if (response.ok) {
+                    const data = await response.json();
+                    IchimiStore.state.server = {
+                        ...data,
+                        status: 'running',
+                        lastUpdate: new Date()
+                    };
+                    IchimiStore.state.errors.connectionError = false;
+                } else {
+                    throw new Error('サーバー情報の取得に失敗しました');
+                }
+            } catch (error) {
+                console.error('Failed to load server info:', error);
+                IchimiStore.state.errors.connectionError = true;
+                this.showNotification('サーバーへの接続に失敗しました', 'error');
+            }
+        },
+        
+        // プロセスリストの読み込み
         async loadProcesses() {
             try {
                 const response = await fetch('/api/processes');
                 if (response.ok) {
-                    this.processes = await response.json();
-                    this.filterProcesses();
+                    IchimiStore.state.processes = await response.json();
+                    IchimiStore.state.errors.connectionError = false;
+                } else {
+                    throw new Error('プロセスリストの取得に失敗しました');
                 }
             } catch (error) {
                 console.error('Failed to load processes:', error);
-                this.showToast('プロセスの読み込みに失敗しました', 'error');
+                IchimiStore.state.errors.connectionError = true;
+                this.showNotification('プロセスリストの取得に失敗しました', 'error');
             }
         },
         
-        // Refresh data
-        async refreshData() {
-            await this.loadProcesses();
-        },
-        
-        // Filter processes based on search query
-        filterProcesses() {
-            if (!this.searchQuery) {
-                this.filteredProcesses = this.processes;
+        // プロセスの作成
+        async createProcess() {
+            const modal = IchimiStore.state.modals.createProcess;
+            modal.errors = {};
+            
+            // バリデーション
+            if (!modal.form.id) {
+                modal.errors.id = 'IDは必須です';
+                return;
+            }
+            if (!modal.form.command) {
+                modal.errors.command = 'コマンドは必須です';
                 return;
             }
             
-            const query = this.searchQuery.toLowerCase();
-            this.filteredProcesses = this.processes.filter(p => {
-                return p.info.id.toLowerCase().includes(query) ||
-                       p.info.command.toLowerCase().includes(query);
-            });
-        },
-        
-        // Create new process
-        async createProcess() {
-            const args = this.newProcess.argsString 
-                ? this.newProcess.argsString.split(' ').filter(a => a) 
-                : [];
+            // args を文字列から配列に変換
+            const argsArray = modal.form.args && typeof modal.form.args === 'string' 
+                ? modal.form.args.split(' ').filter(a => a.trim()) 
+                : modal.form.args || [];
             
-            const env = {};
-            if (this.newProcess.envString) {
-                this.newProcess.envString.split('\n').forEach(line => {
-                    const [key, value] = line.split('=');
-                    if (key && value) {
-                        env[key.trim()] = value.trim();
+            // env を文字列からオブジェクトに変換
+            const envObject = {};
+            if (modal.form.env && typeof modal.form.env === 'string') {
+                modal.form.env.split('\n').forEach(line => {
+                    const [key, ...valueParts] = line.split('=');
+                    if (key && valueParts.length > 0) {
+                        envObject[key.trim()] = valueParts.join('=').trim();
                     }
                 });
+            } else if (typeof modal.form.env === 'object') {
+                Object.assign(envObject, modal.form.env);
             }
             
             const payload = {
-                id: this.newProcess.id,
-                command: this.newProcess.command,
-                args: args,
-                env: env,
-                cwd: this.newProcess.cwd || null,
+                id: modal.form.id,
+                command: modal.form.command,
+                args: argsArray,
+                env: envObject,
+                cwd: modal.form.cwd || null,
+                auto_start: modal.form.auto_start
             };
             
             try {
                 const response = await fetch('/api/processes', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload),
+                    body: JSON.stringify(payload)
                 });
                 
                 if (response.ok) {
-                    this.showCreateModal = false;
-                    this.resetNewProcessForm();
+                    this.closeCreateModal();
                     await this.loadProcesses();
-                    this.showToast('プロセスを作成しました', 'success');
+                    this.showNotification(`プロセス '${payload.id}' を作成しました`, 'success');
                 } else {
                     const error = await response.text();
-                    this.showToast(`エラー: ${error}`, 'error');
+                    this.showNotification(`エラー: ${error}`, 'error');
                 }
             } catch (error) {
                 console.error('Failed to create process:', error);
-                this.showToast('プロセスの作成に失敗しました', 'error');
+                this.showNotification('プロセスの作成に失敗しました', 'error');
             }
         },
         
-        // Start process
+        // プロセスの開始
         async startProcess(id) {
             try {
                 const response = await fetch(`/api/processes/${id}/start`, {
-                    method: 'POST',
+                    method: 'POST'
                 });
                 
                 if (response.ok) {
                     await this.loadProcesses();
-                    this.showToast(`プロセス ${id} を開始しました`, 'success');
+                    this.showNotification(`プロセス '${id}' を開始しました`, 'success');
                 } else {
                     const error = await response.text();
-                    this.showToast(`エラー: ${error}`, 'error');
+                    this.showNotification(`エラー: ${error}`, 'error');
                 }
             } catch (error) {
                 console.error('Failed to start process:', error);
-                this.showToast('プロセスの開始に失敗しました', 'error');
+                this.showNotification('プロセスの開始に失敗しました', 'error');
             }
         },
         
-        // Stop process
+        // プロセスの停止
         async stopProcess(id) {
             try {
                 const response = await fetch(`/api/processes/${id}/stop`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ grace_period_ms: 5000 }),
+                    body: JSON.stringify({ grace_period_ms: 5000 })
                 });
                 
                 if (response.ok) {
                     await this.loadProcesses();
-                    this.showToast(`プロセス ${id} を停止しました`, 'success');
+                    this.showNotification(`プロセス '${id}' を停止しました`, 'success');
                 } else {
                     const error = await response.text();
-                    this.showToast(`エラー: ${error}`, 'error');
+                    this.showNotification(`エラー: ${error}`, 'error');
                 }
             } catch (error) {
                 console.error('Failed to stop process:', error);
-                this.showToast('プロセスの停止に失敗しました', 'error');
+                this.showNotification('プロセスの停止に失敗しました', 'error');
             }
         },
         
-        // Delete process
+        // プロセスの削除
         async deleteProcess(id) {
-            if (!confirm(`プロセス ${id} を削除してもよろしいですか？`)) {
-                return;
-            }
+            const modal = IchimiStore.state.modals.confirmDelete;
+            modal.processId = id;
+            modal.processName = id;
+            modal.visible = true;
+        },
+        
+        // プロセスの削除実行
+        async confirmDeleteProcess() {
+            const id = IchimiStore.state.modals.confirmDelete.processId;
             
             try {
                 const response = await fetch(`/api/processes/${id}`, {
-                    method: 'DELETE',
+                    method: 'DELETE'
                 });
                 
                 if (response.ok) {
+                    this.closeConfirmDeleteModal();
                     await this.loadProcesses();
-                    this.showToast(`プロセス ${id} を削除しました`, 'success');
+                    this.showNotification(`プロセス '${id}' を削除しました`, 'success');
                 } else {
                     const error = await response.text();
-                    this.showToast(`エラー: ${error}`, 'error');
+                    this.showNotification(`エラー: ${error}`, 'error');
                 }
             } catch (error) {
                 console.error('Failed to delete process:', error);
-                this.showToast('プロセスの削除に失敗しました', 'error');
+                this.showNotification('プロセスの削除に失敗しました', 'error');
             }
         },
         
-        // View logs
+        // ログの表示
         async viewLogs(id) {
-            this.currentProcessId = id;
-            this.showLogsModal = true;
+            const modal = IchimiStore.state.modals.viewLogs;
+            modal.processId = id;
+            modal.visible = true;
+            modal.loading = true;
             await this.loadLogs();
         },
         
-        // Load logs
+        // ログの読み込み
         async loadLogs() {
+            const modal = IchimiStore.state.modals.viewLogs;
+            if (!modal.processId) return;
+            
             try {
-                const response = await fetch(`/api/processes/${this.currentProcessId}/logs?stream=${this.logStream}&lines=100`);
+                const response = await fetch(
+                    `/api/processes/${modal.processId}/logs?stream=${modal.stream}&lines=1000`
+                );
+                
                 if (response.ok) {
-                    const logs = await response.json();
-                    this.currentLogs = logs.join('\n') || 'ログがありません';
+                    modal.logs = await response.json();
                 } else {
-                    this.currentLogs = 'ログの取得に失敗しました';
+                    modal.logs = ['ログの取得に失敗しました'];
                 }
             } catch (error) {
                 console.error('Failed to load logs:', error);
-                this.currentLogs = 'ログの取得に失敗しました';
+                modal.logs = ['ログの取得に失敗しました'];
+            } finally {
+                modal.loading = false;
             }
         },
         
-        // Set log stream filter
+        // ログストリームの変更
         async setLogStream(stream) {
-            this.logStream = stream;
+            IchimiStore.state.modals.viewLogs.stream = stream;
             await this.loadLogs();
         },
         
-        // Reset new process form
-        resetNewProcessForm() {
-            this.newProcess = {
+        // モーダルを開く
+        openCreateModal() {
+            const modal = IchimiStore.state.modals.createProcess;
+            modal.visible = true;
+            modal.form = {
                 id: '',
                 command: '',
-                argsString: '',
+                args: '',
+                env: '',
                 cwd: '',
-                envString: '',
+                auto_start: false
             };
+            modal.errors = {};
         },
         
-        // Get status badge class
+        // モーダルを閉じる
+        closeCreateModal() {
+            IchimiStore.state.modals.createProcess.visible = false;
+        },
+        
+        closeLogsModal() {
+            IchimiStore.state.modals.viewLogs.visible = false;
+        },
+        
+        closeConfirmDeleteModal() {
+            IchimiStore.state.modals.confirmDelete.visible = false;
+        },
+        
+        // 通知の表示
+        showNotification(message, type = 'info') {
+            const notification = {
+                id: Date.now(),
+                message,
+                type,
+                timestamp: new Date()
+            };
+            
+            IchimiStore.state.notifications.push(notification);
+            
+            // 3秒後に自動的に削除
+            setTimeout(() => {
+                this.removeNotification(notification.id);
+            }, 3000);
+        },
+        
+        // 通知の削除
+        removeNotification(id) {
+            const index = IchimiStore.state.notifications.findIndex(n => n.id === id);
+            if (index > -1) {
+                IchimiStore.state.notifications.splice(index, 1);
+            }
+        },
+        
+        // 自動更新の開始
+        startAutoRefresh() {
+            if (!IchimiStore.state.ui.autoRefreshEnabled) return;
+            
+            this.refreshInterval = setInterval(async () => {
+                if (IchimiStore.state.ui.autoRefreshEnabled) {
+                    await this.loadProcesses();
+                    await this.loadServerInfo();
+                }
+            }, IchimiStore.state.ui.refreshInterval);
+        },
+        
+        // 自動更新の停止
+        stopAutoRefresh() {
+            if (this.refreshInterval) {
+                clearInterval(this.refreshInterval);
+                this.refreshInterval = null;
+            }
+        },
+        
+        // 自動更新の切り替え
+        toggleAutoRefresh() {
+            IchimiStore.state.ui.autoRefreshEnabled = !IchimiStore.state.ui.autoRefreshEnabled;
+            if (IchimiStore.state.ui.autoRefreshEnabled) {
+                this.startAutoRefresh();
+            } else {
+                this.stopAutoRefresh();
+            }
+        }
+    },
+    
+    // ヘルパー関数
+    helpers: {
+        // ステータスバッジのクラス
         getStatusBadgeClass(state) {
-            switch (state.state) {
-                case 'Running':
-                    return 'badge-running';
-                case 'Stopped':
-                    return 'badge-stopped';
-                case 'Failed':
-                    return 'badge-failed';
-                case 'NotStarted':
-                    return 'badge-notstarted';
-                default:
-                    return 'badge-secondary';
-            }
+            const classes = {
+                'Running': 'badge-success',
+                'Stopped': 'badge-warning',
+                'Failed': 'badge-danger',
+                'NotStarted': 'badge-secondary'
+            };
+            return classes[state.state] || 'badge-secondary';
         },
         
-        // Get status text
+        // ステータステキスト
         getStatusText(state) {
-            switch (state.state) {
-                case 'Running':
-                    return '実行中';
-                case 'Stopped':
-                    return '停止';
-                case 'Failed':
-                    return '失敗';
-                case 'NotStarted':
-                    return '未開始';
-                default:
-                    return state.state;
-            }
+            const texts = {
+                'Running': '実行中',
+                'Stopped': '停止',
+                'Failed': '失敗',
+                'NotStarted': '未開始'
+            };
+            return texts[state.state] || state.state;
         },
         
-        // Format date
+        // 日付フォーマット
         formatDate(date) {
             if (!date) return '-';
             const d = new Date(date);
@@ -272,24 +456,32 @@ document.addEventListener('alpine:init', () => {
                    `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
         },
         
-        // Show toast notification
-        showToast(message, type = 'info') {
-            // Simple console log for now - can be replaced with a proper toast library
-            console.log(`[${type.toUpperCase()}] ${message}`);
+        // 相対時間の計算
+        getRelativeTime(date) {
+            if (!date) return '';
+            const seconds = Math.floor((new Date() - new Date(date)) / 1000);
             
-            // You could integrate with Tabler's toast component here
-            const toast = document.createElement('div');
-            toast.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible position-fixed bottom-0 end-0 m-3`;
-            toast.style.zIndex = '9999';
-            toast.innerHTML = `
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            document.body.appendChild(toast);
-            
-            setTimeout(() => {
-                toast.remove();
-            }, 3000);
-        },
+            if (seconds < 60) return `${seconds}秒前`;
+            if (seconds < 3600) return `${Math.floor(seconds / 60)}分前`;
+            if (seconds < 86400) return `${Math.floor(seconds / 3600)}時間前`;
+            return `${Math.floor(seconds / 86400)}日前`;
+        }
+    }
+};
+
+// Alpine.js コンポーネント定義
+document.addEventListener('alpine:init', () => {
+    // メインアプリケーションコンポーネント
+    Alpine.data('ichimiApp', () => ({
+        // ストアへの参照
+        store: IchimiStore.state,
+        getters: IchimiStore.getters,
+        actions: IchimiStore.actions,
+        helpers: IchimiStore.helpers,
+        
+        // 初期化
+        init() {
+            IchimiStore.actions.init();
+        }
     }));
 });
