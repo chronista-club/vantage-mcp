@@ -47,17 +47,13 @@ impl IchimiServer {
         );
         tracing::debug!("Database initialized successfully");
 
-        // 起動時に既存データをインポート
-        let import_path = Database::get_default_data_path();
-        if import_path.exists() {
-            tracing::info!("Importing existing data from: {}", import_path.display());
-            database
-                .import_from_file(&import_path)
-                .await
-                .unwrap_or_else(|e| {
-                    tracing::warn!("Failed to import data: {}", e);
-                });
-        }
+        // 起動時に既存データを復元
+        database
+            .restore_on_startup()
+            .await
+            .unwrap_or_else(|e| {
+                tracing::warn!("Failed to restore data on startup: {}", e);
+            });
 
         // イベントシステムを初期化
         tracing::debug!("Initializing event system");
@@ -129,14 +125,11 @@ impl IchimiServer {
     pub async fn shutdown(&self) -> Result<(), String> {
         tracing::info!("Shutting down IchimiServer");
 
-        // データベースをエクスポート
-        let export_path = crate::db::Database::get_default_data_path();
-        tracing::info!("Exporting data to: {}", export_path.display());
-
+        // データベースをバックアップ
         self.database
-            .export_to_file(&export_path)
+            .backup_on_shutdown()
             .await
-            .map_err(|e| format!("Failed to export data: {e}"))?;
+            .map_err(|e| format!("Failed to backup data on shutdown: {e}"))?;
 
         tracing::info!("Shutdown complete");
         Ok(())

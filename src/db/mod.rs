@@ -7,6 +7,12 @@ use surrealdb::{
 use tokio::sync::RwLock;
 use tracing::{debug, info};
 
+/// デフォルトのデータディレクトリ
+pub const DEFAULT_DATA_DIR: &str = ".ichimi";
+
+/// デフォルトのデータファイル名
+pub const DEFAULT_DATA_FILE: &str = "ichimi.surql";
+
 #[derive(Clone)]
 pub struct Database {
     client: Arc<RwLock<Surreal<Db>>>,
@@ -187,7 +193,29 @@ impl Database {
 
     /// デフォルトのデータファイルパスを取得
     pub fn get_default_data_path() -> std::path::PathBuf {
-        // プロジェクトルートの .ichimi ディレクトリに保存
-        std::path::PathBuf::from(".ichimi").join("ichimi.db")
+        // プロジェクトルートのデータディレクトリに保存
+        std::path::PathBuf::from(DEFAULT_DATA_DIR).join(DEFAULT_DATA_FILE)
+    }
+
+    /// 起動時のデータ復元
+    pub async fn restore_on_startup(&self) -> Result<()> {
+        let import_path = Self::get_default_data_path();
+        if import_path.exists() {
+            info!("Restoring data from: {}", import_path.display());
+            self.import_from_file(&import_path).await
+                .context("Failed to restore data on startup")?;
+        } else {
+            info!("No existing data file found at: {}", import_path.display());
+        }
+        Ok(())
+    }
+
+    /// 終了時のデータ保存
+    pub async fn backup_on_shutdown(&self) -> Result<()> {
+        let export_path = Self::get_default_data_path();
+        info!("Backing up data to: {}", export_path.display());
+        self.export_to_file(&export_path).await
+            .context("Failed to backup data on shutdown")?;
+        Ok(())
     }
 }
