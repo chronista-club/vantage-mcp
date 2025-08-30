@@ -14,6 +14,21 @@ Ichimi Server は Model Context Protocol (MCP) を介した Claude Code 用の�
 - Webダッシュボード（Alpine.js + Tabler UI）
 - 自動バックアップ機能
 
+## インストール方法
+
+```bash
+# GitHubから特定のバージョンを直接インストール（推奨）
+cargo install --git https://github.com/chronista-club/ichimi-server --tag v0.1.0-beta10
+
+# 最新のmainブランチからインストール
+cargo install --git https://github.com/chronista-club/ichimi-server
+
+# ローカルでビルドしてインストール
+git clone https://github.com/chronista-club/ichimi-server.git
+cd ichimi-server
+cargo install --path .
+```
+
 ## ビルド・開発コマンド
 
 ```bash
