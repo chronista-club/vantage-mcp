@@ -70,6 +70,7 @@ ICHIMI_AUTO_EXPORT_INTERVAL=300 cargo run  # 5分ごとに自動エクスポー�
 - **`src/messages/`**: リクエスト/レスポンスメッセージ構造体
   - `basic.rs`: シンプルなメッセージタイプ（echo、ping）
   - `process.rs`: プロセス管理リクエストタイプ
+  - `ci.rs`: CI監視リクエストタイプ
   
 - **`src/process/`**: コアプロセス管理ロジック
   - `manager.rs`: `ProcessManager` - プロセスライフサイクルを処理し、プロセスレジストリを維持
@@ -80,6 +81,10 @@ ICHIMI_AUTO_EXPORT_INTERVAL=300 cargo run  # 5分ごとに自動エクスポー�
   - `PersistenceManager` - プロセスデータの保存/読み込み
   - .surql ファイル形式でのエクスポート/インポート
   - 起動時の自動インポート、定期的な自動エクスポート
+
+- **`src/ci/`**: GitHub Actions CI監視
+  - `CiMonitor` - gh CLIを使用したCI/CD パイプライン監視
+  - ビルド状態のポーリング、失敗ログ取得
 
 - **`src/web/`**: Webダッシュボードサーバー
   - `server.rs`: HTTP サーバー実装（自動ポート選択機能付き）
@@ -106,6 +111,7 @@ ICHIMI_AUTO_EXPORT_INTERVAL=300 cargo run  # 5分ごとに自動エクスポー�
 - 基本: `echo`、`ping`、`get_status`
 - プロセス管理: `create_process`、`start_process`、`stop_process`、`get_process_status`、`get_process_output`、`list_processes`、`remove_process`
 - 永続化: `export_processes`、`import_processes`
+- CI監視: `list_ci_runs`、`get_ci_run_details`、`get_ci_failed_logs`、`wait_for_ci_completion`、`start_ci_monitoring`
 
 各ツールは `lib.rs` の `IchimiServer` impl ブロック内のメソッドに直接マッピングされます。
 
