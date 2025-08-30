@@ -5,17 +5,10 @@ meta {
     version "1.0.0"
 }
 
-process "test-echo" {
-    command "/bin/echo"
-    args "Hello" "World"
-    cwd "/tmp"
-    auto_start #false
-}
-
-process "test-sleep" {
-    command "/bin/sleep"
-    args "60"
-    cwd "/tmp"
-    auto_start #false
+process "surrealdb" {
+    command "surreal"
+    args "start" "--bind" "127.0.0.1:12713" "-u" "ichimi" "-p" "ichimi" "rocksdb:database.db"
+    cwd ".ichimi"
+    auto_start #true
 }
 

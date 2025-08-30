@@ -4,9 +4,7 @@
       "type": "stdio",
       "command": "./target/release/ichimi",
       "env": {
-        "RUST_LOG": "info",
-        "ICHIMI_AUTO_EXPORT_INTERVAL": "300",
-        "VIEWER_PORT": "12711"
+        "RUST_LOG": "info"
       }
     },
     "serena": {

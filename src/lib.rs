@@ -35,28 +35,49 @@ pub struct IchimiServer {
 #[tool_router]
 impl IchimiServer {
     pub async fn new() -> Self {
+        tracing::info!("Initializing IchimiServer");
+        
         // データベースを初期化
+        tracing::debug!("Initializing database");
         let database = Arc::new(
             Database::new()
                 .await
                 .expect("Failed to initialize database"),
         );
+        tracing::debug!("Database initialized successfully");
+
+        // 起動時に既存データをインポート
+        let import_path = Database::get_default_data_path();
+        if import_path.exists() {
+            tracing::info!("Importing existing data from: {}", import_path.display());
+            database.import_from_file(&import_path)
+                .await
+                .unwrap_or_else(|e| {
+                    tracing::warn!("Failed to import data: {}", e);
+                });
+        }
 
         // イベントシステムを初期化
+        tracing::debug!("Initializing event system");
         let event_system = Arc::new(EventSystem::new(database.clone()));
 
         // 学習エンジンを初期化
+        tracing::debug!("Initializing learning engine");
         let learning_engine = Arc::new(LearningEngine::new(database.clone(), event_system.clone()));
 
         // 学習を開始
+        tracing::debug!("Starting learning engine");
         learning_engine
             .start_learning()
             .await
             .expect("Failed to start learning engine");
+        tracing::info!("Learning engine started successfully");
 
         // ProcessManagerを共有Databaseインスタンスで初期化
+        tracing::debug!("Initializing process manager with shared database");
         let process_manager = ProcessManager::with_database(database.clone()).await;
 
+        tracing::info!("IchimiServer initialization complete");
         Self {
             start_time: Arc::new(Mutex::new(chrono::Utc::now())),
             process_manager,
@@ -69,6 +90,23 @@ impl IchimiServer {
 
     pub fn set_process_manager(&mut self, manager: ProcessManager) {
         self.process_manager = manager;
+    }
+
+    /// サーバー終了時の処理
+    pub async fn shutdown(&self) -> Result<(), String> {
+        tracing::info!("Shutting down IchimiServer");
+        
+        // データベースをエクスポート
+        let export_path = crate::db::Database::get_default_data_path();
+        tracing::info!("Exporting data to: {}", export_path.display());
+        
+        self.database
+            .export_to_file(&export_path)
+            .await
+            .map_err(|e| format!("Failed to export data: {}", e))?;
+        
+        tracing::info!("Shutdown complete");
+        Ok(())
     }
 
     #[tool(description = "Echo the input message back")]
@@ -370,7 +408,8 @@ impl IchimiServer {
 #[tool_handler]
 impl ServerHandler for IchimiServer {
     fn get_info(&self) -> ServerInfo {
-        ServerInfo {
+        tracing::info!("MCP client requesting server info");
+        let info = ServerInfo {
             protocol_version: ProtocolVersion::V_2024_11_05,
             capabilities: ServerCapabilities::builder().enable_tools().build(),
             server_info: Implementation {
@@ -381,6 +420,8 @@ impl ServerHandler for IchimiServer {
                 "Ichimi Server - A powerful process management server for Claude Code via MCP."
                     .to_string(),
             ),
-        }
+        };
+        tracing::debug!("Returning server info: {:?}", info.server_info);
+        info
     }
 }

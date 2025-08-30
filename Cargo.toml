@@ -35,14 +35,15 @@ thiserror = "2.0.16"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
-# Database
-surrealdb = { version = "2.0", features = ["kv-rocksdb"] }
+# Database (Memory-only for MCP compatibility)
+surrealdb = { version = "2.0", features = ["kv-mem"] }
 
 # Utils
 chrono = { version = "0.4", features = ["serde"] }
 schemars = "1.0"
 dirs = "5.0"
 open = "5.3"
+isatty = "0.1"
 
 # Web server
 axum = { version = "0.7", optional = true }
