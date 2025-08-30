@@ -64,7 +64,10 @@ impl PersistenceManager {
 
     /// Save or update a process in SurrealDB
     pub async fn save_process(&self, process_info: &ProcessInfo) -> Result<()> {
-        tracing::info!("Attempting to save process {} to SurrealDB", process_info.id);
+        tracing::info!(
+            "Attempting to save process {} to SurrealDB",
+            process_info.id
+        );
         let record = ProcessInfoRecord::from(process_info);
         let client = self.database.client().await;
 
@@ -238,7 +241,11 @@ impl PersistenceManager {
         // 一時ディレクトリをクリーンアップ
         let _ = std::fs::remove_dir_all(&config_dir);
 
-        tracing::info!("Exported {} processes to KDL file: {}", processes.len(), file_path);
+        tracing::info!(
+            "Exported {} processes to KDL file: {}",
+            processes.len(),
+            file_path
+        );
         Ok(())
     }
 
@@ -262,7 +269,8 @@ impl PersistenceManager {
         // SurrealDBに保存
         for process_config in imported_processes {
             let info = process_config.to_process_info();
-            self.save_process(&info).await
+            self.save_process(&info)
+                .await
                 .map_err(|e| format!("Failed to save imported process: {}", e))?;
         }
 
@@ -295,7 +303,8 @@ impl PersistenceManager {
             .map_err(|e| format!("Failed to parse import file: {}", e))?;
 
         for (_, info) in imported.iter() {
-            self.save_process(info).await
+            self.save_process(info)
+                .await
                 .map_err(|e| format!("Failed to save imported process: {}", e))?;
         }
 

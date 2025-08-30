@@ -15,7 +15,7 @@ pub struct Database {
 impl Database {
     pub async fn new() -> Result<Self> {
         info!("Initializing in-memory SurrealDB");
-        
+
         // 常にインメモリデータベースを使用
         let db = Surreal::new::<Mem>(())
             .await
@@ -33,7 +33,6 @@ impl Database {
         info!("In-memory SurrealDB initialized successfully");
         Ok(database)
     }
-
 
     pub async fn client(&self) -> tokio::sync::RwLockReadGuard<'_, Surreal<Db>> {
         self.client.read().await
@@ -76,67 +75,69 @@ impl Database {
     /// データをSurrealQLファイルにエクスポート
     pub async fn export_to_file(&self, path: &std::path::Path) -> Result<()> {
         info!("Exporting database to: {}", path.display());
-        
+
         let client = self.client().await;
-        
+
         // すべてのデータを取得
         let mut result = client
             .query("SELECT * FROM process; SELECT * FROM process_event;")
             .await
             .context("Failed to fetch data for export")?;
-        
+
         // SurrealQL形式でエクスポート
         let mut export_content = String::new();
         export_content.push_str("-- Ichimi Server Database Export\n");
         export_content.push_str(&format!("-- Generated at: {}\n\n", chrono::Utc::now()));
-        
+
         // プロセスデータのエクスポート
         let processes: Vec<serde_json::Value> = result.take(0)?;
         for process in processes {
-            export_content.push_str(&format!("CREATE process CONTENT {};\n", 
-                serde_json::to_string(&process)?));
+            export_content.push_str(&format!(
+                "CREATE process CONTENT {};\n",
+                serde_json::to_string(&process)?
+            ));
         }
-        
+
         // イベントデータのエクスポート
         let events: Vec<serde_json::Value> = result.take(1)?;
         for event in events {
-            export_content.push_str(&format!("CREATE process_event CONTENT {};\n", 
-                serde_json::to_string(&event)?));
+            export_content.push_str(&format!(
+                "CREATE process_event CONTENT {};\n",
+                serde_json::to_string(&event)?
+            ));
         }
-        
+
         // ファイルに書き込み
         std::fs::create_dir_all(path.parent().unwrap_or(std::path::Path::new(".")))?;
-        std::fs::write(path, export_content)
-            .context("Failed to write export file")?;
-        
+        std::fs::write(path, export_content).context("Failed to write export file")?;
+
         info!("Database exported successfully");
         Ok(())
     }
-    
+
     /// SurrealQLファイルからデータをインポート
     pub async fn import_from_file(&self, path: &std::path::Path) -> Result<()> {
         if !path.exists() {
             info!("Import file not found: {}", path.display());
             return Ok(());
         }
-        
+
         info!("Importing database from: {}", path.display());
-        
-        let content = std::fs::read_to_string(path)
-            .context("Failed to read import file")?;
-        
+
+        let content = std::fs::read_to_string(path).context("Failed to read import file")?;
+
         let client = self.client().await;
-        
+
         // SurrealQLを実行
         client
             .query(&content)
             .await
             .context("Failed to execute import queries")?;
-        
+
         info!("Database imported successfully");
         Ok(())
     }
-    
+
     /// デフォルトのデータファイルパスを取得
     pub fn get_default_data_path() -> std::path::PathBuf {
         // プロジェクトルートの .ichimi ディレクトリに保存

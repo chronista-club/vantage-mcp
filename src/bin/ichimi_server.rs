@@ -60,42 +60,42 @@ async fn main() -> Result<()> {
     }
 
     // Detect if running as MCP server
-    let is_mcp = env::var("MCP_SERVER_NAME").is_ok() || 
-                 env::var("CLAUDE_CODE").is_ok() ||
-                 (!web_only && !isatty::stderr_isatty());
-    
+    let is_mcp = env::var("MCP_SERVER_NAME").is_ok()
+        || env::var("CLAUDE_CODE").is_ok()
+        || (!web_only && !isatty::stderr_isatty());
+
     // Setup logging based on environment
     let log_level = env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string());
-    
+
     if is_mcp {
         // When running as MCP, log to file to avoid interfering with stdio
         let log_dir = dirs::home_dir()
             .unwrap_or_else(|| std::path::PathBuf::from("."))
             .join(".ichimi")
             .join("logs");
-        
+
         // Create log directory if it doesn't exist
         std::fs::create_dir_all(&log_dir).ok();
-        
+
         // Generate log filename with timestamp
         let log_file = log_dir.join(format!(
             "ichimi-mcp-{}.log",
             chrono::Local::now().format("%Y%m%d-%H%M%S")
         ));
-        
+
         // Create file appender
         let file = std::fs::OpenOptions::new()
             .create(true)
             .append(true)
             .open(&log_file)
             .expect("Failed to create log file");
-        
+
         let filter = EnvFilter::from_default_env()
             .add_directive(format!("ichimi={}", log_level).parse().unwrap())
             .add_directive(format!("ichimi_server={}", log_level).parse().unwrap())
             .add_directive("facet_kdl=warn".parse().unwrap())
             .add_directive("mcp_server=debug".parse().unwrap());
-        
+
         tracing_subscriber::fmt()
             .with_env_filter(filter)
             .with_writer(file)
@@ -105,13 +105,16 @@ async fn main() -> Result<()> {
             .with_file(true)
             .with_line_number(true)
             .init();
-        
+
         tracing::info!("=== Ichimi MCP Server Starting ===");
         tracing::info!("Log file: {:?}", log_file);
-        tracing::info!("Environment: MCP_SERVER_NAME={:?}", env::var("MCP_SERVER_NAME").ok());
+        tracing::info!(
+            "Environment: MCP_SERVER_NAME={:?}",
+            env::var("MCP_SERVER_NAME").ok()
+        );
         tracing::info!("Arguments: {:?}", args);
         tracing::info!("Working directory: {:?}", env::current_dir());
-        
+
         // Also write startup info to stderr for debugging
         eprintln!("[ICHIMI] MCP mode detected, logging to: {:?}", log_file);
     } else {
@@ -126,7 +129,7 @@ async fn main() -> Result<()> {
             .with_writer(std::io::stderr)
             .with_ansi(false)
             .init();
-        
+
         tracing::info!("Starting Ichimi Server (console mode)");
     }
 
@@ -139,7 +142,8 @@ async fn main() -> Result<()> {
         tracing::info!("Web dashboard enabled on port {}", web_port);
 
         // Open browser after a short delay to allow server to start
-        if auto_open && !is_mcp {  // Don't open browser in MCP mode
+        if auto_open && !is_mcp {
+            // Don't open browser in MCP mode
             let url = format!("http://localhost:{}", web_port);
             tokio::spawn(async move {
                 tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
@@ -180,9 +184,13 @@ async fn main() -> Result<()> {
             let server_arc = std::sync::Arc::new(server);
 
             tracing::debug!("Serving MCP on stdio");
-            let service = (*server_arc).clone().serve(stdio()).await.inspect_err(|e| {
-                tracing::error!("MCP Server initialization error: {:?}", e);
-            })?;
+            let service = (*server_arc)
+                .clone()
+                .serve(stdio())
+                .await
+                .inspect_err(|e| {
+                    tracing::error!("MCP Server initialization error: {:?}", e);
+                })?;
 
             tracing::info!("MCP server ready, waiting for requests");
             service.waiting().await?;
@@ -196,9 +204,13 @@ async fn main() -> Result<()> {
         server.set_process_manager(process_manager);
         let server_arc = std::sync::Arc::new(server);
 
-        let service = (*server_arc).clone().serve(stdio()).await.inspect_err(|e| {
-            tracing::error!("MCP Server error: {:?}", e);
-        })?;
+        let service = (*server_arc)
+            .clone()
+            .serve(stdio())
+            .await
+            .inspect_err(|e| {
+                tracing::error!("MCP Server error: {:?}", e);
+            })?;
 
         service.waiting().await?;
         server_arc.shutdown().await.ok();
@@ -213,9 +225,13 @@ async fn main() -> Result<()> {
         server.set_process_manager(process_manager);
         let server_arc = std::sync::Arc::new(server);
 
-        let service = (*server_arc).clone().serve(stdio()).await.inspect_err(|e| {
-            tracing::error!("MCP Server error: {:?}", e);
-        })?;
+        let service = (*server_arc)
+            .clone()
+            .serve(stdio())
+            .await
+            .inspect_err(|e| {
+                tracing::error!("MCP Server error: {:?}", e);
+            })?;
 
         service.waiting().await?;
         server_arc.shutdown().await.ok();
