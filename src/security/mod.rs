@@ -138,7 +138,6 @@ pub fn validate_working_directory(cwd: &Option<PathBuf>) -> Result<(), String> {
 
         // システムディレクトリへのアクセスを制限
         let restricted_paths = [
-            "/",
             "/etc",
             "/sys",
             "/proc",
@@ -149,6 +148,11 @@ pub fn validate_working_directory(cwd: &Option<PathBuf>) -> Result<(), String> {
             "/System",
             "/Library",
         ];
+
+        // ルートディレクトリは特別にチェック（完全一致のみ禁止）
+        if canonical == Path::new("/") {
+            return Err("Access to root directory '/' is not allowed".to_string());
+        }
 
         for restricted in &restricted_paths {
             let restricted_path = Path::new(restricted);
