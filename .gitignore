@@ -35,7 +35,6 @@ Thumbs.db
 
 # Vendor files (Tabler and other external libraries)
 static/vendor/ichimi_export.json
-static/
 
 # フォークしたリポジトリ（別途管理）
 facet-kdl/

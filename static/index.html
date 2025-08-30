@@ -263,9 +263,18 @@
                         <div class="mb-3">
                             <label class="form-check">
                                 <input class="form-check-input" type="checkbox" 
-                                       x-model="store.modals.createProcess.form.auto_start">
-                                <span class="form-check-label">自動起動を有効にする</span>
+                                       x-model="store.modals.createProcess.form.auto_start_on_create">
+                                <span class="form-check-label">作成時に自動起動</span>
                             </label>
+                            <small class="text-muted d-block ms-4">プロセス作成時に自動的に起動します</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-check">
+                                <input class="form-check-input" type="checkbox" 
+                                       x-model="store.modals.createProcess.form.auto_start_on_restore">
+                                <span class="form-check-label">復元時に自動起動</span>
+                            </label>
+                            <small class="text-muted d-block ms-4">サーバー再起動時に自動的に起動します</small>
                         </div>
                     </div>
                     <div class="modal-footer">

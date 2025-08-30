@@ -34,7 +34,8 @@ window.IchimiStore = {
                     args: [],
                     env: {},
                     cwd: '',
-                    auto_start: false
+                    auto_start_on_create: false,
+                    auto_start_on_restore: false
                 },
                 errors: {}
             },
@@ -202,7 +203,8 @@ window.IchimiStore = {
                 args: argsArray,
                 env: envObject,
                 cwd: modal.form.cwd || null,
-                auto_start: modal.form.auto_start
+                auto_start_on_create: modal.form.auto_start_on_create,
+                auto_start_on_restore: modal.form.auto_start_on_restore
             };
             
             try {
@@ -347,7 +349,8 @@ window.IchimiStore = {
                 args: '',
                 env: '',
                 cwd: '',
-                auto_start: false
+                auto_start_on_create: false,
+                auto_start_on_restore: false
             };
             modal.errors = {};
         },
