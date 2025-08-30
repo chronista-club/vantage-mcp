@@ -1,5 +1,6 @@
 use super::buffer::CircularBuffer;
 use super::types::*;
+use crate::db::Database;
 use crate::persistence::PersistenceManager;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -55,13 +56,19 @@ pub struct ProcessManager {
 
 impl ProcessManager {
     pub async fn new() -> Self {
-        let persistence = match PersistenceManager::new().await {
-            Ok(pm) => Arc::new(pm),
+        let database = match Database::new().await {
+            Ok(db) => Arc::new(db),
             Err(e) => {
-                tracing::error!("Failed to initialize persistence: {}", e);
-                panic!("Cannot continue without persistence layer");
+                tracing::error!("Failed to initialize database: {}", e);
+                panic!("Cannot continue without database");
             }
         };
+
+        Self::with_database(database).await
+    }
+
+    pub async fn with_database(database: Arc<Database>) -> Self {
+        let persistence = Arc::new(PersistenceManager::with_database(database));
 
         let manager = Self {
             processes: Arc::new(RwLock::new(HashMap::new())),
@@ -138,11 +145,12 @@ impl ProcessManager {
 
         let process = ManagedProcess::new(id.clone(), command, args, env, cwd);
         let process_info = process.info.clone();
-        processes.insert(id, Arc::new(RwLock::new(process)));
+        processes.insert(id.clone(), Arc::new(RwLock::new(process)));
 
         // Persist the process
-        if let Err(e) = self.persistence.save_process(&process_info).await {
-            tracing::warn!("Failed to persist process: {}", e);
+        match self.persistence.save_process(&process_info).await {
+            Ok(_) => tracing::debug!("Process {} persisted successfully", id),
+            Err(e) => tracing::warn!("Failed to persist process {}: {}", id, e),
         }
 
         Ok(())

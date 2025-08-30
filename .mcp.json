@@ -5,8 +5,25 @@
       "command": "./target/release/ichimi",
       "env": {
         "RUST_LOG": "info",
-        "ICHIMI_AUTO_EXPORT_INTERVAL": "300"
+        "ICHIMI_AUTO_EXPORT_INTERVAL": "300",
+        "VIEWER_PORT": "12711"
       }
+    },
+    "serena": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/oraios/serena",
+        "serena-mcp-server",
+        "--context",
+        "ide-assistant"
+      ]
+    },
+    "SurrealDB": {
+      "type": "stdio",
+      "command": "surrealmcp",
+      "args": ["start"]
     }
   }
 }

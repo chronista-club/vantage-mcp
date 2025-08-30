@@ -54,9 +54,12 @@ impl IchimiServer {
             .await
             .expect("Failed to start learning engine");
 
+        // ProcessManagerを共有Databaseインスタンスで初期化
+        let process_manager = ProcessManager::with_database(database.clone()).await;
+
         Self {
             start_time: Arc::new(Mutex::new(chrono::Utc::now())),
-            process_manager: ProcessManager::new().await,
+            process_manager,
             database,
             event_system,
             learning_engine,

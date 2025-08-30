@@ -38,8 +38,6 @@ impl Database {
             db_path,
         };
 
-        database.init_schema().await?;
-
         info!("SurrealDB initialized successfully");
         Ok(database)
     }
@@ -61,64 +59,6 @@ impl Database {
 
     pub async fn client_mut(&self) -> tokio::sync::RwLockWriteGuard<'_, Surreal<Db>> {
         self.client.write().await
-    }
-
-    async fn init_schema(&self) -> Result<()> {
-        debug!("Initializing database schema");
-
-        let queries = vec![
-            // プロセス起動パターン
-            r#"
-            DEFINE TABLE process_pattern SCHEMAFULL;
-            DEFINE FIELD process_id ON process_pattern TYPE string;
-            DEFINE FIELD next_processes ON process_pattern TYPE array;
-            DEFINE FIELD confidence ON process_pattern TYPE float DEFAULT 0.0;
-            DEFINE FIELD context ON process_pattern TYPE object;
-            DEFINE INDEX idx_pattern ON process_pattern COLUMNS process_id;
-            "#,
-            // 時間帯パターン
-            r#"
-            DEFINE TABLE time_pattern SCHEMAFULL;
-            DEFINE FIELD hour_range ON time_pattern TYPE object;
-            DEFINE FIELD day_of_week ON time_pattern TYPE array;
-            DEFINE FIELD processes ON time_pattern TYPE array;
-            DEFINE FIELD frequency ON time_pattern TYPE number DEFAULT 0;
-            "#,
-            // プロセスイベント
-            r#"
-            DEFINE TABLE process_event SCHEMAFULL;
-            DEFINE FIELD type ON process_event TYPE string;
-            DEFINE FIELD process_id ON process_event TYPE string;
-            DEFINE FIELD timestamp ON process_event TYPE datetime DEFAULT time::now();
-            DEFINE FIELD context ON process_event TYPE object;
-            DEFINE FIELD metadata ON process_event TYPE object;
-            "#,
-            // プロセス定義（グラフ用）
-            r#"
-            DEFINE TABLE process SCHEMAFULL;
-            DEFINE FIELD name ON process TYPE string;
-            DEFINE FIELD command ON process TYPE string;
-            DEFINE FIELD args ON process TYPE array;
-            DEFINE FIELD env ON process TYPE object;
-            DEFINE FIELD cwd ON process TYPE string;
-            "#,
-            // 依存関係
-            r#"
-            DEFINE TABLE depends_on SCHEMAFULL;
-            DEFINE FIELD created_at ON depends_on TYPE datetime DEFAULT time::now();
-            "#,
-        ];
-
-        let client = self.client().await;
-        for query in queries {
-            client
-                .query(query)
-                .await
-                .context("Failed to execute schema definition")?;
-        }
-
-        debug!("Database schema initialized");
-        Ok(())
     }
 
     pub async fn record_event(
