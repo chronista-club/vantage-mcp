@@ -2,7 +2,7 @@
   "mcpServers": {
     "ichimi": {
       "type": "stdio",
-      "command": "ichimi",
+      "command": "./target/release/ichimi",
       "env": {
         "RUST_LOG": "info"
       }

@@ -8,13 +8,17 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 pub mod db;
+pub mod error;
 pub mod events;
 pub mod learning;
 pub mod messages;
 pub mod persistence;
 pub mod process;
+pub mod security;
 #[cfg(feature = "web")]
 pub mod web;
+
+pub use error::{IchimiError, IchimiResult};
 
 use db::Database;
 use events::EventSystem;
@@ -35,7 +39,7 @@ pub struct IchimiServer {
 
 #[tool_router]
 impl IchimiServer {
-    pub async fn new() -> Self {
+    pub async fn new() -> anyhow::Result<Self> {
         tracing::info!("Initializing IchimiServer");
 
         // データベースを初期化
@@ -43,7 +47,10 @@ impl IchimiServer {
         let database = Arc::new(
             Database::new()
                 .await
-                .expect("Failed to initialize database"),
+                .map_err(|e| {
+                    tracing::error!("Failed to initialize database: {}", e);
+                    anyhow::anyhow!("Database initialization failed: {}", e)
+                })?,
         );
         tracing::debug!("Database initialized successfully");
 
@@ -62,25 +69,26 @@ impl IchimiServer {
 
         // 学習を開始
         tracing::debug!("Starting learning engine");
-        learning_engine
-            .start_learning()
-            .await
-            .expect("Failed to start learning engine");
-        tracing::info!("Learning engine started successfully");
+        if let Err(e) = learning_engine.start_learning().await {
+            tracing::warn!("Failed to start learning engine: {}", e);
+            // 学習エンジンの失敗は致命的ではないので、警告のみ
+        } else {
+            tracing::info!("Learning engine started successfully");
+        }
 
         // ProcessManagerを共有Databaseインスタンスで初期化
         tracing::debug!("Initializing process manager with shared database");
         let process_manager = ProcessManager::with_database(database.clone()).await;
 
         tracing::info!("IchimiServer initialization complete");
-        Self {
+        Ok(Self {
             start_time: Arc::new(Mutex::new(chrono::Utc::now())),
             process_manager,
             database,
             event_system,
             learning_engine,
             tool_router: Self::tool_router(),
-        }
+        })
     }
 
     pub fn set_process_manager(&mut self, manager: ProcessManager) {
@@ -88,7 +96,7 @@ impl IchimiServer {
     }
 
     /// Create IchimiServer with existing ProcessManager (shares database)
-    pub async fn with_process_manager(process_manager: ProcessManager) -> Self {
+    pub async fn with_process_manager(process_manager: ProcessManager) -> anyhow::Result<Self> {
         tracing::info!("Initializing IchimiServer with existing ProcessManager");
 
         // Get database from ProcessManager
@@ -101,25 +109,26 @@ impl IchimiServer {
         let learning_engine = Arc::new(LearningEngine::new(database.clone(), event_system.clone()));
 
         // Start learning
-        learning_engine
-            .start_learning()
-            .await
-            .expect("Failed to start learning engine");
-        tracing::info!("Learning engine started successfully");
+        if let Err(e) = learning_engine.start_learning().await {
+            tracing::warn!("Failed to start learning engine: {}", e);
+            // 学習エンジンの失敗は致命的ではないので、警告のみ
+        } else {
+            tracing::info!("Learning engine started successfully");
+        }
 
         tracing::info!("IchimiServer initialization complete");
-        Self {
+        Ok(Self {
             start_time: Arc::new(Mutex::new(chrono::Utc::now())),
             process_manager,
             database,
             event_system,
             learning_engine,
             tool_router: Self::tool_router(),
-        }
+        })
     }
 
     /// サーバー終了時の処理
-    pub async fn shutdown(&self) -> Result<(), String> {
+    pub async fn shutdown(&self) -> std::result::Result<(), String> {
         tracing::info!("Shutting down IchimiServer");
 
         // データベースをバックアップ
@@ -136,19 +145,19 @@ impl IchimiServer {
     fn echo(
         &self,
         Parameters(EchoRequest { message }): Parameters<EchoRequest>,
-    ) -> Result<CallToolResult, McpError> {
+    ) -> std::result::Result<CallToolResult, McpError> {
         Ok(CallToolResult::success(vec![Content::text(format!(
             "Echo: {message}"
         ))]))
     }
 
     #[tool(description = "Simple ping/pong health check")]
-    fn ping(&self) -> Result<CallToolResult, McpError> {
+    fn ping(&self) -> std::result::Result<CallToolResult, McpError> {
         Ok(CallToolResult::success(vec![Content::text("pong")]))
     }
 
     #[tool(description = "Get the current server status")]
-    async fn get_status(&self) -> Result<CallToolResult, McpError> {
+    async fn get_status(&self) -> std::result::Result<CallToolResult, McpError> {
         let start_time = self.start_time.lock().await;
         let uptime = chrono::Utc::now() - *start_time;
 
@@ -170,7 +179,7 @@ impl IchimiServer {
             auto_start_on_create,
             auto_start_on_restore,
         }): Parameters<CreateProcessRequest>,
-    ) -> Result<CallToolResult, McpError> {
+    ) -> std::result::Result<CallToolResult, McpError> {
         let cwd_path = cwd.map(std::path::PathBuf::from);
 
         // Create the process with auto_start flags
@@ -200,7 +209,7 @@ impl IchimiServer {
     async fn start_process(
         &self,
         Parameters(StartProcessRequest { id }): Parameters<StartProcessRequest>,
-    ) -> Result<CallToolResult, McpError> {
+    ) -> std::result::Result<CallToolResult, McpError> {
         let pid = self
             .process_manager
             .start_process(id.clone())
@@ -223,7 +232,7 @@ impl IchimiServer {
             id,
             grace_period_ms,
         }): Parameters<StopProcessRequest>,
-    ) -> Result<CallToolResult, McpError> {
+    ) -> std::result::Result<CallToolResult, McpError> {
         self.process_manager
             .stop_process(id.clone(), grace_period_ms)
             .await
@@ -242,7 +251,7 @@ impl IchimiServer {
     async fn get_process_status(
         &self,
         Parameters(GetProcessStatusRequest { id }): Parameters<GetProcessStatusRequest>,
-    ) -> Result<CallToolResult, McpError> {
+    ) -> std::result::Result<CallToolResult, McpError> {
         let status = self
             .process_manager
             .get_process_status(id)
@@ -268,7 +277,7 @@ impl IchimiServer {
         Parameters(GetProcessOutputRequest { id, stream, lines }): Parameters<
             GetProcessOutputRequest,
         >,
-    ) -> Result<CallToolResult, McpError> {
+    ) -> std::result::Result<CallToolResult, McpError> {
         let output = self
             .process_manager
             .get_process_output(id, stream, lines)
@@ -288,7 +297,7 @@ impl IchimiServer {
     async fn list_processes(
         &self,
         Parameters(ListProcessesRequest { filter }): Parameters<ListProcessesRequest>,
-    ) -> Result<CallToolResult, McpError> {
+    ) -> std::result::Result<CallToolResult, McpError> {
         let processes = self.process_manager.list_processes(filter).await;
 
         let json = serde_json::to_string_pretty(&processes).map_err(|e| McpError {
@@ -304,7 +313,7 @@ impl IchimiServer {
     async fn remove_process(
         &self,
         Parameters(RemoveProcessRequest { id }): Parameters<RemoveProcessRequest>,
-    ) -> Result<CallToolResult, McpError> {
+    ) -> std::result::Result<CallToolResult, McpError> {
         self.process_manager
             .remove_process(id.clone())
             .await
@@ -323,7 +332,7 @@ impl IchimiServer {
     async fn export_processes(
         &self,
         Parameters(ExportProcessesRequest { file_path }): Parameters<ExportProcessesRequest>,
-    ) -> Result<CallToolResult, McpError> {
+    ) -> std::result::Result<CallToolResult, McpError> {
         let path = self
             .process_manager
             .export_processes(file_path)
@@ -343,7 +352,7 @@ impl IchimiServer {
     async fn import_processes(
         &self,
         Parameters(ImportProcessesRequest { file_path }): Parameters<ImportProcessesRequest>,
-    ) -> Result<CallToolResult, McpError> {
+    ) -> std::result::Result<CallToolResult, McpError> {
         self.process_manager
             .import_processes(&file_path)
             .await
@@ -366,7 +375,7 @@ impl IchimiServer {
             auto_start_on_create,
             auto_start_on_restore,
         }): Parameters<UpdateProcessConfigRequest>,
-    ) -> Result<CallToolResult, McpError> {
+    ) -> std::result::Result<CallToolResult, McpError> {
         self.process_manager
             .update_process_config(id.clone(), auto_start_on_create, auto_start_on_restore)
             .await
@@ -391,7 +400,7 @@ impl IchimiServer {
     async fn get_suggestions(
         &self,
         Parameters(GetSuggestionsRequest { current_process }): Parameters<GetSuggestionsRequest>,
-    ) -> Result<CallToolResult, McpError> {
+    ) -> std::result::Result<CallToolResult, McpError> {
         let suggestions = self
             .learning_engine
             .get_suggestions(current_process.as_deref())

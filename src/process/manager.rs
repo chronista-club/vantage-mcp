@@ -184,6 +184,9 @@ impl ProcessManager {
         auto_start_on_create: bool,
         auto_start_on_restore: bool,
     ) -> Result<(), String> {
+        // セキュリティ検証
+        crate::security::validate_process_inputs(&command, &args, &env, &cwd)?;
+        
         info!(
             "Creating process '{}': {} {:?} (auto_start_on_create: {}, auto_start_on_restore: {})",
             id, command, args, auto_start_on_create, auto_start_on_restore

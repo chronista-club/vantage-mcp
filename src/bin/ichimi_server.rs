@@ -86,13 +86,13 @@ async fn main() -> Result<()> {
             .create(true)
             .append(true)
             .open(&log_file)
-            .expect("Failed to create log file");
+            .map_err(|e| anyhow::anyhow!("Failed to create log file: {}", e))?;
 
         let filter = EnvFilter::from_default_env()
-            .add_directive(format!("ichimi={log_level}").parse().unwrap())
-            .add_directive(format!("ichimi_server={log_level}").parse().unwrap())
-            .add_directive("facet_kdl=warn".parse().unwrap())
-            .add_directive("mcp_server=debug".parse().unwrap());
+            .add_directive(format!("ichimi={log_level}").parse().map_err(|e| anyhow::anyhow!("Invalid log level: {}", e))?)
+            .add_directive(format!("ichimi_server={log_level}").parse().map_err(|e| anyhow::anyhow!("Invalid log level: {}", e))?)
+            .add_directive("facet_kdl=warn".parse().map_err(|e| anyhow::anyhow!("Invalid log level: {}", e))?)
+            .add_directive("mcp_server=debug".parse().map_err(|e| anyhow::anyhow!("Invalid log level: {}", e))?);
 
         tracing_subscriber::fmt()
             .with_env_filter(filter)
@@ -111,9 +111,9 @@ async fn main() -> Result<()> {
     } else {
         // Web mode or MCP with web - log to stderr
         let filter = EnvFilter::from_default_env()
-            .add_directive(format!("ichimi={log_level}").parse().unwrap())
-            .add_directive(format!("ichimi_server={log_level}").parse().unwrap())
-            .add_directive("facet_kdl=warn".parse().unwrap());
+            .add_directive(format!("ichimi={log_level}").parse().map_err(|e| anyhow::anyhow!("Invalid log level: {}", e))?)
+            .add_directive(format!("ichimi_server={log_level}").parse().map_err(|e| anyhow::anyhow!("Invalid log level: {}", e))?)
+            .add_directive("facet_kdl=warn".parse().map_err(|e| anyhow::anyhow!("Invalid log level: {}", e))?);
 
         tracing_subscriber::fmt()
             .with_env_filter(filter)
@@ -228,7 +228,9 @@ async fn main() -> Result<()> {
     // Run MCP server unless --web-only is specified
     if run_mcp {
         tracing::info!("Starting MCP server");
-        let server = IchimiServer::with_process_manager(process_manager.clone()).await;
+        let server = IchimiServer::with_process_manager(process_manager.clone())
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to initialize IchimiServer: {}", e))?;
         let server_arc = std::sync::Arc::new(server);
 
         tracing::debug!("Serving MCP on stdio");
