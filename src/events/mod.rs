@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::broadcast;
-use tracing::{debug, error, info};
+use tracing::debug;
 
 use crate::db::Database;
 

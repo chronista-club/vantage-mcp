@@ -197,7 +197,7 @@ pub async fn create_process(
         .create_process(req.id.clone(), req.command, req.args, req.env, cwd)
         .await
         .map_err(|e| (StatusCode::BAD_REQUEST, e.clone()))?;
-    
+
     // Update auto_start if provided
     if req.auto_start {
         if let Err(e) = state
@@ -208,7 +208,7 @@ pub async fn create_process(
             tracing::warn!("Failed to set auto_start on creation: {}", e);
         }
     }
-    
+
     Ok((
         StatusCode::CREATED,
         Json(serde_json::json!({

@@ -15,9 +15,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         env: HashMap::new(),
         cwd: None,
         state: ProcessState::NotStarted,
+        auto_start: false,
     };
 
-    println!("Saving process: {:?}", process_info);
+    println!("Saving process: {process_info:?}");
 
     // Save process
     persistence.save_process(&process_info).await?;
@@ -31,18 +32,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Loaded {} processes", loaded.len());
 
     if let Some(proc) = loaded.get("test-example") {
-        println!("Loaded process: {:?}", proc);
+        println!("Loaded process: {proc:?}");
         println!("Args: {:?}", proc.args);
     }
 
     // Export to file
     let export_path = "/tmp/test_export.surql";
     persistence.export_to_file(export_path).await?;
-    println!("Exported to {}", export_path);
+    println!("Exported to {export_path}");
 
     // Read and print the export file
     let content = std::fs::read_to_string(export_path)?;
-    println!("\nExport file content:\n{}", content);
+    println!("\nExport file content:\n{content}");
 
     Ok(())
 }

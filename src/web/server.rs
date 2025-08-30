@@ -76,16 +76,16 @@ fn create_app(process_manager: ProcessManager) -> Router {
     // 埋め込んだテンプレートを追加
     if let Err(e) = tera.add_raw_template("base.tera", base_template) {
         tracing::error!("baseテンプレートの追加エラー: {}", e);
-        panic!("baseテンプレートの追加に失敗しました: {}", e);
+        panic!("baseテンプレートの追加に失敗しました: {e}");
     }
 
     if let Err(e) = tera.add_raw_template("index.tera", index_template) {
         tracing::error!("indexテンプレートの追加エラー: {}", e);
-        panic!("indexテンプレートの追加に失敗しました: {}", e);
+        panic!("indexテンプレートの追加に失敗しました: {e}");
     }
 
     let tera = Arc::new(tera);
-    
+
     // 現在の作業ディレクトリを取得
     let working_directory = std::env::current_dir()
         .ok()
@@ -125,7 +125,7 @@ async fn index_handler(
             tracing::error!("テンプレートレンダリングエラー: {}", e);
             Err((
                 axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                format!("テンプレートエラー: {}", e),
+                format!("テンプレートエラー: {e}"),
             ))
         }
     }

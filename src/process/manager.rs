@@ -1,5 +1,6 @@
 use super::buffer::CircularBuffer;
 use super::types::*;
+use crate::db::Database;
 use crate::persistence::PersistenceManager;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -55,13 +56,19 @@ pub struct ProcessManager {
 
 impl ProcessManager {
     pub async fn new() -> Self {
-        let persistence = match PersistenceManager::new().await {
-            Ok(pm) => Arc::new(pm),
+        let database = match Database::new().await {
+            Ok(db) => Arc::new(db),
             Err(e) => {
-                tracing::error!("Failed to initialize persistence: {}", e);
-                panic!("Cannot continue without persistence layer");
+                tracing::error!("Failed to initialize database: {}", e);
+                panic!("Cannot continue without database");
             }
         };
+
+        Self::with_database(database).await
+    }
+
+    pub async fn with_database(database: Arc<Database>) -> Self {
+        let persistence = Arc::new(PersistenceManager::with_database(database));
 
         let manager = Self {
             processes: Arc::new(RwLock::new(HashMap::new())),
@@ -133,16 +140,17 @@ impl ProcessManager {
         let mut processes = self.processes.write().await;
 
         if processes.contains_key(&id) {
-            return Err(format!("Process with id '{}' already exists", id));
+            return Err(format!("Process with id '{id}' already exists"));
         }
 
         let process = ManagedProcess::new(id.clone(), command, args, env, cwd);
         let process_info = process.info.clone();
-        processes.insert(id, Arc::new(RwLock::new(process)));
+        processes.insert(id.clone(), Arc::new(RwLock::new(process)));
 
         // Persist the process
-        if let Err(e) = self.persistence.save_process(&process_info).await {
-            tracing::warn!("Failed to persist process: {}", e);
+        match self.persistence.save_process(&process_info).await {
+            Ok(_) => tracing::debug!("Process {} persisted successfully", id),
+            Err(e) => tracing::warn!("Failed to persist process {}: {}", id, e),
         }
 
         Ok(())
@@ -154,7 +162,7 @@ impl ProcessManager {
         let processes = self.processes.read().await;
         let process_arc = processes
             .get(&id)
-            .ok_or_else(|| format!("Process '{}' not found", id))?
+            .ok_or_else(|| format!("Process '{id}' not found"))?
             .clone();
         drop(processes);
 
@@ -162,7 +170,7 @@ impl ProcessManager {
 
         // すでに実行中の場合はエラー
         if matches!(process.info.state, ProcessState::Running { .. }) {
-            return Err(format!("Process '{}' is already running", id));
+            return Err(format!("Process '{id}' is already running"));
         }
 
         // コマンドを構築
@@ -185,7 +193,7 @@ impl ProcessManager {
         // プロセスを起動
         let mut child = cmd
             .spawn()
-            .map_err(|e| format!("Failed to start process: {}", e))?;
+            .map_err(|e| format!("Failed to start process: {e}"))?;
 
         let pid = child
             .id()
@@ -248,7 +256,7 @@ impl ProcessManager {
         let processes = self.processes.read().await;
         let process_arc = processes
             .get(&id)
-            .ok_or_else(|| format!("Process '{}' not found", id))?
+            .ok_or_else(|| format!("Process '{id}' not found"))?
             .clone();
         drop(processes);
 
@@ -256,7 +264,7 @@ impl ProcessManager {
 
         // 実行中でない場合はエラー
         if !matches!(process.info.state, ProcessState::Running { .. }) {
-            return Err(format!("Process '{}' is not running", id));
+            return Err(format!("Process '{id}' is not running"));
         }
 
         if let Some(mut child) = process.child.take() {
@@ -265,7 +273,7 @@ impl ProcessManager {
                 child
                     .kill()
                     .await
-                    .map_err(|e| format!("Failed to kill process: {}", e))?;
+                    .map_err(|e| format!("Failed to kill process: {e}"))?;
 
                 // 指定時間待機
                 let timeout = tokio::time::Duration::from_millis(grace_ms);
@@ -275,7 +283,7 @@ impl ProcessManager {
                 child
                     .kill()
                     .await
-                    .map_err(|e| format!("Failed to kill process: {}", e))?;
+                    .map_err(|e| format!("Failed to kill process: {e}"))?;
             }
 
             // 出力ハンドルをクリーンアップ
@@ -306,7 +314,7 @@ impl ProcessManager {
         let processes = self.processes.read().await;
         let process_arc = processes
             .get(&id)
-            .ok_or_else(|| format!("Process '{}' not found", id))?;
+            .ok_or_else(|| format!("Process '{id}' not found"))?;
 
         let process = process_arc.read().await;
 
@@ -335,7 +343,7 @@ impl ProcessManager {
         let processes = self.processes.read().await;
         let process_arc = processes
             .get(&id)
-            .ok_or_else(|| format!("Process '{}' not found", id))?;
+            .ok_or_else(|| format!("Process '{id}' not found"))?;
 
         let process = process_arc.read().await;
 
@@ -406,7 +414,7 @@ impl ProcessManager {
         let mut processes = self.processes.write().await;
         processes
             .remove(&id)
-            .ok_or_else(|| format!("Process '{}' not found", id))?;
+            .ok_or_else(|| format!("Process '{id}' not found"))?;
 
         // Delete from persistence
         if let Err(e) = self.persistence.delete_process(&id).await {
@@ -447,19 +455,22 @@ impl ProcessManager {
         let processes = self.processes.read().await;
         let process_arc = processes
             .get(&id)
-            .ok_or_else(|| format!("Process '{}' not found", id))?;
+            .ok_or_else(|| format!("Process '{id}' not found"))?;
 
         let mut process = process_arc.write().await;
-        
+
         // Update auto_start if provided
         if let Some(auto_start_value) = auto_start {
             process.info.auto_start = auto_start_value;
-            info!("Updated process '{}' auto_start to {}", id, auto_start_value);
+            info!(
+                "Updated process '{}' auto_start to {}",
+                id, auto_start_value
+            );
         }
 
         // Persist the updated configuration
         if let Err(e) = self.persistence.update_process(&process.info).await {
-            return Err(format!("Failed to persist process config update: {}", e));
+            return Err(format!("Failed to persist process config update: {e}"));
         }
 
         Ok(())

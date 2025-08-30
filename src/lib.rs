@@ -27,6 +27,7 @@ pub struct IchimiServer {
     start_time: Arc<Mutex<chrono::DateTime<chrono::Utc>>>,
     process_manager: ProcessManager,
     database: Arc<Database>,
+    #[allow(dead_code)]
     event_system: Arc<EventSystem>,
     learning_engine: Arc<LearningEngine>,
     tool_router: ToolRouter<IchimiServer>,
@@ -35,28 +36,53 @@ pub struct IchimiServer {
 #[tool_router]
 impl IchimiServer {
     pub async fn new() -> Self {
+        tracing::info!("Initializing IchimiServer");
+
         // データベースを初期化
+        tracing::debug!("Initializing database");
         let database = Arc::new(
             Database::new()
                 .await
                 .expect("Failed to initialize database"),
         );
+        tracing::debug!("Database initialized successfully");
+
+        // 起動時に既存データをインポート
+        let import_path = Database::get_default_data_path();
+        if import_path.exists() {
+            tracing::info!("Importing existing data from: {}", import_path.display());
+            database
+                .import_from_file(&import_path)
+                .await
+                .unwrap_or_else(|e| {
+                    tracing::warn!("Failed to import data: {}", e);
+                });
+        }
 
         // イベントシステムを初期化
+        tracing::debug!("Initializing event system");
         let event_system = Arc::new(EventSystem::new(database.clone()));
 
         // 学習エンジンを初期化
+        tracing::debug!("Initializing learning engine");
         let learning_engine = Arc::new(LearningEngine::new(database.clone(), event_system.clone()));
 
         // 学習を開始
+        tracing::debug!("Starting learning engine");
         learning_engine
             .start_learning()
             .await
             .expect("Failed to start learning engine");
+        tracing::info!("Learning engine started successfully");
 
+        // ProcessManagerを共有Databaseインスタンスで初期化
+        tracing::debug!("Initializing process manager with shared database");
+        let process_manager = ProcessManager::with_database(database.clone()).await;
+
+        tracing::info!("IchimiServer initialization complete");
         Self {
             start_time: Arc::new(Mutex::new(chrono::Utc::now())),
-            process_manager: ProcessManager::new().await,
+            process_manager,
             database,
             event_system,
             learning_engine,
@@ -68,14 +94,30 @@ impl IchimiServer {
         self.process_manager = manager;
     }
 
+    /// サーバー終了時の処理
+    pub async fn shutdown(&self) -> Result<(), String> {
+        tracing::info!("Shutting down IchimiServer");
+
+        // データベースをエクスポート
+        let export_path = crate::db::Database::get_default_data_path();
+        tracing::info!("Exporting data to: {}", export_path.display());
+
+        self.database
+            .export_to_file(&export_path)
+            .await
+            .map_err(|e| format!("Failed to export data: {e}"))?;
+
+        tracing::info!("Shutdown complete");
+        Ok(())
+    }
+
     #[tool(description = "Echo the input message back")]
     fn echo(
         &self,
         Parameters(EchoRequest { message }): Parameters<EchoRequest>,
     ) -> Result<CallToolResult, McpError> {
         Ok(CallToolResult::success(vec![Content::text(format!(
-            "Echo: {}",
-            message
+            "Echo: {message}"
         ))]))
     }
 
@@ -118,10 +160,11 @@ impl IchimiServer {
                 code: rmcp::model::ErrorCode::INTERNAL_ERROR,
                 data: None,
             })?;
-        
+
         // Update auto_start if provided
         if auto_start {
-            if let Err(e) = self.process_manager
+            if let Err(e) = self
+                .process_manager
                 .update_process_config(id.clone(), Some(auto_start))
                 .await
             {
@@ -130,8 +173,7 @@ impl IchimiServer {
         }
 
         Ok(CallToolResult::success(vec![Content::text(format!(
-            "Process '{}' created successfully",
-            id
+            "Process '{id}' created successfully"
         ))]))
     }
 
@@ -151,8 +193,7 @@ impl IchimiServer {
             })?;
 
         Ok(CallToolResult::success(vec![Content::text(format!(
-            "Process '{}' started with PID {}",
-            id, pid
+            "Process '{id}' started with PID {pid}"
         ))]))
     }
 
@@ -174,8 +215,7 @@ impl IchimiServer {
             })?;
 
         Ok(CallToolResult::success(vec![Content::text(format!(
-            "Process '{}' stopped successfully",
-            id
+            "Process '{id}' stopped successfully"
         ))]))
     }
 
@@ -195,7 +235,7 @@ impl IchimiServer {
             })?;
 
         let json = serde_json::to_string_pretty(&status).map_err(|e| McpError {
-            message: format!("Failed to serialize status: {}", e).into(),
+            message: format!("Failed to serialize status: {e}").into(),
             code: rmcp::model::ErrorCode::INTERNAL_ERROR,
             data: None,
         })?;
@@ -233,7 +273,7 @@ impl IchimiServer {
         let processes = self.process_manager.list_processes(filter).await;
 
         let json = serde_json::to_string_pretty(&processes).map_err(|e| McpError {
-            message: format!("Failed to serialize processes: {}", e).into(),
+            message: format!("Failed to serialize processes: {e}").into(),
             code: rmcp::model::ErrorCode::INTERNAL_ERROR,
             data: None,
         })?;
@@ -256,8 +296,7 @@ impl IchimiServer {
             })?;
 
         Ok(CallToolResult::success(vec![Content::text(format!(
-            "Process '{}' removed successfully",
-            id
+            "Process '{id}' removed successfully"
         ))]))
     }
 
@@ -277,8 +316,7 @@ impl IchimiServer {
             })?;
 
         Ok(CallToolResult::success(vec![Content::text(format!(
-            "Processes exported successfully to {}",
-            path
+            "Processes exported successfully to {path}"
         ))]))
     }
 
@@ -297,15 +335,16 @@ impl IchimiServer {
             })?;
 
         Ok(CallToolResult::success(vec![Content::text(format!(
-            "Processes imported successfully from {}",
-            file_path
+            "Processes imported successfully from {file_path}"
         ))]))
     }
 
     #[tool(description = "Update process configuration (e.g., auto_start flag)")]
     async fn update_process_config(
         &self,
-        Parameters(UpdateProcessConfigRequest { id, auto_start }): Parameters<UpdateProcessConfigRequest>,
+        Parameters(UpdateProcessConfigRequest { id, auto_start }): Parameters<
+            UpdateProcessConfigRequest,
+        >,
     ) -> Result<CallToolResult, McpError> {
         self.process_manager
             .update_process_config(id.clone(), auto_start)
@@ -316,9 +355,9 @@ impl IchimiServer {
                 data: None,
             })?;
 
-        let mut message = format!("Process '{}' configuration updated", id);
+        let mut message = format!("Process '{id}' configuration updated");
         if let Some(auto_start_value) = auto_start {
-            message.push_str(&format!(" - auto_start set to {}", auto_start_value));
+            message.push_str(&format!(" - auto_start set to {auto_start_value}"));
         }
 
         Ok(CallToolResult::success(vec![Content::text(message)]))
@@ -334,7 +373,7 @@ impl IchimiServer {
             .get_suggestions(current_process.as_deref())
             .await
             .map_err(|e| McpError {
-                message: format!("{}", e).into(),
+                message: format!("{e}").into(),
                 code: rmcp::model::ErrorCode::INTERNAL_ERROR,
                 data: None,
             })?;
@@ -364,7 +403,8 @@ impl IchimiServer {
 #[tool_handler]
 impl ServerHandler for IchimiServer {
     fn get_info(&self) -> ServerInfo {
-        ServerInfo {
+        tracing::info!("MCP client requesting server info");
+        let info = ServerInfo {
             protocol_version: ProtocolVersion::V_2024_11_05,
             capabilities: ServerCapabilities::builder().enable_tools().build(),
             server_info: Implementation {
@@ -375,6 +415,8 @@ impl ServerHandler for IchimiServer {
                 "Ichimi Server - A powerful process management server for Claude Code via MCP."
                     .to_string(),
             ),
-        }
+        };
+        tracing::debug!("Returning server info: {:?}", info.server_info);
+        info
     }
 }

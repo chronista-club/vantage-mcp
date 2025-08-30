@@ -1,33 +1,25 @@
 use anyhow::{Context, Result};
-use std::{path::PathBuf, sync::Arc};
+use std::sync::Arc;
 use surrealdb::{
     Surreal,
-    engine::local::{Db, RocksDb},
+    engine::local::{Db, Mem},
 };
 use tokio::sync::RwLock;
-use tracing::{debug, error, info};
+use tracing::info;
 
 #[derive(Clone)]
 pub struct Database {
     client: Arc<RwLock<Surreal<Db>>>,
-    db_path: PathBuf,
 }
 
 impl Database {
     pub async fn new() -> Result<Self> {
-        let db_path = Self::get_db_path()?;
+        info!("Initializing in-memory SurrealDB");
 
-        info!("Initializing SurrealDB at: {}", db_path.display());
-
-        // dataディレクトリが存在しない場合は作成
-        if let Some(parent) = db_path.parent() {
-            std::fs::create_dir_all(parent)
-                .context("Failed to create data directory")?;
-        }
-
-        let db = Surreal::new::<RocksDb>(db_path.to_str().unwrap())
+        // 常にインメモリデータベースを使用
+        let db = Surreal::new::<Mem>(())
             .await
-            .context("Failed to create SurrealDB instance")?;
+            .context("Failed to create in-memory SurrealDB instance")?;
 
         db.use_ns("ichimi")
             .use_db("main")
@@ -36,24 +28,10 @@ impl Database {
 
         let database = Self {
             client: Arc::new(RwLock::new(db)),
-            db_path,
         };
 
-        database.init_schema().await?;
-
-        info!("SurrealDB initialized successfully");
+        info!("In-memory SurrealDB initialized successfully");
         Ok(database)
-    }
-
-    fn get_db_path() -> Result<PathBuf> {
-        // 環境変数からカスタムパスを取得、なければデフォルト
-        if let Ok(custom_path) = std::env::var("ICHIMI_DB_PATH") {
-            return Ok(PathBuf::from(custom_path));
-        }
-        
-        // プロジェクトルートのdata/ichimi.dbをデフォルトとする
-        let current_dir = std::env::current_dir().context("Failed to get current directory")?;
-        Ok(current_dir.join("data").join("ichimi.db"))
     }
 
     pub async fn client(&self) -> tokio::sync::RwLockReadGuard<'_, Surreal<Db>> {
@@ -62,64 +40,6 @@ impl Database {
 
     pub async fn client_mut(&self) -> tokio::sync::RwLockWriteGuard<'_, Surreal<Db>> {
         self.client.write().await
-    }
-
-    async fn init_schema(&self) -> Result<()> {
-        debug!("Initializing database schema");
-
-        let queries = vec![
-            // プロセス起動パターン
-            r#"
-            DEFINE TABLE process_pattern SCHEMAFULL;
-            DEFINE FIELD process_id ON process_pattern TYPE string;
-            DEFINE FIELD next_processes ON process_pattern TYPE array;
-            DEFINE FIELD confidence ON process_pattern TYPE float DEFAULT 0.0;
-            DEFINE FIELD context ON process_pattern TYPE object;
-            DEFINE INDEX idx_pattern ON process_pattern COLUMNS process_id;
-            "#,
-            // 時間帯パターン
-            r#"
-            DEFINE TABLE time_pattern SCHEMAFULL;
-            DEFINE FIELD hour_range ON time_pattern TYPE object;
-            DEFINE FIELD day_of_week ON time_pattern TYPE array;
-            DEFINE FIELD processes ON time_pattern TYPE array;
-            DEFINE FIELD frequency ON time_pattern TYPE number DEFAULT 0;
-            "#,
-            // プロセスイベント
-            r#"
-            DEFINE TABLE process_event SCHEMAFULL;
-            DEFINE FIELD type ON process_event TYPE string;
-            DEFINE FIELD process_id ON process_event TYPE string;
-            DEFINE FIELD timestamp ON process_event TYPE datetime DEFAULT time::now();
-            DEFINE FIELD context ON process_event TYPE object;
-            DEFINE FIELD metadata ON process_event TYPE object;
-            "#,
-            // プロセス定義（グラフ用）
-            r#"
-            DEFINE TABLE process SCHEMAFULL;
-            DEFINE FIELD name ON process TYPE string;
-            DEFINE FIELD command ON process TYPE string;
-            DEFINE FIELD args ON process TYPE array;
-            DEFINE FIELD env ON process TYPE object;
-            DEFINE FIELD cwd ON process TYPE string;
-            "#,
-            // 依存関係
-            r#"
-            DEFINE TABLE depends_on SCHEMAFULL;
-            DEFINE FIELD created_at ON depends_on TYPE datetime DEFAULT time::now();
-            "#,
-        ];
-
-        let client = self.client().await;
-        for query in queries {
-            client
-                .query(query)
-                .await
-                .context("Failed to execute schema definition")?;
-        }
-
-        debug!("Database schema initialized");
-        Ok(())
     }
 
     pub async fn record_event(
@@ -150,5 +70,77 @@ impl Database {
             .context("Failed to record event")?;
 
         Ok(())
+    }
+
+    /// データをSurrealQLファイルにエクスポート
+    pub async fn export_to_file(&self, path: &std::path::Path) -> Result<()> {
+        info!("Exporting database to: {}", path.display());
+
+        let client = self.client().await;
+
+        // すべてのデータを取得
+        let mut result = client
+            .query("SELECT * FROM process; SELECT * FROM process_event;")
+            .await
+            .context("Failed to fetch data for export")?;
+
+        // SurrealQL形式でエクスポート
+        let mut export_content = String::new();
+        export_content.push_str("-- Ichimi Server Database Export\n");
+        export_content.push_str(&format!("-- Generated at: {}\n\n", chrono::Utc::now()));
+
+        // プロセスデータのエクスポート
+        let processes: Vec<serde_json::Value> = result.take(0)?;
+        for process in processes {
+            export_content.push_str(&format!(
+                "CREATE process CONTENT {};\n",
+                serde_json::to_string(&process)?
+            ));
+        }
+
+        // イベントデータのエクスポート
+        let events: Vec<serde_json::Value> = result.take(1)?;
+        for event in events {
+            export_content.push_str(&format!(
+                "CREATE process_event CONTENT {};\n",
+                serde_json::to_string(&event)?
+            ));
+        }
+
+        // ファイルに書き込み
+        std::fs::create_dir_all(path.parent().unwrap_or(std::path::Path::new(".")))?;
+        std::fs::write(path, export_content).context("Failed to write export file")?;
+
+        info!("Database exported successfully");
+        Ok(())
+    }
+
+    /// SurrealQLファイルからデータをインポート
+    pub async fn import_from_file(&self, path: &std::path::Path) -> Result<()> {
+        if !path.exists() {
+            info!("Import file not found: {}", path.display());
+            return Ok(());
+        }
+
+        info!("Importing database from: {}", path.display());
+
+        let content = std::fs::read_to_string(path).context("Failed to read import file")?;
+
+        let client = self.client().await;
+
+        // SurrealQLを実行
+        client
+            .query(&content)
+            .await
+            .context("Failed to execute import queries")?;
+
+        info!("Database imported successfully");
+        Ok(())
+    }
+
+    /// デフォルトのデータファイルパスを取得
+    pub fn get_default_data_path() -> std::path::PathBuf {
+        // プロジェクトルートの .ichimi ディレクトリに保存
+        std::path::PathBuf::from(".ichimi").join("data.surql")
     }
 }

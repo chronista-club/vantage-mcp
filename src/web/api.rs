@@ -14,7 +14,10 @@ pub fn create_api_routes() -> Router<AppState> {
         .route("/processes/:id", delete(super::handlers::remove_process))
         .route("/processes/:id/start", post(super::handlers::start_process))
         .route("/processes/:id/stop", post(super::handlers::stop_process))
-        .route("/processes/:id/config", patch(super::handlers::update_process_config))
+        .route(
+            "/processes/:id/config",
+            patch(super::handlers::update_process_config),
+        )
         .route(
             "/processes/:id/logs",
             get(super::handlers::get_process_logs),
