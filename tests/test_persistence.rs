@@ -104,11 +104,11 @@ async fn test_export_import() {
         // Add multiple processes
         for i in 1..=3 {
             let process_info = ProcessInfo {
-                id: format!("process-{}", i),
-                command: format!("cmd-{}", i),
+                id: format!("process-{i}"),
+                command: format!("cmd-{i}"),
                 args: vec![format!("arg-{}", i)],
                 env: HashMap::new(),
-                cwd: Some(PathBuf::from(format!("/path/{}", i))),
+                cwd: Some(PathBuf::from(format!("/path/{i}"))),
                 state: ProcessState::NotStarted,
                 auto_start: false,
             };
@@ -207,7 +207,7 @@ async fn test_process_state_serialization() {
 
     for (i, state) in states.into_iter().enumerate() {
         let process_info = ProcessInfo {
-            id: format!("state-test-{}", i),
+            id: format!("state-test-{i}"),
             command: "test".to_string(),
             args: vec![],
             env: HashMap::new(),
@@ -221,9 +221,9 @@ async fn test_process_state_serialization() {
         // Note: When loading, state is reset to NotStarted
         // This is by design - processes don't persist their runtime state
         let loaded = persistence.load_all_processes().await.unwrap();
-        assert!(loaded.contains_key(&format!("state-test-{}", i)));
+        assert!(loaded.contains_key(&format!("state-test-{i}")));
         assert_eq!(
-            loaded[&format!("state-test-{}", i)].state,
+            loaded[&format!("state-test-{i}")].state,
             ProcessState::NotStarted
         );
     }

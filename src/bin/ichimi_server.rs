@@ -91,8 +91,8 @@ async fn main() -> Result<()> {
             .expect("Failed to create log file");
 
         let filter = EnvFilter::from_default_env()
-            .add_directive(format!("ichimi={}", log_level).parse().unwrap())
-            .add_directive(format!("ichimi_server={}", log_level).parse().unwrap())
+            .add_directive(format!("ichimi={log_level}").parse().unwrap())
+            .add_directive(format!("ichimi_server={log_level}").parse().unwrap())
             .add_directive("facet_kdl=warn".parse().unwrap())
             .add_directive("mcp_server=debug".parse().unwrap());
 
@@ -116,12 +116,12 @@ async fn main() -> Result<()> {
         tracing::info!("Working directory: {:?}", env::current_dir());
 
         // Also write startup info to stderr for debugging
-        eprintln!("[ICHIMI] MCP mode detected, logging to: {:?}", log_file);
+        eprintln!("[ICHIMI] MCP mode detected, logging to: {log_file:?}");
     } else {
         // Normal mode - log to stderr
         let filter = EnvFilter::from_default_env()
-            .add_directive(format!("ichimi={}", log_level).parse().unwrap())
-            .add_directive(format!("ichimi_server={}", log_level).parse().unwrap())
+            .add_directive(format!("ichimi={log_level}").parse().unwrap())
+            .add_directive(format!("ichimi_server={log_level}").parse().unwrap())
             .add_directive("facet_kdl=warn".parse().unwrap());
 
         tracing_subscriber::fmt()
@@ -144,7 +144,7 @@ async fn main() -> Result<()> {
         // Open browser after a short delay to allow server to start
         if auto_open && !is_mcp {
             // Don't open browser in MCP mode
-            let url = format!("http://localhost:{}", web_port);
+            let url = format!("http://localhost:{web_port}");
             tokio::spawn(async move {
                 tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
                 if let Err(e) = open::that(&url) {

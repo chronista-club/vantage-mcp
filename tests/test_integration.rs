@@ -1,7 +1,6 @@
 use ichimi_server::process::{OutputStream, ProcessFilter, ProcessManager, ProcessStateFilter};
 use std::collections::HashMap;
 use std::time::Duration;
-use tokio::time::timeout;
 
 #[tokio::test]
 async fn test_process_basic_lifecycle() {
@@ -172,7 +171,7 @@ async fn test_multiple_concurrent_processes() {
     for i in 1..=num_processes {
         manager
             .create_process(
-                format!("concurrent-{}", i),
+                format!("concurrent-{i}"),
                 "sh".to_string(),
                 vec![
                     "-c".to_string(),
@@ -185,7 +184,7 @@ async fn test_multiple_concurrent_processes() {
                 None,
             )
             .await
-            .expect(&format!("Failed to create process {}", i));
+            .unwrap_or_else(|_| panic!("Failed to create process {i}"));
     }
 
     // Start all processes concurrently
@@ -194,7 +193,7 @@ async fn test_multiple_concurrent_processes() {
         let manager_clone = manager.clone();
         let handle = tokio::spawn(async move {
             manager_clone
-                .start_process(format!("concurrent-{}", i))
+                .start_process(format!("concurrent-{i}"))
                 .await
         });
         handles.push(handle);
@@ -212,24 +211,24 @@ async fn test_multiple_concurrent_processes() {
     // Verify all processes have output
     for i in 1..=num_processes {
         let output = manager
-            .get_process_output(format!("concurrent-{}", i), OutputStream::Stdout, Some(10))
+            .get_process_output(format!("concurrent-{i}"), OutputStream::Stdout, Some(10))
             .await
-            .expect(&format!("Failed to get output for process {}", i));
+            .unwrap_or_else(|_| panic!("Failed to get output for process {i}"));
 
         assert!(!output.is_empty());
         assert!(
             output
                 .iter()
-                .any(|line| line.contains(&format!("Process {}", i)))
+                .any(|line| line.contains(&format!("Process {i}")))
         );
     }
 
     // Clean up all processes
     for i in 1..=num_processes {
         manager
-            .remove_process(format!("concurrent-{}", i))
+            .remove_process(format!("concurrent-{i}"))
             .await
-            .expect(&format!("Failed to remove process {}", i));
+            .unwrap_or_else(|_| panic!("Failed to remove process {i}"));
     }
 }
 
@@ -300,7 +299,7 @@ async fn test_process_filtering() {
                 None,
             )
             .await
-            .expect(&format!("Failed to create {}", id));
+            .unwrap_or_else(|_| panic!("Failed to create {id}"));
     }
 
     // Start some processes
@@ -394,7 +393,7 @@ async fn test_process_restart() {
         .expect("Failed to start process second time");
 
     // PIDs might be different
-    println!("First PID: {}, Second PID: {}", pid1, pid2);
+    println!("First PID: {pid1}, Second PID: {pid2}");
 
     // Wait and get new output
     tokio::time::sleep(Duration::from_millis(200)).await;

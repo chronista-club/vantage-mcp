@@ -127,11 +127,11 @@ impl PersistenceManager {
         let mut response = client
             .query(query)
             .await
-            .map_err(|e| format!("Failed to query processes: {}", e))?;
+            .map_err(|e| format!("Failed to query processes: {e}"))?;
 
         let records: Vec<ProcessInfoRecord> = response
             .take(0)
-            .map_err(|e| format!("Failed to parse process records: {}", e))?;
+            .map_err(|e| format!("Failed to parse process records: {e}"))?;
 
         let mut result = HashMap::new();
         for record in records {
@@ -163,11 +163,11 @@ impl PersistenceManager {
 
         let mut response = query_builder
             .await
-            .map_err(|e| format!("Failed to query processes: {}", e))?;
+            .map_err(|e| format!("Failed to query processes: {e}"))?;
 
         let records: Vec<ProcessInfoRecord> = response
             .take(0)
-            .map_err(|e| format!("Failed to parse process records: {}", e))?;
+            .map_err(|e| format!("Failed to parse process records: {e}"))?;
 
         Ok(records.into_iter().map(|r| r.to_process_info()).collect())
     }
@@ -180,11 +180,11 @@ impl PersistenceManager {
         let mut response = client
             .query(query)
             .await
-            .map_err(|e| format!("Failed to get stats: {}", e))?;
+            .map_err(|e| format!("Failed to get stats: {e}"))?;
 
         let stats: Option<serde_json::Value> = response
             .take(0)
-            .map_err(|e| format!("Failed to parse stats: {}", e))?;
+            .map_err(|e| format!("Failed to parse stats: {e}"))?;
 
         Ok(stats.unwrap_or(serde_json::json!({
             "total_processes": 0,
@@ -209,11 +209,11 @@ impl PersistenceManager {
             .bind(("term", search_term.to_string()))
             .bind(("term_lower", search_term.to_lowercase()))
             .await
-            .map_err(|e| format!("Failed to search processes: {}", e))?;
+            .map_err(|e| format!("Failed to search processes: {e}"))?;
 
         let records: Vec<ProcessInfoRecord> = response
             .take(0)
-            .map_err(|e| format!("Failed to parse search results: {}", e))?;
+            .map_err(|e| format!("Failed to parse search results: {e}"))?;
 
         Ok(records.into_iter().map(|r| r.to_process_info()).collect())
     }
@@ -230,13 +230,13 @@ impl PersistenceManager {
             let process_config = ProcessConfig::from_process_info(info);
             kdl_persistence
                 .add_or_update_process(process_config)
-                .map_err(|e| format!("Failed to export process to KDL: {}", e))?;
+                .map_err(|e| format!("Failed to export process to KDL: {e}"))?;
         }
 
         // エクスポートディレクトリから指定パスにコピー
         let export_file = config_dir.join("processes.kdl");
         std::fs::copy(&export_file, file_path)
-            .map_err(|e| format!("Failed to copy export file: {}", e))?;
+            .map_err(|e| format!("Failed to copy export file: {e}"))?;
 
         // 一時ディレクトリをクリーンアップ
         let _ = std::fs::remove_dir_all(&config_dir);
@@ -254,24 +254,24 @@ impl PersistenceManager {
         // 一時ディレクトリを作成してKDLファイルをコピー
         let config_dir = PathBuf::from(".ichimi_import");
         std::fs::create_dir_all(&config_dir)
-            .map_err(|e| format!("Failed to create import directory: {}", e))?;
+            .map_err(|e| format!("Failed to create import directory: {e}"))?;
 
         let import_dest = config_dir.join("processes.kdl");
         std::fs::copy(file_path, &import_dest)
-            .map_err(|e| format!("Failed to copy import file: {}", e))?;
+            .map_err(|e| format!("Failed to copy import file: {e}"))?;
 
         // KDLファイルを読み込み
         let kdl_persistence = KdlPersistence::new(&config_dir);
         let imported_processes = kdl_persistence
             .get_all_processes()
-            .map_err(|e| format!("Failed to read KDL file: {}", e))?;
+            .map_err(|e| format!("Failed to read KDL file: {e}"))?;
 
         // SurrealDBに保存
         for process_config in imported_processes {
             let info = process_config.to_process_info();
             self.save_process(&info)
                 .await
-                .map_err(|e| format!("Failed to save imported process: {}", e))?;
+                .map_err(|e| format!("Failed to save imported process: {e}"))?;
         }
 
         // 一時ディレクトリをクリーンアップ
@@ -285,10 +285,10 @@ impl PersistenceManager {
     pub async fn export_to_file(&self, file_path: &str) -> Result<(), String> {
         let processes = self.load_all_processes().await?;
         let json = serde_json::to_string_pretty(&processes)
-            .map_err(|e| format!("Failed to serialize processes: {}", e))?;
+            .map_err(|e| format!("Failed to serialize processes: {e}"))?;
 
         std::fs::write(file_path, json)
-            .map_err(|e| format!("Failed to write export file: {}", e))?;
+            .map_err(|e| format!("Failed to write export file: {e}"))?;
 
         tracing::info!("Exported {} processes to {}", processes.len(), file_path);
         Ok(())
@@ -297,15 +297,15 @@ impl PersistenceManager {
     /// Import from JSON file (compatibility)
     pub async fn import_from_file(&self, file_path: &str) -> Result<(), String> {
         let content = std::fs::read_to_string(file_path)
-            .map_err(|e| format!("Failed to read import file: {}", e))?;
+            .map_err(|e| format!("Failed to read import file: {e}"))?;
 
         let imported: HashMap<String, ProcessInfo> = serde_json::from_str(&content)
-            .map_err(|e| format!("Failed to parse import file: {}", e))?;
+            .map_err(|e| format!("Failed to parse import file: {e}"))?;
 
         for (_, info) in imported.iter() {
             self.save_process(info)
                 .await
-                .map_err(|e| format!("Failed to save imported process: {}", e))?;
+                .map_err(|e| format!("Failed to save imported process: {e}"))?;
         }
 
         tracing::info!("Imported {} processes from {}", imported.len(), file_path);

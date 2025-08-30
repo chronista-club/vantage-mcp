@@ -194,7 +194,7 @@ impl LearningEngine {
 
         client
             .query(query)
-            .bind(("id", format!("pattern_{}", process_id)))
+            .bind(("id", format!("pattern_{process_id}")))
             .bind(("process_id", process_id.to_string()))
             .await?;
 
@@ -213,7 +213,7 @@ impl LearningEngine {
 
         client
             .query(query)
-            .bind(("id", format!("pattern_{}", process_id)))
+            .bind(("id", format!("pattern_{process_id}")))
             .bind(("process_id", process_id.to_string()))
             .await?;
 
@@ -237,7 +237,7 @@ impl LearningEngine {
 
         client
             .query(query)
-            .bind(("id", format!("pattern_{}", process_id)))
+            .bind(("id", format!("pattern_{process_id}")))
             .bind(("process_id", process_id.to_string()))
             .bind(("error_context", context))
             .await?;
@@ -270,8 +270,7 @@ impl LearningEngine {
                     for next_process in &pattern.next_processes {
                         suggestions.push(Suggestion {
                             message: format!(
-                                "「{}」が起動しました。通常は「{}」も必要です。",
-                                process_id, next_process
+                                "「{process_id}」が起動しました。通常は「{next_process}」も必要です。"
                             ),
                             confidence: pattern.confidence,
                             action: SuggestedAction::StartProcess {
@@ -309,7 +308,7 @@ impl LearningEngine {
             for pattern in time_patterns {
                 for process in &pattern.processes {
                     suggestions.push(Suggestion {
-                        message: format!("この時間帯は通常「{}」を起動しています。", process),
+                        message: format!("この時間帯は通常「{process}」を起動しています。"),
                         confidence: 0.7,
                         action: SuggestedAction::StartProcess {
                             process_id: process.clone(),

@@ -37,7 +37,7 @@ impl KdlPersistence {
         // ディレクトリが存在しない場合は作成
         if let Some(parent) = self.config_path.parent() {
             fs::create_dir_all(parent)
-                .with_context(|| format!("Failed to create directory: {:?}", parent))?;
+                .with_context(|| format!("Failed to create directory: {parent:?}"))?;
         }
 
         // 現時点ではKDLのシリアライズは手動で行う
@@ -46,7 +46,7 @@ impl KdlPersistence {
         // アトミックな書き込みのため、一時ファイルを使用
         let temp_path = self.config_path.with_extension("kdl.tmp");
         fs::write(&temp_path, kdl_content)
-            .with_context(|| format!("Failed to write to temp file: {:?}", temp_path))?;
+            .with_context(|| format!("Failed to write to temp file: {temp_path:?}"))?;
 
         fs::rename(&temp_path, &self.config_path)
             .with_context(|| format!("Failed to rename temp file to: {:?}", self.config_path))?;
@@ -75,7 +75,7 @@ impl KdlPersistence {
             if !process.args.is_empty() {
                 kdl.push_str("    args");
                 for arg in &process.args {
-                    kdl.push_str(&format!(" \"{}\"", arg));
+                    kdl.push_str(&format!(" \"{arg}\""));
                 }
                 kdl.push('\n');
             }
@@ -168,7 +168,7 @@ mod tests {
         let kdl_path = temp_dir.path().join("processes.kdl");
         if kdl_path.exists() {
             let content = std::fs::read_to_string(&kdl_path).unwrap();
-            println!("Generated KDL content:\n{}", content);
+            println!("Generated KDL content:\n{content}");
         }
 
         // プロセスを読み込み

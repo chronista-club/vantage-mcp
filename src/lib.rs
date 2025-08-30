@@ -27,6 +27,7 @@ pub struct IchimiServer {
     start_time: Arc<Mutex<chrono::DateTime<chrono::Utc>>>,
     process_manager: ProcessManager,
     database: Arc<Database>,
+    #[allow(dead_code)]
     event_system: Arc<EventSystem>,
     learning_engine: Arc<LearningEngine>,
     tool_router: ToolRouter<IchimiServer>,
@@ -104,7 +105,7 @@ impl IchimiServer {
         self.database
             .export_to_file(&export_path)
             .await
-            .map_err(|e| format!("Failed to export data: {}", e))?;
+            .map_err(|e| format!("Failed to export data: {e}"))?;
 
         tracing::info!("Shutdown complete");
         Ok(())
@@ -116,8 +117,7 @@ impl IchimiServer {
         Parameters(EchoRequest { message }): Parameters<EchoRequest>,
     ) -> Result<CallToolResult, McpError> {
         Ok(CallToolResult::success(vec![Content::text(format!(
-            "Echo: {}",
-            message
+            "Echo: {message}"
         ))]))
     }
 
@@ -173,8 +173,7 @@ impl IchimiServer {
         }
 
         Ok(CallToolResult::success(vec![Content::text(format!(
-            "Process '{}' created successfully",
-            id
+            "Process '{id}' created successfully"
         ))]))
     }
 
@@ -194,8 +193,7 @@ impl IchimiServer {
             })?;
 
         Ok(CallToolResult::success(vec![Content::text(format!(
-            "Process '{}' started with PID {}",
-            id, pid
+            "Process '{id}' started with PID {pid}"
         ))]))
     }
 
@@ -217,8 +215,7 @@ impl IchimiServer {
             })?;
 
         Ok(CallToolResult::success(vec![Content::text(format!(
-            "Process '{}' stopped successfully",
-            id
+            "Process '{id}' stopped successfully"
         ))]))
     }
 
@@ -238,7 +235,7 @@ impl IchimiServer {
             })?;
 
         let json = serde_json::to_string_pretty(&status).map_err(|e| McpError {
-            message: format!("Failed to serialize status: {}", e).into(),
+            message: format!("Failed to serialize status: {e}").into(),
             code: rmcp::model::ErrorCode::INTERNAL_ERROR,
             data: None,
         })?;
@@ -276,7 +273,7 @@ impl IchimiServer {
         let processes = self.process_manager.list_processes(filter).await;
 
         let json = serde_json::to_string_pretty(&processes).map_err(|e| McpError {
-            message: format!("Failed to serialize processes: {}", e).into(),
+            message: format!("Failed to serialize processes: {e}").into(),
             code: rmcp::model::ErrorCode::INTERNAL_ERROR,
             data: None,
         })?;
@@ -299,8 +296,7 @@ impl IchimiServer {
             })?;
 
         Ok(CallToolResult::success(vec![Content::text(format!(
-            "Process '{}' removed successfully",
-            id
+            "Process '{id}' removed successfully"
         ))]))
     }
 
@@ -320,8 +316,7 @@ impl IchimiServer {
             })?;
 
         Ok(CallToolResult::success(vec![Content::text(format!(
-            "Processes exported successfully to {}",
-            path
+            "Processes exported successfully to {path}"
         ))]))
     }
 
@@ -340,8 +335,7 @@ impl IchimiServer {
             })?;
 
         Ok(CallToolResult::success(vec![Content::text(format!(
-            "Processes imported successfully from {}",
-            file_path
+            "Processes imported successfully from {file_path}"
         ))]))
     }
 
@@ -361,9 +355,9 @@ impl IchimiServer {
                 data: None,
             })?;
 
-        let mut message = format!("Process '{}' configuration updated", id);
+        let mut message = format!("Process '{id}' configuration updated");
         if let Some(auto_start_value) = auto_start {
-            message.push_str(&format!(" - auto_start set to {}", auto_start_value));
+            message.push_str(&format!(" - auto_start set to {auto_start_value}"));
         }
 
         Ok(CallToolResult::success(vec![Content::text(message)]))
@@ -379,7 +373,7 @@ impl IchimiServer {
             .get_suggestions(current_process.as_deref())
             .await
             .map_err(|e| McpError {
-                message: format!("{}", e).into(),
+                message: format!("{e}").into(),
                 code: rmcp::model::ErrorCode::INTERNAL_ERROR,
                 data: None,
             })?;

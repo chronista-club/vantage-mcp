@@ -22,7 +22,7 @@ async fn test_update_process_config_auto_start() {
         .get_process_status("auto-start-test".to_string())
         .await
         .expect("Failed to get process status");
-    assert_eq!(status_before.info.auto_start, false);
+    assert!(!status_before.info.auto_start);
 
     // Update auto_start to true
     manager
@@ -35,7 +35,7 @@ async fn test_update_process_config_auto_start() {
         .get_process_status("auto-start-test".to_string())
         .await
         .expect("Failed to get process status");
-    assert_eq!(status_after.info.auto_start, true);
+    assert!(status_after.info.auto_start);
 
     // Clean up
     manager
@@ -77,7 +77,7 @@ async fn test_update_config_on_running_process() {
         .get_process_status("running-auto-test".to_string())
         .await
         .expect("Failed to get process status");
-    assert_eq!(status.info.auto_start, true);
+    assert!(status.info.auto_start);
     assert!(matches!(
         status.info.state,
         ichimi_server::process::types::ProcessState::Running { .. }
@@ -146,8 +146,8 @@ async fn test_auto_start_persistence() {
             .find(|p| p.id == "persist-auto-test")
             .expect("Process not found after import");
 
-        assert_eq!(
-            process.auto_start, true,
+        assert!(
+            process.auto_start,
             "auto_start not preserved after import"
         );
     }
@@ -196,8 +196,7 @@ async fn test_toggle_auto_start_multiple_times() {
 
         assert_eq!(
             status.info.auto_start, expected,
-            "auto_start should be {} after toggle",
-            expected
+            "auto_start should be {expected} after toggle"
         );
     }
 

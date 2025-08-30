@@ -1,4 +1,3 @@
-use facet_kdl;
 use ichimi_server::persistence::kdl_schema::IchimiConfig;
 use std::fs;
 
@@ -11,7 +10,7 @@ fn main() -> anyhow::Result<()> {
     // KDLファイルを読み込み
     let kdl_content = fs::read_to_string(&file_path)?;
     println!("読み込んだKDLファイル:");
-    println!("{}", kdl_content);
+    println!("{kdl_content}");
     println!("\n===========================\n");
 
     // KDLをパース
@@ -37,7 +36,7 @@ fn main() -> anyhow::Result<()> {
             }
         }
         Err(e) => {
-            println!("❌ パースエラー: {:?}", e);
+            println!("❌ パースエラー: {e:?}");
             return Err(anyhow::anyhow!("KDLパースに失敗しました: {:?}", e));
         }
     }

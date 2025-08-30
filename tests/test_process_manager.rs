@@ -16,8 +16,8 @@ async fn test_process_manager_export_import() {
     for i in 1..=3 {
         manager1
             .create_process(
-                format!("manager-test-{}", i),
-                format!("echo"),
+                format!("manager-test-{i}"),
+                "echo".to_string(),
                 vec![format!("Process {}", i)],
                 HashMap::new(),
                 None,
@@ -56,11 +56,11 @@ async fn test_process_manager_export_import() {
     for i in 1..=3 {
         let process = test_processes
             .iter()
-            .find(|p| p.id == format!("manager-test-{}", i))
-            .expect(&format!("Process manager-test-{} not found", i));
+            .find(|p| p.id == format!("manager-test-{i}"))
+            .unwrap_or_else(|| panic!("Process manager-test-{i} not found"));
 
         assert_eq!(process.command, "echo");
-        assert_eq!(process.args, vec![format!("Process {}", i)]);
+        assert_eq!(process.args, vec![format!("Process {i}")]);
     }
 }
 
@@ -238,7 +238,7 @@ async fn test_concurrent_export() {
     for i in 1..=5 {
         manager
             .create_process(
-                format!("concurrent-{}", i),
+                format!("concurrent-{i}"),
                 "echo".to_string(),
                 vec![i.to_string()],
                 HashMap::new(),
@@ -254,7 +254,7 @@ async fn test_concurrent_export() {
     let mut handles = vec![];
     for i in 1..=3 {
         let manager_clone = manager.clone();
-        let export_path = temp_dir.path().join(format!("concurrent_{}.surql", i));
+        let export_path = temp_dir.path().join(format!("concurrent_{i}.surql"));
         let export_path_str = export_path.to_str().unwrap().to_string();
 
         let handle =
@@ -272,7 +272,7 @@ async fn test_concurrent_export() {
 
     // Verify all export files exist and contain the same data
     for i in 1..=3 {
-        let export_path = temp_dir.path().join(format!("concurrent_{}.surql", i));
+        let export_path = temp_dir.path().join(format!("concurrent_{i}.surql"));
         assert!(export_path.exists());
 
         let content = std::fs::read_to_string(&export_path).unwrap();
