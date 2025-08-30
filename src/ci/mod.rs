@@ -1,5 +1,5 @@
 //! GitHub Actions CI監視機能
-//! 
+//!
 //! gh CLIを使用してCI/CDパイプラインの状態を監視し、
 //! 実行結果を追跡する機能を提供します。
 
@@ -9,7 +9,7 @@ use std::process::Stdio;
 use std::sync::Arc;
 use tokio::process::Command;
 use tokio::sync::RwLock;
-use tokio::time::{interval, Duration};
+use tokio::time::{Duration, interval};
 use tracing::{debug, error, info, warn};
 
 /// CI実行の状態
@@ -206,7 +206,10 @@ impl CiMonitor {
             // 実行中の場合はエラーではなく情報として扱う
             if stderr.contains("still in progress") {
                 info!("Run {} is still in progress", run_id);
-                return Ok("CI run is still in progress. Logs will be available when it completes.".to_string());
+                return Ok(
+                    "CI run is still in progress. Logs will be available when it completes."
+                        .to_string(),
+                );
             }
             error!("gh command failed: {}", stderr);
             return Err(format!("gh command failed: {}", stderr));
@@ -237,10 +240,10 @@ impl CiMonitor {
 
             // 最新の状態を取得
             let runs = self.get_latest_runs(50).await?;
-            
+
             if let Some(run) = runs.iter().find(|r| r.id == run_id) {
                 debug!("CI run {} status: {:?}", run_id, run.status);
-                
+
                 if run.status == CiRunStatus::Completed {
                     info!(
                         "CI run {} completed with conclusion: {:?}",
@@ -272,7 +275,7 @@ impl CiMonitor {
                         let mut cache = runs.write().await;
                         for run in latest_runs {
                             let existing = cache.get(&run.id);
-                            
+
                             // 状態が変わった場合にログ出力
                             if let Some(existing_run) = existing {
                                 if existing_run.status != run.status {
@@ -280,7 +283,7 @@ impl CiMonitor {
                                         "CI run {} status changed: {:?} -> {:?}",
                                         run.id, existing_run.status, run.status
                                     );
-                                    
+
                                     if run.status == CiRunStatus::Completed {
                                         info!(
                                             "CI run {} completed with conclusion: {:?}",
@@ -289,7 +292,7 @@ impl CiMonitor {
                                     }
                                 }
                             }
-                            
+
                             cache.insert(run.id, run);
                         }
                     }

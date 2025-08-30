@@ -122,10 +122,10 @@ impl IchimiServer {
         }
 
         tracing::info!("IchimiServer initialization complete");
-        
+
         // CI監視を初期化（2回目の初期化）
         let ci_monitor_2 = Arc::new(CiMonitor::new(None, Some(30)));
-        
+
         Ok(Self {
             start_time: Arc::new(Mutex::new(chrono::Utc::now())),
             process_manager,
@@ -445,7 +445,10 @@ impl IchimiServer {
     // CI監視ツール
 
     #[tool(description = "List recent CI/CD runs from GitHub Actions")]
-    async fn list_ci_runs(&self, Parameters(request): Parameters<ListCiRunsRequest>) -> std::result::Result<CallToolResult, McpError> {
+    async fn list_ci_runs(
+        &self,
+        Parameters(request): Parameters<ListCiRunsRequest>,
+    ) -> std::result::Result<CallToolResult, McpError> {
         tracing::info!("Listing CI runs (limit: {})", request.limit);
 
         let ci_monitor = if let Some(repo) = request.repo {
@@ -458,35 +461,44 @@ impl IchimiServer {
             Ok(runs) => {
                 let response = ListCiRunsResponse {
                     total_count: runs.len(),
-                    runs: runs.into_iter().map(|run| CiRunResponse {
-                        id: run.id,
-                        name: run.name,
-                        workflow_name: run.workflow_name,
-                        branch: run.branch,
-                        event: run.event,
-                        status: format!("{:?}", run.status),
-                        conclusion: run.conclusion.map(|c| format!("{:?}", c)),
-                        created_at: run.created_at,
-                        updated_at: run.updated_at,
-                        duration: run.duration,
-                        url: run.url,
-                    }).collect(),
+                    runs: runs
+                        .into_iter()
+                        .map(|run| CiRunResponse {
+                            id: run.id,
+                            name: run.name,
+                            workflow_name: run.workflow_name,
+                            branch: run.branch,
+                            event: run.event,
+                            status: format!("{:?}", run.status),
+                            conclusion: run.conclusion.map(|c| format!("{:?}", c)),
+                            created_at: run.created_at,
+                            updated_at: run.updated_at,
+                            duration: run.duration,
+                            url: run.url,
+                        })
+                        .collect(),
                 };
 
                 let json = serde_json::to_string_pretty(&response)
                     .map_err(|e| McpError::invalid_params(e.to_string(), None))?;
-                
+
                 Ok(CallToolResult::success(vec![Content::text(json)]))
             }
             Err(e) => {
                 tracing::error!("Failed to list CI runs: {}", e);
-                Err(McpError::internal_error(format!("Failed to list CI runs: {}", e), None))
+                Err(McpError::internal_error(
+                    format!("Failed to list CI runs: {}", e),
+                    None,
+                ))
             }
         }
     }
 
     #[tool(description = "Get detailed information about a specific CI run")]
-    async fn get_ci_run_details(&self, Parameters(request): Parameters<GetCiRunDetailsRequest>) -> std::result::Result<CallToolResult, McpError> {
+    async fn get_ci_run_details(
+        &self,
+        Parameters(request): Parameters<GetCiRunDetailsRequest>,
+    ) -> std::result::Result<CallToolResult, McpError> {
         tracing::info!("Getting details for CI run {}", request.run_id);
 
         let ci_monitor = if let Some(repo) = request.repo {
@@ -496,18 +508,22 @@ impl IchimiServer {
         };
 
         match ci_monitor.get_run_details(request.run_id).await {
-            Ok(details) => {
-                Ok(CallToolResult::success(vec![Content::text(details)]))
-            }
+            Ok(details) => Ok(CallToolResult::success(vec![Content::text(details)])),
             Err(e) => {
                 tracing::error!("Failed to get CI run details: {}", e);
-                Err(McpError::internal_error(format!("Failed to get CI run details: {}", e), None))
+                Err(McpError::internal_error(
+                    format!("Failed to get CI run details: {}", e),
+                    None,
+                ))
             }
         }
     }
 
     #[tool(description = "Get logs from failed jobs in a CI run")]
-    async fn get_ci_failed_logs(&self, Parameters(request): Parameters<GetCiFailedLogsRequest>) -> std::result::Result<CallToolResult, McpError> {
+    async fn get_ci_failed_logs(
+        &self,
+        Parameters(request): Parameters<GetCiFailedLogsRequest>,
+    ) -> std::result::Result<CallToolResult, McpError> {
         tracing::info!("Getting failed logs for CI run {}", request.run_id);
 
         let ci_monitor = if let Some(repo) = request.repo {
@@ -517,19 +533,27 @@ impl IchimiServer {
         };
 
         match ci_monitor.get_failed_logs(request.run_id).await {
-            Ok(logs) => {
-                Ok(CallToolResult::success(vec![Content::text(logs)]))
-            }
+            Ok(logs) => Ok(CallToolResult::success(vec![Content::text(logs)])),
             Err(e) => {
                 tracing::error!("Failed to get CI failed logs: {}", e);
-                Err(McpError::internal_error(format!("Failed to get CI failed logs: {}", e), None))
+                Err(McpError::internal_error(
+                    format!("Failed to get CI failed logs: {}", e),
+                    None,
+                ))
             }
         }
     }
 
     #[tool(description = "Wait for a CI run to complete and return its final status")]
-    async fn wait_for_ci_completion(&self, Parameters(request): Parameters<WaitForCiCompletionRequest>) -> std::result::Result<CallToolResult, McpError> {
-        tracing::info!("Waiting for CI run {} to complete (timeout: {}s)", request.run_id, request.timeout_secs);
+    async fn wait_for_ci_completion(
+        &self,
+        Parameters(request): Parameters<WaitForCiCompletionRequest>,
+    ) -> std::result::Result<CallToolResult, McpError> {
+        tracing::info!(
+            "Waiting for CI run {} to complete (timeout: {}s)",
+            request.run_id,
+            request.timeout_secs
+        );
 
         let ci_monitor = if let Some(repo) = request.repo {
             CiMonitor::new(Some(repo), None)
@@ -537,7 +561,10 @@ impl IchimiServer {
             CiMonitor::new(None, None)
         };
 
-        match ci_monitor.wait_for_completion(request.run_id, Some(request.timeout_secs)).await {
+        match ci_monitor
+            .wait_for_completion(request.run_id, Some(request.timeout_secs))
+            .await
+        {
             Ok(run) => {
                 let response = CiRunResponse {
                     id: run.id,
@@ -555,19 +582,28 @@ impl IchimiServer {
 
                 let json = serde_json::to_string_pretty(&response)
                     .map_err(|e| McpError::invalid_params(e.to_string(), None))?;
-                
+
                 Ok(CallToolResult::success(vec![Content::text(json)]))
             }
             Err(e) => {
                 tracing::error!("Failed to wait for CI completion: {}", e);
-                Err(McpError::internal_error(format!("Failed to wait for CI completion: {}", e), None))
+                Err(McpError::internal_error(
+                    format!("Failed to wait for CI completion: {}", e),
+                    None,
+                ))
             }
         }
     }
 
     #[tool(description = "Start monitoring CI runs in the background")]
-    async fn start_ci_monitoring(&self, Parameters(request): Parameters<StartCiMonitoringRequest>) -> std::result::Result<CallToolResult, McpError> {
-        tracing::info!("Starting CI monitoring with {}s interval", request.poll_interval);
+    async fn start_ci_monitoring(
+        &self,
+        Parameters(request): Parameters<StartCiMonitoringRequest>,
+    ) -> std::result::Result<CallToolResult, McpError> {
+        tracing::info!(
+            "Starting CI monitoring with {}s interval",
+            request.poll_interval
+        );
 
         let ci_monitor = if let Some(repo) = request.repo {
             CiMonitor::new(Some(repo), Some(request.poll_interval))
@@ -577,9 +613,10 @@ impl IchimiServer {
 
         ci_monitor.start_monitoring().await;
 
-        Ok(CallToolResult::success(vec![Content::text(
-            format!("CI monitoring started with {}s polling interval", request.poll_interval)
-        )]))
+        Ok(CallToolResult::success(vec![Content::text(format!(
+            "CI monitoring started with {}s polling interval",
+            request.poll_interval
+        ))]))
     }
 }
 

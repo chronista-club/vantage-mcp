@@ -9,7 +9,7 @@ pub struct ListCiRunsRequest {
     /// 取得する実行数の上限
     #[serde(default = "default_limit")]
     pub limit: usize,
-    
+
     /// リポジトリパス（省略時は現在のリポジトリ）
     #[serde(skip_serializing_if = "Option::is_none")]
     pub repo: Option<String>,
@@ -24,7 +24,7 @@ fn default_limit() -> usize {
 pub struct GetCiRunDetailsRequest {
     /// 実行ID
     pub run_id: u64,
-    
+
     /// リポジトリパス（省略時は現在のリポジトリ）
     #[serde(skip_serializing_if = "Option::is_none")]
     pub repo: Option<String>,
@@ -35,7 +35,7 @@ pub struct GetCiRunDetailsRequest {
 pub struct GetCiFailedLogsRequest {
     /// 実行ID
     pub run_id: u64,
-    
+
     /// リポジトリパス（省略時は現在のリポジトリ）
     #[serde(skip_serializing_if = "Option::is_none")]
     pub repo: Option<String>,
@@ -46,11 +46,11 @@ pub struct GetCiFailedLogsRequest {
 pub struct WaitForCiCompletionRequest {
     /// 実行ID
     pub run_id: u64,
-    
+
     /// タイムアウト（秒）
     #[serde(default = "default_timeout")]
     pub timeout_secs: u64,
-    
+
     /// リポジトリパス（省略時は現在のリポジトリ）
     #[serde(skip_serializing_if = "Option::is_none")]
     pub repo: Option<String>,
@@ -66,7 +66,7 @@ pub struct StartCiMonitoringRequest {
     /// ポーリング間隔（秒）
     #[serde(default = "default_poll_interval")]
     pub poll_interval: u64,
-    
+
     /// リポジトリパス（省略時は現在のリポジトリ）
     #[serde(skip_serializing_if = "Option::is_none")]
     pub repo: Option<String>,
