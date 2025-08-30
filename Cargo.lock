@@ -1750,7 +1750,7 @@ dependencies = [
 
 [[package]]
 name = "ichimi-server"
-version = "0.1.0-beta8"
+version = "0.1.0-beta9"
 dependencies = [
  "anyhow",
  "axum",

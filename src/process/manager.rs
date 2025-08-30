@@ -37,7 +37,8 @@ impl ManagedProcess {
                 env,
                 cwd,
                 state: ProcessState::NotStarted,
-                auto_start: false,
+                auto_start_on_create: false,
+                auto_start_on_restore: false,
             },
             stdout_buffer: CircularBuffer::new(1000),
             stderr_buffer: CircularBuffer::new(1000),
@@ -52,6 +53,7 @@ impl ManagedProcess {
 pub struct ProcessManager {
     processes: Arc<RwLock<HashMap<String, Arc<RwLock<ManagedProcess>>>>>,
     persistence: Arc<PersistenceManager>,
+    database: Arc<Database>,
 }
 
 impl ProcessManager {
@@ -66,13 +68,19 @@ impl ProcessManager {
 
         Self::with_database(database).await
     }
+    
+    /// Get the database instance
+    pub fn database(&self) -> Arc<Database> {
+        self.database.clone()
+    }
 
     pub async fn with_database(database: Arc<Database>) -> Self {
-        let persistence = Arc::new(PersistenceManager::with_database(database));
+        let persistence = Arc::new(PersistenceManager::with_database(database.clone()));
 
         let manager = Self {
             processes: Arc::new(RwLock::new(HashMap::new())),
             persistence: persistence.clone(),
+            database,
         };
 
         // Load persisted processes on startup
@@ -111,8 +119,14 @@ impl ProcessManager {
     async fn load_persisted_processes(&self) -> Result<(), String> {
         let loaded_processes = self.persistence.load_all_processes().await?;
         let mut processes = self.processes.write().await;
+        let mut auto_start_processes = Vec::new();
 
         for (id, info) in loaded_processes {
+            // Check if this process should be auto-started on restore
+            if info.auto_start_on_restore {
+                auto_start_processes.push(id.clone());
+            }
+
             let managed = ManagedProcess {
                 info,
                 stdout_buffer: CircularBuffer::new(1000),
@@ -123,7 +137,30 @@ impl ProcessManager {
             processes.insert(id, Arc::new(RwLock::new(managed)));
         }
 
-        tracing::info!("Loaded {} persisted processes", processes.len());
+        let loaded_count = processes.len();
+        tracing::info!("Loaded {} persisted processes", loaded_count);
+
+        // Release the write lock before starting processes
+        drop(processes);
+
+        // Start auto-start processes
+        if !auto_start_processes.is_empty() {
+            tracing::info!(
+                "Starting {} processes with auto_start_on_restore enabled",
+                auto_start_processes.len()
+            );
+            for process_id in auto_start_processes {
+                match self.start_process(process_id.clone()).await {
+                    Ok(pid) => {
+                        tracing::info!("Auto-started process '{}' with PID {} on restore", process_id, pid);
+                    }
+                    Err(e) => {
+                        tracing::warn!("Failed to auto-start process '{}' on restore: {}", process_id, e);
+                    }
+                }
+            }
+        }
+
         Ok(())
     }
 
@@ -135,22 +172,40 @@ impl ProcessManager {
         args: Vec<String>,
         env: HashMap<String, String>,
         cwd: Option<PathBuf>,
+        auto_start_on_create: bool,
+        auto_start_on_restore: bool,
     ) -> Result<(), String> {
-        info!("Creating process '{}': {} {:?}", id, command, args);
+        info!("Creating process '{}': {} {:?} (auto_start_on_create: {}, auto_start_on_restore: {})", 
+              id, command, args, auto_start_on_create, auto_start_on_restore);
         let mut processes = self.processes.write().await;
 
         if processes.contains_key(&id) {
             return Err(format!("Process with id '{id}' already exists"));
         }
 
-        let process = ManagedProcess::new(id.clone(), command, args, env, cwd);
+        let mut process = ManagedProcess::new(id.clone(), command, args, env, cwd);
+        process.info.auto_start_on_create = auto_start_on_create;
+        process.info.auto_start_on_restore = auto_start_on_restore;
+        
         let process_info = process.info.clone();
-        processes.insert(id.clone(), Arc::new(RwLock::new(process)));
+        let process_arc = Arc::new(RwLock::new(process));
+        processes.insert(id.clone(), process_arc.clone());
+        
+        // Release the write lock before persistence and auto-start
+        drop(processes);
 
         // Persist the process
         match self.persistence.save_process(&process_info).await {
             Ok(_) => tracing::debug!("Process {} persisted successfully", id),
             Err(e) => tracing::warn!("Failed to persist process {}: {}", id, e),
+        }
+
+        // Auto-start on create if configured
+        if auto_start_on_create {
+            info!("Auto-starting process '{}' on creation", id);
+            if let Err(e) = self.start_process(id.clone()).await {
+                tracing::warn!("Failed to auto-start process '{}': {}", id, e);
+            }
         }
 
         Ok(())
@@ -426,19 +481,28 @@ impl ProcessManager {
 
     /// Export processes to surql file
     pub async fn export_processes(&self, file_path: Option<String>) -> Result<String, String> {
-        match file_path {
-            Some(path) => {
-                self.persistence.export_to_file(&path).await?;
-                Ok(path)
-            }
-            None => self.persistence.export_default().await,
-        }
+        let path = match file_path {
+            Some(p) => std::path::PathBuf::from(p),
+            None => Database::get_default_data_path(),
+        };
+        
+        self.database
+            .export_to_file(&path)
+            .await
+            .map_err(|e| format!("Failed to export processes: {e}"))?;
+        
+        Ok(path.to_string_lossy().to_string())
     }
 
     /// Import processes from surql file
     pub async fn import_processes(&self, file_path: &str) -> Result<(), String> {
-        // Import to database
-        self.persistence.import_from_file(file_path).await?;
+        let path = std::path::Path::new(file_path);
+        
+        // Import to database using Database's import method which handles .surql format
+        self.database
+            .import_from_file(path)
+            .await
+            .map_err(|e| format!("Failed to import processes: {e}"))?;
 
         // Reload processes into memory
         self.load_persisted_processes().await?;
@@ -446,11 +510,12 @@ impl ProcessManager {
         Ok(())
     }
 
-    /// Update process configuration (e.g., auto_start flag)
+    /// Update process configuration (auto_start flags)
     pub async fn update_process_config(
         &self,
         id: String,
-        auto_start: Option<bool>,
+        auto_start_on_create: Option<bool>,
+        auto_start_on_restore: Option<bool>,
     ) -> Result<(), String> {
         let processes = self.processes.read().await;
         let process_arc = processes
@@ -458,13 +523,20 @@ impl ProcessManager {
             .ok_or_else(|| format!("Process '{id}' not found"))?;
 
         let mut process = process_arc.write().await;
-
-        // Update auto_start if provided
-        if let Some(auto_start_value) = auto_start {
-            process.info.auto_start = auto_start_value;
+        
+        if let Some(value) = auto_start_on_create {
+            process.info.auto_start_on_create = value;
             info!(
-                "Updated process '{}' auto_start to {}",
-                id, auto_start_value
+                "Updated process '{}' auto_start_on_create to {}",
+                id, value
+            );
+        }
+        
+        if let Some(value) = auto_start_on_restore {
+            process.info.auto_start_on_restore = value;
+            info!(
+                "Updated process '{}' auto_start_on_restore to {}",
+                id, value
             );
         }
 

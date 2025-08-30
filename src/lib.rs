@@ -94,6 +94,37 @@ impl IchimiServer {
         self.process_manager = manager;
     }
 
+    /// Create IchimiServer with existing ProcessManager (shares database)
+    pub async fn with_process_manager(process_manager: ProcessManager) -> Self {
+        tracing::info!("Initializing IchimiServer with existing ProcessManager");
+        
+        // Get database from ProcessManager
+        let database = process_manager.database();
+        
+        // Initialize event system with shared database
+        let event_system = Arc::new(EventSystem::new(database.clone()));
+        
+        // Initialize learning engine with shared database
+        let learning_engine = Arc::new(LearningEngine::new(database.clone(), event_system.clone()));
+        
+        // Start learning
+        learning_engine
+            .start_learning()
+            .await
+            .expect("Failed to start learning engine");
+        tracing::info!("Learning engine started successfully");
+        
+        tracing::info!("IchimiServer initialization complete");
+        Self {
+            start_time: Arc::new(Mutex::new(chrono::Utc::now())),
+            process_manager,
+            database,
+            event_system,
+            learning_engine,
+            tool_router: Self::tool_router(),
+        }
+    }
+
     /// サーバー終了時の処理
     pub async fn shutdown(&self) -> Result<(), String> {
         tracing::info!("Shutting down IchimiServer");
@@ -146,31 +177,21 @@ impl IchimiServer {
             args,
             env,
             cwd,
-            auto_start,
+            auto_start_on_create,
+            auto_start_on_restore,
         }): Parameters<CreateProcessRequest>,
     ) -> Result<CallToolResult, McpError> {
         let cwd_path = cwd.map(std::path::PathBuf::from);
 
-        // Create the process
+        // Create the process with auto_start flags
         self.process_manager
-            .create_process(id.clone(), command, args, env, cwd_path)
+            .create_process(id.clone(), command, args, env, cwd_path, auto_start_on_create, auto_start_on_restore)
             .await
             .map_err(|e| McpError {
                 message: e.into(),
                 code: rmcp::model::ErrorCode::INTERNAL_ERROR,
                 data: None,
             })?;
-
-        // Update auto_start if provided
-        if auto_start {
-            if let Err(e) = self
-                .process_manager
-                .update_process_config(id.clone(), Some(auto_start))
-                .await
-            {
-                tracing::warn!("Failed to set auto_start on creation: {}", e);
-            }
-        }
 
         Ok(CallToolResult::success(vec![Content::text(format!(
             "Process '{id}' created successfully"
@@ -339,15 +360,17 @@ impl IchimiServer {
         ))]))
     }
 
-    #[tool(description = "Update process configuration (e.g., auto_start flag)")]
+    #[tool(description = "Update process configuration (auto_start flags)")]
     async fn update_process_config(
         &self,
-        Parameters(UpdateProcessConfigRequest { id, auto_start }): Parameters<
-            UpdateProcessConfigRequest,
-        >,
+        Parameters(UpdateProcessConfigRequest { 
+            id, 
+            auto_start_on_create,
+            auto_start_on_restore,
+        }): Parameters<UpdateProcessConfigRequest>,
     ) -> Result<CallToolResult, McpError> {
         self.process_manager
-            .update_process_config(id.clone(), auto_start)
+            .update_process_config(id.clone(), auto_start_on_create, auto_start_on_restore)
             .await
             .map_err(|e| McpError {
                 message: e.into(),
@@ -356,8 +379,11 @@ impl IchimiServer {
             })?;
 
         let mut message = format!("Process '{id}' configuration updated");
-        if let Some(auto_start_value) = auto_start {
-            message.push_str(&format!(" - auto_start set to {auto_start_value}"));
+        if let Some(value) = auto_start_on_create {
+            message.push_str(&format!(" - auto_start_on_create set to {value}"));
+        }
+        if let Some(value) = auto_start_on_restore {
+            message.push_str(&format!(" - auto_start_on_restore set to {value}"));
         }
 
         Ok(CallToolResult::success(vec![Content::text(message)]))

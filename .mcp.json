@@ -2,7 +2,7 @@
   "mcpServers": {
     "ichimi": {
       "type": "stdio",
-      "command": "./target/release/ichimi",
+      "command": "ichimi",
       "env": {
         "RUST_LOG": "info"
       }
@@ -21,7 +21,9 @@
     "SurrealDB": {
       "type": "stdio",
       "command": "surrealmcp",
-      "args": ["start"]
+      "args": [
+        "start"
+      ]
     }
   }
 }

@@ -17,7 +17,7 @@
     <link href="/css/style.css" rel="stylesheet">
 </head>
 <body>
-    <div class="page" x-data="processManager">
+    <div class="page" x-data="ichimiApp">
         <!-- Header -->
         <header class="navbar navbar-expand-md d-print-none">
             <div class="container-xl">
@@ -30,10 +30,27 @@
                 <div class="navbar-nav flex-row order-md-last">
                     <div class="nav-item d-none d-md-flex me-3">
                         <div class="btn-list">
-                            <button @click="refreshData()" class="btn btn-outline-primary">
+                            <!-- Connection Status Indicator -->
+                            <span class="badge" :class="store.errors.connectionError ? 'bg-red' : 'bg-green'">
+                                <span class="badge-pill" :class="store.errors.connectionError ? 'bg-red' : 'bg-green'"></span>
+                                <span x-text="store.errors.connectionError ? 'オフライン' : 'オンライン'"></span>
+                            </span>
+                            
+                            <!-- Auto Refresh Toggle -->
+                            <button @click="actions.toggleAutoRefresh()" 
+                                    class="btn btn-outline-secondary"
+                                    :class="{ 'btn-secondary': store.ui.autoRefreshEnabled }">
+                                <i class="ti ti-refresh" :class="{ 'ti-refresh-off': !store.ui.autoRefreshEnabled }"></i>
+                                <span x-text="store.ui.autoRefreshEnabled ? '自動更新ON' : '自動更新OFF'"></span>
+                            </button>
+                            
+                            <!-- Refresh Button -->
+                            <button @click="actions.loadProcesses()" class="btn btn-outline-primary">
                                 <i class="ti ti-refresh"></i> 更新
                             </button>
-                            <button @click="showCreateModal = true" class="btn btn-primary">
+                            
+                            <!-- Add Process Button -->
+                            <button @click="actions.openCreateModal()" class="btn btn-primary">
                                 <i class="ti ti-plus"></i> 新規プロセス
                             </button>
                         </div>
@@ -49,6 +66,9 @@
                     <div class="row g-2 align-items-center">
                         <div class="col">
                             <h2 class="page-title">プロセス管理</h2>
+                            <div class="text-muted mt-1">
+                                サーバーバージョン: <span x-text="store.server.version || '-'"></span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -56,7 +76,7 @@
             
             <div class="page-body">
                 <div class="container-xl">
-                    <!-- Stats -->
+                    <!-- Stats Cards -->
                     <div class="row row-cards mb-3">
                         <div class="col-sm-6 col-lg-3">
                             <div class="card">
@@ -64,7 +84,7 @@
                                     <div class="d-flex align-items-center">
                                         <div class="subheader">総プロセス数</div>
                                     </div>
-                                    <div class="h1 mb-0" x-text="processes.length"></div>
+                                    <div class="h1 mb-0" x-text="getters.processStats().total"></div>
                                 </div>
                             </div>
                         </div>
@@ -74,7 +94,7 @@
                                     <div class="d-flex align-items-center">
                                         <div class="subheader">実行中</div>
                                     </div>
-                                    <div class="h1 mb-0 text-green" x-text="runningCount"></div>
+                                    <div class="h1 mb-0 text-green" x-text="getters.processStats().running"></div>
                                 </div>
                             </div>
                         </div>
@@ -84,7 +104,7 @@
                                     <div class="d-flex align-items-center">
                                         <div class="subheader">停止中</div>
                                     </div>
-                                    <div class="h1 mb-0 text-yellow" x-text="stoppedCount"></div>
+                                    <div class="h1 mb-0 text-yellow" x-text="getters.processStats().stopped"></div>
                                 </div>
                             </div>
                         </div>
@@ -94,7 +114,7 @@
                                     <div class="d-flex align-items-center">
                                         <div class="subheader">失敗</div>
                                     </div>
-                                    <div class="h1 mb-0 text-red" x-text="failedCount"></div>
+                                    <div class="h1 mb-0 text-red" x-text="getters.processStats().failed"></div>
                                 </div>
                             </div>
                         </div>
@@ -106,8 +126,7 @@
                             <h3 class="card-title">プロセス一覧</h3>
                             <div class="card-actions">
                                 <input type="text" 
-                                       x-model="searchQuery" 
-                                       @input="filterProcesses()"
+                                       x-model="store.ui.searchQuery" 
                                        class="form-control form-control-sm" 
                                        placeholder="検索...">
                             </div>
@@ -121,50 +140,63 @@
                                         <th>状態</th>
                                         <th>PID</th>
                                         <th>開始時刻</th>
+                                        <th>自動起動</th>
                                         <th class="w-1"></th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <template x-for="process in filteredProcesses" :key="process.info.id">
+                                    <template x-for="process in getters.filteredProcesses()" :key="process.info.id">
                                         <tr>
                                             <td x-text="process.info.id"></td>
                                             <td>
                                                 <code x-text="process.info.command"></code>
+                                                <template x-if="process.info.args && process.info.args.length > 0">
+                                                    <small class="text-muted d-block" x-text="process.info.args.join(' ')"></small>
+                                                </template>
                                             </td>
                                             <td>
                                                 <span class="badge" 
-                                                      :class="getStatusBadgeClass(process.info.state)"
-                                                      x-text="getStatusText(process.info.state)">
+                                                      :class="helpers.getStatusBadgeClass(process.info.state)"
+                                                      x-text="helpers.getStatusText(process.info.state)">
                                                 </span>
                                             </td>
                                             <td x-text="process.info.state.pid || '-'"></td>
-                                            <td x-text="formatDate(process.info.state.started_at)"></td>
+                                            <td x-text="helpers.formatDate(process.info.state.started_at)"></td>
+                                            <td>
+                                                <span class="badge" :class="process.info.auto_start ? 'bg-blue' : 'bg-secondary'">
+                                                    <span x-text="process.info.auto_start ? 'ON' : 'OFF'"></span>
+                                                </span>
+                                            </td>
                                             <td>
                                                 <div class="btn-list flex-nowrap">
                                                     <button x-show="process.info.state.state === 'NotStarted' || process.info.state.state === 'Stopped'"
-                                                            @click="startProcess(process.info.id)"
-                                                            class="btn btn-sm btn-success">
+                                                            @click="actions.startProcess(process.info.id)"
+                                                            class="btn btn-sm btn-success"
+                                                            title="開始">
                                                         <i class="ti ti-player-play"></i>
                                                     </button>
                                                     <button x-show="process.info.state.state === 'Running'"
-                                                            @click="stopProcess(process.info.id)"
-                                                            class="btn btn-sm btn-warning">
+                                                            @click="actions.stopProcess(process.info.id)"
+                                                            class="btn btn-sm btn-warning"
+                                                            title="停止">
                                                         <i class="ti ti-player-stop"></i>
                                                     </button>
-                                                    <button @click="viewLogs(process.info.id)"
-                                                            class="btn btn-sm btn-info">
+                                                    <button @click="actions.viewLogs(process.info.id)"
+                                                            class="btn btn-sm btn-info"
+                                                            title="ログ表示">
                                                         <i class="ti ti-file-text"></i>
                                                     </button>
-                                                    <button @click="deleteProcess(process.info.id)"
-                                                            class="btn btn-sm btn-danger">
+                                                    <button @click="actions.deleteProcess(process.info.id)"
+                                                            class="btn btn-sm btn-danger"
+                                                            title="削除">
                                                         <i class="ti ti-trash"></i>
                                                     </button>
                                                 </div>
                                             </td>
                                         </tr>
                                     </template>
-                                    <tr x-show="filteredProcesses.length === 0">
-                                        <td colspan="6" class="text-center text-muted">
+                                    <tr x-show="getters.filteredProcesses().length === 0">
+                                        <td colspan="7" class="text-center text-muted">
                                             プロセスがありません
                                         </td>
                                     </tr>
@@ -178,42 +210,67 @@
 
         <!-- Create Process Modal -->
         <div class="modal modal-blur fade" 
-             :class="{ 'show': showCreateModal }" 
-             :style="{ display: showCreateModal ? 'block' : 'none' }"
-             x-show="showCreateModal"
-             @click.outside="showCreateModal = false">
+             :class="{ 'show': store.modals.createProcess.visible }" 
+             :style="{ display: store.modals.createProcess.visible ? 'block' : 'none' }"
+             x-show="store.modals.createProcess.visible"
+             @click.outside="actions.closeCreateModal()">
             <div class="modal-dialog modal-lg modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title">新規プロセス作成</h5>
-                        <button type="button" class="btn-close" @click="showCreateModal = false"></button>
+                        <button type="button" class="btn-close" @click="actions.closeCreateModal()"></button>
                     </div>
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label class="form-label">プロセスID</label>
-                            <input type="text" class="form-control" x-model="newProcess.id" placeholder="my-process">
+                            <label class="form-label required">プロセスID</label>
+                            <input type="text" class="form-control" 
+                                   :class="{ 'is-invalid': store.modals.createProcess.errors.id }"
+                                   x-model="store.modals.createProcess.form.id" 
+                                   placeholder="my-process">
+                            <div class="invalid-feedback" x-show="store.modals.createProcess.errors.id" 
+                                 x-text="store.modals.createProcess.errors.id"></div>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">コマンド</label>
-                            <input type="text" class="form-control" x-model="newProcess.command" placeholder="python">
+                            <label class="form-label required">コマンド</label>
+                            <input type="text" class="form-control" 
+                                   :class="{ 'is-invalid': store.modals.createProcess.errors.command }"
+                                   x-model="store.modals.createProcess.form.command" 
+                                   placeholder="python">
+                            <div class="invalid-feedback" x-show="store.modals.createProcess.errors.command" 
+                                 x-text="store.modals.createProcess.errors.command"></div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">引数</label>
-                            <input type="text" class="form-control" x-model="newProcess.argsString" placeholder="-m http.server 8000">
+                            <input type="text" class="form-control" 
+                                   x-model="store.modals.createProcess.form.args" 
+                                   placeholder="-m http.server 8000">
                             <small class="text-muted">スペース区切りで入力</small>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">作業ディレクトリ（オプション）</label>
-                            <input type="text" class="form-control" x-model="newProcess.cwd" placeholder="/path/to/directory">
+                            <input type="text" class="form-control" 
+                                   x-model="store.modals.createProcess.form.cwd" 
+                                   placeholder="/path/to/directory">
                         </div>
                         <div class="mb-3">
                             <label class="form-label">環境変数（オプション）</label>
-                            <textarea class="form-control" x-model="newProcess.envString" rows="3" placeholder="KEY1=value1&#10;KEY2=value2"></textarea>
+                            <textarea class="form-control" 
+                                      x-model="store.modals.createProcess.form.env" 
+                                      rows="3" 
+                                      placeholder="KEY1=value1&#10;KEY2=value2"></textarea>
+                            <small class="text-muted">KEY=value 形式で、1行に1つずつ入力</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-check">
+                                <input class="form-check-input" type="checkbox" 
+                                       x-model="store.modals.createProcess.form.auto_start">
+                                <span class="form-check-label">自動起動を有効にする</span>
+                            </label>
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn me-auto" @click="showCreateModal = false">キャンセル</button>
-                        <button type="button" class="btn btn-primary" @click="createProcess()">作成</button>
+                        <button type="button" class="btn me-auto" @click="actions.closeCreateModal()">キャンセル</button>
+                        <button type="button" class="btn btn-primary" @click="actions.createProcess()">作成</button>
                     </div>
                 </div>
             </div>
@@ -221,40 +278,90 @@
 
         <!-- Logs Modal -->
         <div class="modal modal-blur fade modal-xl" 
-             :class="{ 'show': showLogsModal }" 
-             :style="{ display: showLogsModal ? 'block' : 'none' }"
-             x-show="showLogsModal"
-             @click.outside="showLogsModal = false">
+             :class="{ 'show': store.modals.viewLogs.visible }" 
+             :style="{ display: store.modals.viewLogs.visible ? 'block' : 'none' }"
+             x-show="store.modals.viewLogs.visible"
+             @click.outside="actions.closeLogsModal()">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">ログ: <span x-text="currentProcessId"></span></h5>
-                        <button type="button" class="btn-close" @click="showLogsModal = false"></button>
+                        <h5 class="modal-title">ログ: <span x-text="store.modals.viewLogs.processId"></span></h5>
+                        <button type="button" class="btn-close" @click="actions.closeLogsModal()"></button>
                     </div>
                     <div class="modal-body">
                         <div class="mb-3">
                             <div class="btn-group" role="group">
                                 <button type="button" 
                                         class="btn" 
-                                        :class="{ 'btn-primary': logStream === 'both' }"
-                                        @click="setLogStream('both')">全て</button>
+                                        :class="{ 'btn-primary': store.modals.viewLogs.stream === 'both' }"
+                                        @click="actions.setLogStream('both')">全て</button>
                                 <button type="button" 
                                         class="btn" 
-                                        :class="{ 'btn-primary': logStream === 'stdout' }"
-                                        @click="setLogStream('stdout')">stdout</button>
+                                        :class="{ 'btn-primary': store.modals.viewLogs.stream === 'stdout' }"
+                                        @click="actions.setLogStream('stdout')">stdout</button>
                                 <button type="button" 
                                         class="btn" 
-                                        :class="{ 'btn-primary': logStream === 'stderr' }"
-                                        @click="setLogStream('stderr')">stderr</button>
+                                        :class="{ 'btn-primary': store.modals.viewLogs.stream === 'stderr' }"
+                                        @click="actions.setLogStream('stderr')">stderr</button>
                             </div>
                         </div>
-                        <pre class="log-viewer" x-text="currentLogs"></pre>
+                        <div x-show="store.modals.viewLogs.loading" class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                        <pre class="log-viewer" x-show="!store.modals.viewLogs.loading" 
+                             x-text="store.modals.viewLogs.logs.join('\n') || 'ログがありません'"></pre>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" @click="showLogsModal = false">閉じる</button>
+                        <button type="button" class="btn btn-secondary" @click="actions.closeLogsModal()">閉じる</button>
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div class="modal modal-blur fade" 
+             :class="{ 'show': store.modals.confirmDelete.visible }" 
+             :style="{ display: store.modals.confirmDelete.visible ? 'block' : 'none' }"
+             x-show="store.modals.confirmDelete.visible"
+             @click.outside="actions.closeConfirmDeleteModal()">
+            <div class="modal-dialog modal-sm modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-body">
+                        <div class="modal-title">削除の確認</div>
+                        <div>プロセス「<strong x-text="store.modals.confirmDelete.processName"></strong>」を削除してもよろしいですか？</div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-link link-secondary" @click="actions.closeConfirmDeleteModal()">
+                            キャンセル
+                        </button>
+                        <button type="button" class="btn btn-danger" @click="actions.confirmDeleteProcess()">
+                            削除する
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notifications -->
+        <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 9999;">
+            <template x-for="notification in store.notifications" :key="notification.id">
+                <div class="toast show mb-2" role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <strong :class="{
+                                'text-success': notification.type === 'success',
+                                'text-danger': notification.type === 'error',
+                                'text-warning': notification.type === 'warning',
+                                'text-info': notification.type === 'info'
+                            }" x-text="notification.message"></strong>
+                        </div>
+                        <button type="button" class="btn-close me-2 m-auto" 
+                                @click="actions.removeNotification(notification.id)"></button>
+                    </div>
+                </div>
+            </template>
         </div>
     </div>
 
@@ -262,5 +369,38 @@
     <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/js/tabler.min.js"></script>
     <!-- Custom JS -->
     <script src="/js/app.js"></script>
+    
+    <style>
+        .log-viewer {
+            background-color: #1a1a1a;
+            color: #00ff00;
+            padding: 1rem;
+            border-radius: 0.25rem;
+            max-height: 500px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .badge-pill {
+            display: inline-block;
+            width: 0.5rem;
+            height: 0.5rem;
+            border-radius: 50%;
+            margin-right: 0.25rem;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .badge-pill.bg-green {
+            animation: pulse 2s infinite;
+        }
+    </style>
 </body>
 </html>
