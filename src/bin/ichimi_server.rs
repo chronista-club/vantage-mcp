@@ -59,8 +59,8 @@ async fn main() -> Result<()> {
     }
 
     // Determine operation mode
-    let run_mcp = !web_only;  // Run MCP server by default unless --web-only is specified
-    
+    let run_mcp = !web_only; // Run MCP server by default unless --web-only is specified
+
     // Setup logging based on environment
     let log_level = env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string());
 
@@ -89,10 +89,26 @@ async fn main() -> Result<()> {
             .map_err(|e| anyhow::anyhow!("Failed to create log file: {}", e))?;
 
         let filter = EnvFilter::from_default_env()
-            .add_directive(format!("ichimi={log_level}").parse().map_err(|e| anyhow::anyhow!("Invalid log level: {}", e))?)
-            .add_directive(format!("ichimi_server={log_level}").parse().map_err(|e| anyhow::anyhow!("Invalid log level: {}", e))?)
-            .add_directive("facet_kdl=warn".parse().map_err(|e| anyhow::anyhow!("Invalid log level: {}", e))?)
-            .add_directive("mcp_server=debug".parse().map_err(|e| anyhow::anyhow!("Invalid log level: {}", e))?);
+            .add_directive(
+                format!("ichimi={log_level}")
+                    .parse()
+                    .map_err(|e| anyhow::anyhow!("Invalid log level: {}", e))?,
+            )
+            .add_directive(
+                format!("ichimi_server={log_level}")
+                    .parse()
+                    .map_err(|e| anyhow::anyhow!("Invalid log level: {}", e))?,
+            )
+            .add_directive(
+                "facet_kdl=warn"
+                    .parse()
+                    .map_err(|e| anyhow::anyhow!("Invalid log level: {}", e))?,
+            )
+            .add_directive(
+                "mcp_server=debug"
+                    .parse()
+                    .map_err(|e| anyhow::anyhow!("Invalid log level: {}", e))?,
+            );
 
         tracing_subscriber::fmt()
             .with_env_filter(filter)
@@ -111,9 +127,21 @@ async fn main() -> Result<()> {
     } else {
         // Web mode or MCP with web - log to stderr
         let filter = EnvFilter::from_default_env()
-            .add_directive(format!("ichimi={log_level}").parse().map_err(|e| anyhow::anyhow!("Invalid log level: {}", e))?)
-            .add_directive(format!("ichimi_server={log_level}").parse().map_err(|e| anyhow::anyhow!("Invalid log level: {}", e))?)
-            .add_directive("facet_kdl=warn".parse().map_err(|e| anyhow::anyhow!("Invalid log level: {}", e))?);
+            .add_directive(
+                format!("ichimi={log_level}")
+                    .parse()
+                    .map_err(|e| anyhow::anyhow!("Invalid log level: {}", e))?,
+            )
+            .add_directive(
+                format!("ichimi_server={log_level}")
+                    .parse()
+                    .map_err(|e| anyhow::anyhow!("Invalid log level: {}", e))?,
+            )
+            .add_directive(
+                "facet_kdl=warn"
+                    .parse()
+                    .map_err(|e| anyhow::anyhow!("Invalid log level: {}", e))?,
+            );
 
         tracing_subscriber::fmt()
             .with_env_filter(filter)

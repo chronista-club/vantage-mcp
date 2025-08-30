@@ -44,14 +44,10 @@ impl IchimiServer {
 
         // データベースを初期化
         tracing::debug!("Initializing database");
-        let database = Arc::new(
-            Database::new()
-                .await
-                .map_err(|e| {
-                    tracing::error!("Failed to initialize database: {}", e);
-                    anyhow::anyhow!("Database initialization failed: {}", e)
-                })?,
-        );
+        let database = Arc::new(Database::new().await.map_err(|e| {
+            tracing::error!("Failed to initialize database: {}", e);
+            anyhow::anyhow!("Database initialization failed: {}", e)
+        })?);
         tracing::debug!("Database initialized successfully");
 
         // 起動時に既存データを復元

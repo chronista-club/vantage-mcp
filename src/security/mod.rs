@@ -10,8 +10,7 @@ pub fn validate_command(command: &str) -> Result<(), String> {
 
     // 危険な文字やパターンをチェック
     let dangerous_patterns = [
-        "&&", "||", ";", "|", "$(", "`", "\n", "\r",
-        ">", "<", ">>", "<<", "&>", "&>>", "2>", "2>>",
+        "&&", "||", ";", "|", "$(", "`", "\n", "\r", ">", "<", ">>", "<<", "&>", "&>>", "2>", "2>>",
     ];
 
     for pattern in &dangerous_patterns {
@@ -46,7 +45,10 @@ pub fn validate_args(args: &[String]) -> Result<(), String> {
         }
 
         // 制御文字をチェック（改行とタブは許可）
-        if arg.chars().any(|c| c.is_control() && c != '\t' && c != '\n' && c != '\r') {
+        if arg
+            .chars()
+            .any(|c| c.is_control() && c != '\t' && c != '\n' && c != '\r')
+        {
             return Err("Arguments contain control characters".to_string());
         }
 
@@ -85,12 +87,21 @@ pub fn validate_env_vars(env: &HashMap<String, String>) -> Result<(), String> {
             "PATH", // PATHの上書きは制限
         ];
 
-        if dangerous_vars.iter().any(|&var| key.eq_ignore_ascii_case(var)) {
-            return Err(format!("Setting '{}' environment variable is not allowed", key));
+        if dangerous_vars
+            .iter()
+            .any(|&var| key.eq_ignore_ascii_case(var))
+        {
+            return Err(format!(
+                "Setting '{}' environment variable is not allowed",
+                key
+            ));
         }
 
         // 値に制御文字が含まれていないかチェック
-        if value.chars().any(|c| c.is_control() && c != '\t' && c != '\n') {
+        if value
+            .chars()
+            .any(|c| c.is_control() && c != '\t' && c != '\n')
+        {
             return Err(format!(
                 "Environment variable '{}' contains control characters",
                 key
@@ -106,7 +117,10 @@ pub fn validate_working_directory(cwd: &Option<PathBuf>) -> Result<(), String> {
     if let Some(path) = cwd {
         // パスが存在するか確認
         if !path.exists() {
-            return Err(format!("Working directory does not exist: {}", path.display()));
+            return Err(format!(
+                "Working directory does not exist: {}",
+                path.display()
+            ));
         }
 
         // ディレクトリであることを確認
@@ -124,15 +138,25 @@ pub fn validate_working_directory(cwd: &Option<PathBuf>) -> Result<(), String> {
 
         // システムディレクトリへのアクセスを制限
         let restricted_paths = [
-            "/", "/etc", "/sys", "/proc", "/dev", "/boot",
-            "/private/etc", "/private/var", "/System", "/Library"
+            "/",
+            "/etc",
+            "/sys",
+            "/proc",
+            "/dev",
+            "/boot",
+            "/private/etc",
+            "/private/var",
+            "/System",
+            "/Library",
         ];
 
         for restricted in &restricted_paths {
             let restricted_path = Path::new(restricted);
             // 正規化されたパスと、実際のパスの両方をチェック
-            if canonical == restricted_path || 
-               canonical.starts_with(restricted_path) && canonical.components().count() <= restricted_path.components().count() + 1 {
+            if canonical == restricted_path
+                || canonical.starts_with(restricted_path)
+                    && canonical.components().count() <= restricted_path.components().count() + 1
+            {
                 return Err(format!(
                     "Access to system directory '{}' is not allowed",
                     restricted
@@ -205,7 +229,7 @@ mod tests {
     #[test]
     fn test_validate_env_vars() {
         let mut env = HashMap::new();
-        
+
         // 正常な環境変数
         env.insert("MY_VAR".to_string(), "value".to_string());
         assert!(validate_env_vars(&env).is_ok());
