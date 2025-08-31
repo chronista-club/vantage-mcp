@@ -1,11 +1,9 @@
 use crate::process::ProcessManager;
-use axum::{Router, extract::State, response::{Html, IntoResponse, Response}, http::StatusCode};
+use axum::{Router, response::{Html, IntoResponse, Response}, http::StatusCode};
+use axum::extract::State;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use tera::{Context, Tera};
 use tower_http::cors::CorsLayer;
-
-// テンプレートファイルをバイナリに埋め込む
 
 pub async fn start_web_server(
     process_manager: ProcessManager,
@@ -71,36 +69,8 @@ async fn bind_to_available_port(
 }
 
 fn create_app(process_manager: ProcessManager) -> Router {
-    // Teraテンプレートエンジンを初期化（埋め込みテンプレートを使用）
-    let mut tera = Tera::default();
-
-    // 実行時にテンプレートファイルを読み込む
-    let base_template = include_str!("../../templates/base.tera");
-    let index_template = include_str!("../../templates/index.tera");
-
-    // 埋め込んだテンプレートを追加
-    if let Err(e) = tera.add_raw_template("base.tera", base_template) {
-        tracing::error!("baseテンプレートの追加エラー: {}", e);
-        panic!("baseテンプレートの追加に失敗しました: {e}");
-    }
-
-    if let Err(e) = tera.add_raw_template("index.tera", index_template) {
-        tracing::error!("indexテンプレートの追加エラー: {}", e);
-        panic!("indexテンプレートの追加に失敗しました: {e}");
-    }
-
-    let tera = Arc::new(tera);
-
-    // 現在の作業ディレクトリを取得
-    let working_directory = std::env::current_dir()
-        .ok()
-        .and_then(|p| p.to_str().map(String::from))
-        .unwrap_or_else(|| "Unknown".to_string());
-
     let app_state = AppState {
         process_manager: Arc::new(process_manager),
-        tera,
-        working_directory,
     };
 
     Router::new()
@@ -114,25 +84,13 @@ fn create_app(process_manager: ProcessManager) -> Router {
 #[derive(Clone)]
 pub struct AppState {
     pub process_manager: Arc<ProcessManager>,
-    pub tera: Arc<Tera>,
-    pub working_directory: String,
 }
 
-async fn index_handler(
-    State(state): State<AppState>,
-) -> Result<Html<String>, (axum::http::StatusCode, String)> {
-    let mut context = Context::new();
-    context.insert("working_directory", &state.working_directory);
-
-    match state.tera.render("index.tera", &context) {
-        Ok(html) => Ok(Html(html)),
-        Err(e) => {
-            tracing::error!("テンプレートレンダリングエラー: {}", e);
-            Err((
-                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                format!("テンプレートエラー: {e}"),
-            ))
-        }
+async fn index_handler() -> impl IntoResponse {
+    // Serve the built Svelte app from embedded asset
+    match super::assets::Asset::get("dist/index.html") {
+        Some(content) => Html(std::str::from_utf8(content.data.as_ref()).unwrap_or("Error loading page").to_string()),
+        None => Html("Error: index.html not found".to_string()),
     }
 }
 
@@ -155,17 +113,17 @@ async fn static_handler(
 
     tracing::debug!("Static file request: {} -> {}", uri.path(), path);
     
-    // デバッグ用：埋め込まれているファイルをリスト（最初のリクエスト時のみ）
-    use rust_embed::RustEmbed;
-    static ONCE: std::sync::Once = std::sync::Once::new();
-    ONCE.call_once(|| {
-        tracing::info!("Embedded files:");
-        for file in Asset::iter() {
-            tracing::info!("  - {}", file.as_ref());
-        }
-    });
-
-    // 埋め込みアセットから取得
+    // Svelteビルドファイルをチェック（dist/ディレクトリ）
+    let dist_path = format!("dist/{}", path);
+    if let Some((data, mime)) = Asset::get_with_mime(&dist_path) {
+        return Response::builder()
+            .status(StatusCode::OK)
+            .header("Content-Type", mime)
+            .body(axum::body::Body::from(data))
+            .unwrap();
+    }
+    
+    // 通常の静的ファイル
     match Asset::get_with_mime(path) {
         Some((data, mime)) => {
             Response::builder()

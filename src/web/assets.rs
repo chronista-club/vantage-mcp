@@ -1,8 +1,9 @@
 use rust_embed::RustEmbed;
 
 #[derive(RustEmbed)]
-#[folder = "static/"]
-#[include = "**/*"]
+#[folder = "."]
+#[include = "static/**/*"]
+#[include = "dist/**/*"]
 pub struct Asset;
 
 impl Asset {
