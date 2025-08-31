@@ -238,9 +238,9 @@ async fn main() -> Result<()> {
             }
         };
 
-        // Open browser with actual port (only in web-only mode)
-        if auto_open && web_only {
-            // Don't open browser in MCP mode
+        // Open browser with actual port (when web is enabled)
+        if auto_open && (web_enabled || web_only) {
+            // Open browser when web dashboard is available
             let url = format!("http://localhost:{}", actual_port);
             tokio::spawn(async move {
                 tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
