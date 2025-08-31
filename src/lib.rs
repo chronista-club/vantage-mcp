@@ -406,6 +406,65 @@ impl IchimiServer {
         Ok(CallToolResult::success(vec![Content::text(message)]))
     }
 
+    #[tool(description = "Update process attributes (command, args, env, cwd, and auto_start flags)")]
+    async fn update_process(
+        &self,
+        Parameters(UpdateProcessRequest {
+            id,
+            command,
+            args,
+            env,
+            cwd,
+            auto_start_on_create,
+            auto_start_on_restore,
+        }): Parameters<UpdateProcessRequest>,
+    ) -> std::result::Result<CallToolResult, McpError> {
+        self.process_manager
+            .update_process(
+                id.clone(),
+                command.clone(),
+                args.clone(),
+                env.clone(),
+                cwd.clone(),
+                auto_start_on_create,
+                auto_start_on_restore,
+            )
+            .await
+            .map_err(|e| McpError {
+                message: e.into(),
+                code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+                data: None,
+            })?;
+
+        let mut updates = Vec::new();
+        if command.is_some() {
+            updates.push("command");
+        }
+        if args.is_some() {
+            updates.push("args");
+        }
+        if env.is_some() {
+            updates.push("env");
+        }
+        if cwd.is_some() {
+            updates.push("cwd");
+        }
+        if auto_start_on_create.is_some() {
+            updates.push("auto_start_on_create");
+        }
+        if auto_start_on_restore.is_some() {
+            updates.push("auto_start_on_restore");
+        }
+
+        let message = if updates.is_empty() {
+            format!("Process '{}' - no attributes updated", id)
+        } else {
+            format!("Process '{}' updated: {}", id, updates.join(", "))
+        };
+
+        Ok(CallToolResult::success(vec![Content::text(message)]))
+    }
+
     #[tool(description = "Get smart suggestions for next actions based on learning")]
     async fn get_suggestions(
         &self,

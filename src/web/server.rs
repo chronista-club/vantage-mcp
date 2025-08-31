@@ -1,9 +1,9 @@
 use crate::process::ProcessManager;
-use axum::{Router, extract::State, response::Html};
+use axum::{Router, extract::State, response::{Html, IntoResponse, Response}, http::StatusCode};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tera::{Context, Tera};
-use tower_http::{cors::CorsLayer, services::ServeDir};
+use tower_http::cors::CorsLayer;
 
 // テンプレートファイルをバイナリに埋め込む
 
@@ -106,7 +106,7 @@ fn create_app(process_manager: ProcessManager) -> Router {
     Router::new()
         .route("/", axum::routing::get(index_handler))
         .nest("/api", super::api::create_api_routes())
-        .nest_service("/static", ServeDir::new("static"))
+        .fallback(static_handler)
         .layer(CorsLayer::permissive())
         .with_state(app_state)
 }
@@ -132,6 +132,54 @@ async fn index_handler(
                 axum::http::StatusCode::INTERNAL_SERVER_ERROR,
                 format!("テンプレートエラー: {e}"),
             ))
+        }
+    }
+}
+
+async fn static_handler(
+    uri: axum::http::Uri,
+) -> impl IntoResponse {
+    use super::assets::Asset;
+    
+    // URIからパスを取得
+    let path = uri.path();
+    
+    // パスの正規化
+    let path = if path.is_empty() || path == "/" {
+        "index.html"
+    } else if path.starts_with('/') {
+        &path[1..]
+    } else {
+        path
+    };
+
+    // 埋め込みアセットから取得
+    match Asset::get_with_mime(path) {
+        Some((data, mime)) => {
+            Response::builder()
+                .status(StatusCode::OK)
+                .header("Content-Type", mime)
+                .body(axum::body::Body::from(data))
+                .unwrap()
+        }
+        None => {
+            // ファイルが見つからない場合、vendorディレクトリ以下も探す
+            let vendor_path = format!("vendor/{}", path);
+            match Asset::get_with_mime(&vendor_path) {
+                Some((data, mime)) => {
+                    Response::builder()
+                        .status(StatusCode::OK)
+                        .header("Content-Type", mime)
+                        .body(axum::body::Body::from(data))
+                        .unwrap()
+                }
+                None => {
+                    Response::builder()
+                        .status(StatusCode::NOT_FOUND)
+                        .body(axum::body::Body::from("404 Not Found"))
+                        .unwrap()
+                }
+            }
         }
     }
 }

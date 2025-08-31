@@ -378,7 +378,7 @@ impl ProcessManager {
         Ok(())
     }
 
-    /// 全ての実行中プロセスを停止
+    /// 全ての実行中プロセスを停止（stop_on_shutdownフラグに基づく）
     pub async fn stop_all_processes(&self) -> Result<Vec<String>, String> {
         info!("Stopping all running processes...");
         
@@ -595,9 +595,75 @@ impl ProcessManager {
             );
         }
 
+
         // Persist the updated configuration
         if let Err(e) = self.persistence.update_process(&process.info).await {
             return Err(format!("Failed to persist process config update: {e}"));
+        }
+
+        Ok(())
+    }
+
+    /// Update process attributes (command, args, env, cwd, and flags)
+    pub async fn update_process(
+        &self,
+        id: String,
+        command: Option<String>,
+        args: Option<Vec<String>>,
+        env: Option<HashMap<String, String>>,
+        cwd: Option<String>,
+        auto_start_on_create: Option<bool>,
+        auto_start_on_restore: Option<bool>,
+    ) -> Result<(), String> {
+        let processes = self.processes.read().await;
+        let process_arc = processes
+            .get(&id)
+            .ok_or_else(|| format!("Process '{id}' not found"))?;
+
+        let mut process = process_arc.write().await;
+
+        // Update command if provided
+        if let Some(cmd) = command {
+            process.info.command = cmd.clone();
+            info!("Updated process '{}' command to '{}'", id, cmd);
+        }
+
+        // Update args if provided
+        if let Some(arguments) = args {
+            process.info.args = arguments.clone();
+            info!("Updated process '{}' args to {:?}", id, arguments);
+        }
+
+        // Update env if provided
+        if let Some(environment) = env {
+            process.info.env = environment.clone();
+            info!("Updated process '{}' env variables", id);
+        }
+
+        // Update cwd if provided
+        if let Some(working_dir) = cwd {
+            process.info.cwd = Some(PathBuf::from(&working_dir));
+            info!("Updated process '{}' cwd to '{}'", id, working_dir);
+        }
+
+        // Update auto_start flags if provided
+        if let Some(value) = auto_start_on_create {
+            process.info.auto_start_on_create = value;
+            info!("Updated process '{}' auto_start_on_create to {}", id, value);
+        }
+
+        if let Some(value) = auto_start_on_restore {
+            process.info.auto_start_on_restore = value;
+            info!(
+                "Updated process '{}' auto_start_on_restore to {}",
+                id, value
+            );
+        }
+
+
+        // Persist the updated configuration
+        if let Err(e) = self.persistence.update_process(&process.info).await {
+            return Err(format!("Failed to persist process update: {e}"));
         }
 
         Ok(())

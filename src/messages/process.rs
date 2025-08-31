@@ -65,3 +65,21 @@ pub struct UpdateProcessConfigRequest {
     pub auto_start_on_create: Option<bool>,
     pub auto_start_on_restore: Option<bool>,
 }
+
+/// Request to update process attributes
+#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
+pub struct UpdateProcessRequest {
+    pub id: String,
+    /// Optional: Update command
+    pub command: Option<String>,
+    /// Optional: Update args
+    pub args: Option<Vec<String>>,
+    /// Optional: Update environment variables
+    pub env: Option<std::collections::HashMap<String, String>>,
+    /// Optional: Update working directory
+    pub cwd: Option<String>,
+    /// Optional: Update auto_start_on_create flag
+    pub auto_start_on_create: Option<bool>,
+    /// Optional: Update auto_start_on_restore flag
+    pub auto_start_on_restore: Option<bool>,
+}

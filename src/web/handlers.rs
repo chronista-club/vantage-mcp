@@ -1,4 +1,4 @@
-use crate::messages::{CreateProcessRequest, StopProcessRequest};
+use crate::messages::{CreateProcessRequest, StopProcessRequest, UpdateProcessRequest};
 use crate::process::{OutputStream, ProcessFilter, ProcessStateFilter};
 use crate::web::server::AppState;
 use axum::{
@@ -266,6 +266,28 @@ pub async fn update_process_config(
             id,
             config.auto_start_on_create,
             config.auto_start_on_restore,
+        )
+        .await
+        .map(|_| StatusCode::OK)
+        .map_err(|e| (StatusCode::BAD_REQUEST, e))
+}
+
+/// Update process attributes
+pub async fn update_process(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    Json(request): Json<UpdateProcessRequest>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    state
+        .process_manager
+        .update_process(
+            id,
+            request.command,
+            request.args,
+            request.env,
+            request.cwd,
+            request.auto_start_on_create,
+            request.auto_start_on_restore,
         )
         .await
         .map(|_| StatusCode::OK)

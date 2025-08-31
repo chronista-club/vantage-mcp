@@ -1,7 +1,7 @@
 use crate::web::server::AppState;
 use axum::{
     Router,
-    routing::{delete, get, patch, post},
+    routing::{delete, get, patch, post, put},
 };
 
 pub fn create_api_routes() -> Router<AppState> {
@@ -12,6 +12,7 @@ pub fn create_api_routes() -> Router<AppState> {
         .route("/processes", post(super::handlers::create_process))
         .route("/processes/:id", get(super::handlers::get_process))
         .route("/processes/:id", delete(super::handlers::remove_process))
+        .route("/processes/:id", put(super::handlers::update_process))
         .route("/processes/:id/start", post(super::handlers::start_process))
         .route("/processes/:id/stop", post(super::handlers::stop_process))
         .route(
