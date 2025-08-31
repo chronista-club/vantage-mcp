@@ -88,7 +88,7 @@ pub struct AppState {
 
 async fn index_handler() -> impl IntoResponse {
     // Serve the built Svelte app from embedded asset
-    match super::assets::Asset::get("dist/index.html") {
+    match super::assets::Asset::get("web-svelte/dist/index.html") {
         Some(content) => Html(std::str::from_utf8(content.data.as_ref()).unwrap_or("Error loading page").to_string()),
         None => Html("Error: index.html not found".to_string()),
     }
@@ -113,8 +113,8 @@ async fn static_handler(
 
     tracing::debug!("Static file request: {} -> {}", uri.path(), path);
     
-    // Svelteビルドファイルをチェック（dist/ディレクトリ）
-    let dist_path = format!("dist/{}", path);
+    // Svelteビルドファイルをチェック（web-svelte/dist/ディレクトリ）
+    let dist_path = format!("web-svelte/dist/{}", path);
     if let Some((data, mime)) = Asset::get_with_mime(&dist_path) {
         return Response::builder()
             .status(StatusCode::OK)
