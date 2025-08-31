@@ -6,11 +6,11 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>{% block title %}Ichimi Server - Process Manager{% endblock %}</title>
     
-    <!-- Tabler CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/css/tabler.min.css" rel="stylesheet">
+    <!-- Tabler CSS (ローカル) -->
+    <link href="/static/css/tabler.min.css" rel="stylesheet">
     
-    <!-- Tabler Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons@latest/iconfont/tabler-icons.min.css">
+    <!-- Tabler Icons (ローカル) -->
+    <link rel="stylesheet" href="/static/css/tabler-icons.min.css">
     
     {% block styles %}{% endblock %}
 </head>
@@ -91,15 +91,13 @@
         </div>
     </div>
     
-    <!-- Tabler JS (includes Bootstrap) -->
-    <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/js/tabler.min.js"></script>
+    <!-- Tabler JS (ローカル) -->
+    <script src="/static/js/tabler.min.js"></script>
     
-    <!-- Alpine.js (load after Tabler/Bootstrap) -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    
-    <!-- Global Alpine Store -->
+    <!-- Global Alpine Store (Tablerの後、Alpine.jsの前に定義) -->
     <script>
-        document.addEventListener('alpine:init', () => {
+        // Alpine.jsがロードされる前にストアを準備
+        window.alpineStoreConfig = () => {
             Alpine.store('app', {
                 version: '0.1.0-beta7',
                 apiBase: '/api',
@@ -141,10 +139,23 @@
                         console.error('Delete error:', error);
                         throw error;
                     }
+                },
+                
+                showToast(type, message) {
+                    // Toast機能の実装（必要に応じて）
+                    console.log(`[${type}] ${message}`);
                 }
             });
+        };
+        
+        // Alpine.jsがロードされたら設定を適用
+        document.addEventListener('alpine:init', () => {
+            window.alpineStoreConfig();
         });
     </script>
+    
+    <!-- Alpine.js (ローカルから読み込む) -->
+    <script defer src="/static/js/alpine.min.js"></script>
     
     {% block scripts %}{% endblock %}
 </body>

@@ -153,6 +153,18 @@ async fn static_handler(
         path
     };
 
+    tracing::debug!("Static file request: {} -> {}", uri.path(), path);
+    
+    // デバッグ用：埋め込まれているファイルをリスト（最初のリクエスト時のみ）
+    use rust_embed::RustEmbed;
+    static ONCE: std::sync::Once = std::sync::Once::new();
+    ONCE.call_once(|| {
+        tracing::info!("Embedded files:");
+        for file in Asset::iter() {
+            tracing::info!("  - {}", file.as_ref());
+        }
+    });
+
     // 埋め込みアセットから取得
     match Asset::get_with_mime(path) {
         Some((data, mime)) => {

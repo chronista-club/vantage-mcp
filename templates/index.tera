@@ -13,12 +13,12 @@
                 </div>
                 <h2 class="page-title">Process Dashboard</h2>
             </div>
-            <div class="col-auto ms-auto d-print-none">
+            <div class="col-auto ms-auto d-print-none" x-data>
                 <div class="btn-list">
-                    <button @click="$refs.dashboard.refresh()" class="btn btn-primary">
+                    <button @click="$dispatch('refresh-dashboard')" class="btn btn-primary">
                         <i class="ti ti-refresh"></i> Refresh
                     </button>
-                    <button @click="$refs.addProcessModal.show()" class="btn btn-primary">
+                    <button data-bs-toggle="modal" data-bs-target="#addProcessModal" class="btn btn-primary">
                         <i class="ti ti-plus"></i> Add Process
                     </button>
                 </div>
@@ -29,7 +29,7 @@
 {% endblock %}
 
 {% block content %}
-<div x-data="dashboard()" x-ref="dashboard" x-init="init()">
+<div x-data="dashboard()" x-init="init()" @refresh-dashboard.window="fetchDashboard()">
     <!-- Stats Cards -->
     <div class="row row-deck row-cards mb-4">
         <div class="col-sm-6 col-lg-3">
@@ -188,7 +188,7 @@
                         Try adjusting your search or add a new process.
                     </p>
                     <div class="empty-action">
-                        <button @click="$refs.addProcessModal.show()" class="btn btn-primary">
+                        <button data-bs-toggle="modal" data-bs-target="#addProcessModal" class="btn btn-primary">
                             <i class="ti ti-plus"></i> Add your first process
                         </button>
                     </div>
@@ -198,7 +198,7 @@
     </div>
 
     <!-- Add Process Modal -->
-    <div class="modal modal-blur fade" id="addProcessModal" tabindex="-1" x-ref="addProcessModal">
+    <div class="modal modal-blur fade" id="addProcessModal" tabindex="-1">
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
@@ -244,7 +244,7 @@
     </div>
 
     <!-- Logs Modal -->
-    <div class="modal modal-blur fade" id="logsModal" tabindex="-1" x-ref="logsModal">
+    <div class="modal modal-blur fade" id="logsModal" tabindex="-1">
         <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
@@ -292,21 +292,47 @@ function dashboard() {
         selectedProcess: null,
         logs: '',
         refreshInterval: null,
+        addProcessModal: null,
+        logsModal: null,
         
         async init() {
             await this.fetchDashboard();
             // Auto-refresh every 5 seconds
             this.refreshInterval = setInterval(() => this.fetchDashboard(), 5000);
             
-            // Initialize modals after a short delay to ensure Bootstrap is loaded
-            this.$nextTick(() => {
-                if (typeof bootstrap !== 'undefined') {
-                    this.$refs.addProcessModal = new bootstrap.Modal(this.$refs.addProcessModal);
-                    this.$refs.logsModal = new bootstrap.Modal(this.$refs.logsModal);
+            // DOMContentLoadedとTablerの読み込み完了後にモーダルを初期化
+            const initModals = () => {
+                if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                    const addModalEl = document.getElementById('addProcessModal');
+                    const logsModalEl = document.getElementById('logsModal');
+                    
+                    if (addModalEl && !this.addProcessModal) {
+                        this.addProcessModal = new bootstrap.Modal(addModalEl, {
+                            backdrop: true,
+                            keyboard: true,
+                            focus: true
+                        });
+                    }
+                    
+                    if (logsModalEl && !this.logsModal) {
+                        this.logsModal = new bootstrap.Modal(logsModalEl, {
+                            backdrop: true,
+                            keyboard: true,
+                            focus: true
+                        });
+                    }
                 } else {
-                    console.warn('Bootstrap is not loaded yet');
+                    // Bootstrapがまだロードされていない場合は少し待って再試行
+                    setTimeout(initModals, 100);
                 }
-            });
+            };
+            
+            // DOM準備完了後に初期化
+            if (document.readyState === 'complete' || document.readyState === 'interactive') {
+                initModals();
+            } else {
+                document.addEventListener('DOMContentLoaded', initModals);
+            }
         },
         
         async fetchDashboard() {
@@ -381,7 +407,10 @@ function dashboard() {
                 };
                 
                 await Alpine.store('app').postData('/processes', processData);
-                this.$refs.addProcessModal.hide();
+                // 保持しているモーダルインスタンスを使用して閉じる
+                if (this.addProcessModal) {
+                    this.addProcessModal.hide();
+                }
                 this.resetNewProcess();
                 await this.fetchDashboard();
             } catch (error) {
@@ -402,7 +431,10 @@ function dashboard() {
         async viewLogs(id) {
             this.selectedProcess = id;
             await this.refreshLogs();
-            this.$refs.logsModal.show();
+            // 保持しているモーダルインスタンスを使用して表示
+            if (this.logsModal) {
+                this.logsModal.show();
+            }
         },
         
         async refreshLogs() {
