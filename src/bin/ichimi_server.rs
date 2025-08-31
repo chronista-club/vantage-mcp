@@ -163,11 +163,10 @@ async fn main() -> Result<()> {
 
     // Auto-import processes on startup if configured
     let import_file = env::var("ICHIMI_IMPORT_FILE").unwrap_or_else(|_| {
-        dirs::home_dir()
-            .unwrap_or_else(|| std::path::PathBuf::from("."))
+        std::env::current_dir()
+            .unwrap_or_else(|_| std::path::PathBuf::from("."))
             .join(".ichimi")
-            .join("data")
-            .join("processes.surql")
+            .join("snapshot.surql")
             .to_string_lossy()
             .to_string()
     });
@@ -224,11 +223,10 @@ async fn main() -> Result<()> {
 
         // Auto-export processes on shutdown
         let export_file = env::var("ICHIMI_EXPORT_FILE").unwrap_or_else(|_| {
-            dirs::home_dir()
-                .unwrap_or_else(|| std::path::PathBuf::from("."))
+            std::env::current_dir()
+                .unwrap_or_else(|_| std::path::PathBuf::from("."))
                 .join(".ichimi")
-                .join("data")
-                .join("processes.surql")
+                .join("snapshot.surql")
                 .to_string_lossy()
                 .to_string()
         });

@@ -10,8 +10,7 @@ use tracing::{debug, info};
 /// デフォルトのデータディレクトリ
 pub const DEFAULT_DATA_DIR: &str = ".ichimi";
 
-/// デフォルトのデータファイル名
-pub const DEFAULT_DATA_FILE: &str = "ichimi.surql";
+pub const DEFAULT_DATA_FILE: &str = "snapshot.surql";
 
 #[derive(Clone)]
 pub struct Database {
@@ -189,7 +188,7 @@ impl Database {
 
     /// デフォルトのデータファイルパスを取得
     pub fn get_default_data_path() -> std::path::PathBuf {
-        // プロジェクトルートのデータディレクトリに保存
+        // プロジェクトルート（現在の作業ディレクトリ）の.ichimiディレクトリに保存
         std::path::PathBuf::from(DEFAULT_DATA_DIR).join(DEFAULT_DATA_FILE)
     }
 
