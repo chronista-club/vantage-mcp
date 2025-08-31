@@ -19,7 +19,6 @@ fn create_test_process(id: &str, command: &str) -> ProcessInfo {
         env,
         cwd: Some(PathBuf::from("/tmp")),
         state: ProcessState::NotStarted,
-        auto_start_on_create: true,
         auto_start_on_restore: false,
     }
 }
@@ -150,10 +149,6 @@ async fn test_export_and_import() {
             assert_eq!(
                 imported.cwd, original_process.cwd,
                 "Working directory should match"
-            );
-            assert_eq!(
-                imported.auto_start_on_create, original_process.auto_start_on_create,
-                "auto_start_on_create should match"
             );
             assert_eq!(
                 imported.auto_start_on_restore, original_process.auto_start_on_restore,

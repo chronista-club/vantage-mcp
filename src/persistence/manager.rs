@@ -14,8 +14,6 @@ struct ProcessInfoRecord {
     env: HashMap<String, String>,
     cwd: Option<String>,
     #[serde(default)]
-    auto_start_on_create: bool,
-    #[serde(default)]
     auto_start_on_restore: bool,
 }
 
@@ -27,7 +25,6 @@ impl From<&ProcessInfo> for ProcessInfoRecord {
             args: info.args.clone(),
             env: info.env.clone(),
             cwd: info.cwd.as_ref().map(|p| p.to_string_lossy().to_string()),
-            auto_start_on_create: info.auto_start_on_create,
             auto_start_on_restore: info.auto_start_on_restore,
         }
     }
@@ -42,7 +39,6 @@ impl ProcessInfoRecord {
             env: self.env.clone(),
             cwd: self.cwd.as_ref().map(PathBuf::from),
             state: ProcessState::NotStarted,
-            auto_start_on_create: self.auto_start_on_create,
             auto_start_on_restore: self.auto_start_on_restore,
         }
     }
@@ -84,7 +80,6 @@ impl PersistenceManager {
                 args: $args,
                 env: $env,
                 cwd: $cwd,
-                auto_start_on_create: $auto_start_on_create,
                 auto_start_on_restore: $auto_start_on_restore,
                 updated_at: time::now()
             };
@@ -97,7 +92,6 @@ impl PersistenceManager {
             .bind(("args", record.args.clone()))
             .bind(("env", record.env.clone()))
             .bind(("cwd", record.cwd.clone()))
-            .bind(("auto_start_on_create", record.auto_start_on_create))
             .bind(("auto_start_on_restore", record.auto_start_on_restore))
             .await
             .context("Failed to save process to SurrealDB")?;

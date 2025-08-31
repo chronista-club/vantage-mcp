@@ -20,7 +20,6 @@ fn create_test_process(id: &str) -> ProcessInfo {
         env,
         cwd: Some(PathBuf::from("/tmp")),
         state: ProcessState::NotStarted,
-        auto_start_on_create: false,
         auto_start_on_restore: true,
     }
 }
@@ -66,7 +65,7 @@ async fn test_surrealdb_multiple_processes() {
     for i in 1..=5 {
         let mut process = create_test_process(&format!("test-process-{}", i));
         process.command = format!("cmd-{}", i);
-        process.auto_start_on_create = i % 2 == 0; // Even numbers are true
+        process.auto_start_on_restore = i % 2 == 0; // Even numbers are true
 
         persistence
             .save_process(&process)
@@ -88,7 +87,7 @@ async fn test_surrealdb_multiple_processes() {
 
         let process = &loaded[&id];
         assert_eq!(process.command, format!("cmd-{}", i));
-        assert_eq!(process.auto_start_on_create, i % 2 == 0);
+        assert_eq!(process.auto_start_on_restore, i % 2 == 0);
     }
 }
 

@@ -21,7 +21,6 @@ async fn test_save_and_load_process() {
         env,
         cwd: Some(PathBuf::from("/tmp")),
         state: ProcessState::NotStarted,
-        auto_start_on_create: false,
         auto_start_on_restore: false,
     };
 
@@ -51,7 +50,6 @@ async fn test_update_process() {
         env: HashMap::new(),
         cwd: None,
         state: ProcessState::NotStarted,
-        auto_start_on_create: false,
         auto_start_on_restore: false,
     };
 
@@ -82,7 +80,6 @@ async fn test_delete_process() {
         env: HashMap::new(),
         cwd: None,
         state: ProcessState::NotStarted,
-        auto_start_on_create: false,
         auto_start_on_restore: false,
     };
 
@@ -110,7 +107,6 @@ async fn test_process_state_reset() {
             pid: 12345,
             started_at: chrono::Utc::now(),
         },
-        auto_start_on_create: false,
         auto_start_on_restore: false,
     };
 

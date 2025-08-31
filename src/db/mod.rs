@@ -91,8 +91,6 @@ impl Database {
             env: HashMap<String, String>,
             cwd: Option<String>,
             #[serde(default)]
-            auto_start_on_create: bool,
-            #[serde(default)]
             auto_start_on_restore: bool,
         }
 

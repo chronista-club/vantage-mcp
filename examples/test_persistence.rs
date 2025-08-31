@@ -15,7 +15,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         env: HashMap::new(),
         cwd: None,
         state: ProcessState::NotStarted,
-        auto_start_on_create: false,
         auto_start_on_restore: false,
     };
 

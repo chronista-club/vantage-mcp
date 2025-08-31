@@ -11,8 +11,6 @@ pub struct CreateProcessRequest {
     pub env: std::collections::HashMap<String, String>,
     pub cwd: Option<String>,
     #[serde(default)]
-    pub auto_start_on_create: bool, // 作成時に自動起動
-    #[serde(default)]
     pub auto_start_on_restore: bool, // サーバー起動時に自動起動
 }
 
@@ -62,7 +60,6 @@ pub struct ImportProcessesRequest {
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
 pub struct UpdateProcessConfigRequest {
     pub id: String,
-    pub auto_start_on_create: Option<bool>,
     pub auto_start_on_restore: Option<bool>,
 }
 
@@ -78,8 +75,6 @@ pub struct UpdateProcessRequest {
     pub env: Option<std::collections::HashMap<String, String>>,
     /// Optional: Update working directory
     pub cwd: Option<String>,
-    /// Optional: Update auto_start_on_create flag
-    pub auto_start_on_create: Option<bool>,
     /// Optional: Update auto_start_on_restore flag
     pub auto_start_on_restore: Option<bool>,
 }

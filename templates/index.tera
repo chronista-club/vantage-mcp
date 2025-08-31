@@ -298,9 +298,15 @@ function dashboard() {
             // Auto-refresh every 5 seconds
             this.refreshInterval = setInterval(() => this.fetchDashboard(), 5000);
             
-            // Initialize modals
-            this.$refs.addProcessModal = new bootstrap.Modal(this.$refs.addProcessModal);
-            this.$refs.logsModal = new bootstrap.Modal(this.$refs.logsModal);
+            // Initialize modals after a short delay to ensure Bootstrap is loaded
+            this.$nextTick(() => {
+                if (typeof bootstrap !== 'undefined') {
+                    this.$refs.addProcessModal = new bootstrap.Modal(this.$refs.addProcessModal);
+                    this.$refs.logsModal = new bootstrap.Modal(this.$refs.logsModal);
+                } else {
+                    console.warn('Bootstrap is not loaded yet');
+                }
+            });
         },
         
         async fetchDashboard() {

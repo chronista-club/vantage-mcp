@@ -91,11 +91,11 @@
         </div>
     </div>
     
-    <!-- Alpine.js -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    
-    <!-- Tabler JS -->
+    <!-- Tabler JS (includes Bootstrap) -->
     <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/js/tabler.min.js"></script>
+    
+    <!-- Alpine.js (load after Tabler/Bootstrap) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     
     <!-- Global Alpine Store -->
     <script>

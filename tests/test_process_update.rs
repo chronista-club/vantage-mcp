@@ -18,7 +18,6 @@ async fn test_update_process_attributes() {
         args: vec!["original".to_string()],
         env: HashMap::new(),
         cwd: None,
-        auto_start_on_create: false,
         auto_start_on_restore: false,
     };
 
@@ -29,7 +28,6 @@ async fn test_update_process_attributes() {
             request.args,
             request.env,
             request.cwd.map(PathBuf::from),
-            request.auto_start_on_create,
             request.auto_start_on_restore,
         )
         .await
@@ -47,7 +45,6 @@ async fn test_update_process_attributes() {
             Some(new_env.clone()),
             Some("/tmp".to_string()),
             Some(true),
-            Some(true),
         )
         .await
         .unwrap();
@@ -60,7 +57,6 @@ async fn test_update_process_attributes() {
     assert_eq!(updated_process.command, "ls");
     assert_eq!(updated_process.args, vec!["-la"]);
     assert_eq!(updated_process.cwd, Some(PathBuf::from("/tmp")));
-    assert_eq!(updated_process.auto_start_on_create, true);
     assert_eq!(updated_process.auto_start_on_restore, true);
     assert_eq!(updated_process.env.get("TEST_VAR").unwrap(), "test_value");
 }
@@ -84,7 +80,6 @@ async fn test_update_process_persistence() {
                 HashMap::new(),
                 None,
                 false,
-                false,
             )
             .await
             .unwrap();
@@ -98,7 +93,6 @@ async fn test_update_process_persistence() {
                 None,
                 Some("/home/user".to_string()),
                 Some(true),
-                None,
             )
             .await
             .unwrap();
@@ -122,7 +116,7 @@ async fn test_update_process_persistence() {
         assert_eq!(restored_process.command, "cat");
         assert_eq!(restored_process.args, vec!["file.txt"]);
         assert_eq!(restored_process.cwd, Some(PathBuf::from("/home/user")));
-        assert_eq!(restored_process.auto_start_on_create, true);
+        assert_eq!(restored_process.auto_start_on_restore, true);
     }
 }
 
@@ -146,13 +140,12 @@ async fn test_partial_update() {
             vec!["test".to_string()],
             initial_env,
             Some(original_dir.clone()),
-            false,
             true,
         )
         .await
         .unwrap();
 
-    // 一部の属性のみ更新（commandとauto_start_on_createのみ）
+    // 一部の属性のみ更新（commandとauto_start_on_restoreのみ）
     manager
         .update_process(
             "partial_test".to_string(),
@@ -160,8 +153,7 @@ async fn test_partial_update() {
             None,                      // argsは更新しない
             None,                      // envは更新しない
             None,                      // cwdは更新しない
-            Some(true),               // auto_start_on_createを更新
-            None,                      // auto_start_on_restoreは更新しない
+            Some(false),              // auto_start_on_restoreを更新
         )
         .await
         .unwrap();
@@ -172,11 +164,10 @@ async fn test_partial_update() {
 
     // 更新された値を検証
     assert_eq!(updated_process.command, "ls");
-    assert_eq!(updated_process.auto_start_on_create, true);
     
     // 更新されていない値が保持されているか検証
     assert_eq!(updated_process.args, vec!["test"]);
     assert_eq!(updated_process.cwd, Some(original_dir));
-    assert_eq!(updated_process.auto_start_on_restore, true);
+    assert_eq!(updated_process.auto_start_on_restore, false);  // 更新された値
     assert_eq!(updated_process.env.get("INITIAL").unwrap(), "value");
 }

@@ -186,13 +186,12 @@ impl IchimiServer {
             args,
             env,
             cwd,
-            auto_start_on_create,
             auto_start_on_restore,
         }): Parameters<CreateProcessRequest>,
     ) -> std::result::Result<CallToolResult, McpError> {
         let cwd_path = cwd.map(std::path::PathBuf::from);
 
-        // Create the process with auto_start flags
+        // Create the process
         self.process_manager
             .create_process(
                 id.clone(),
@@ -200,7 +199,6 @@ impl IchimiServer {
                 args,
                 env,
                 cwd_path,
-                auto_start_on_create,
                 auto_start_on_restore,
             )
             .await
@@ -382,12 +380,11 @@ impl IchimiServer {
         &self,
         Parameters(UpdateProcessConfigRequest {
             id,
-            auto_start_on_create,
             auto_start_on_restore,
         }): Parameters<UpdateProcessConfigRequest>,
     ) -> std::result::Result<CallToolResult, McpError> {
         self.process_manager
-            .update_process_config(id.clone(), auto_start_on_create, auto_start_on_restore)
+            .update_process_config(id.clone(), auto_start_on_restore)
             .await
             .map_err(|e| McpError {
                 message: e.into(),
@@ -396,9 +393,6 @@ impl IchimiServer {
             })?;
 
         let mut message = format!("Process '{id}' configuration updated");
-        if let Some(value) = auto_start_on_create {
-            message.push_str(&format!(" - auto_start_on_create set to {value}"));
-        }
         if let Some(value) = auto_start_on_restore {
             message.push_str(&format!(" - auto_start_on_restore set to {value}"));
         }
@@ -415,7 +409,6 @@ impl IchimiServer {
             args,
             env,
             cwd,
-            auto_start_on_create,
             auto_start_on_restore,
         }): Parameters<UpdateProcessRequest>,
     ) -> std::result::Result<CallToolResult, McpError> {
@@ -426,7 +419,6 @@ impl IchimiServer {
                 args.clone(),
                 env.clone(),
                 cwd.clone(),
-                auto_start_on_create,
                 auto_start_on_restore,
             )
             .await
@@ -448,9 +440,6 @@ impl IchimiServer {
         }
         if cwd.is_some() {
             updates.push("cwd");
-        }
-        if auto_start_on_create.is_some() {
-            updates.push("auto_start_on_create");
         }
         if auto_start_on_restore.is_some() {
             updates.push("auto_start_on_restore");

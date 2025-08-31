@@ -37,7 +37,6 @@ impl ManagedProcess {
                 env,
                 cwd,
                 state: ProcessState::NotStarted,
-                auto_start_on_create: false,
                 auto_start_on_restore: false,
             },
             stdout_buffer: CircularBuffer::new(1000),
@@ -181,15 +180,14 @@ impl ProcessManager {
         args: Vec<String>,
         env: HashMap<String, String>,
         cwd: Option<PathBuf>,
-        auto_start_on_create: bool,
         auto_start_on_restore: bool,
     ) -> Result<(), String> {
         // セキュリティ検証
         crate::security::validate_process_inputs(&command, &args, &env, &cwd)?;
 
         info!(
-            "Creating process '{}': {} {:?} (auto_start_on_create: {}, auto_start_on_restore: {})",
-            id, command, args, auto_start_on_create, auto_start_on_restore
+            "Creating process '{}': {} {:?} (auto_start_on_restore: {})",
+            id, command, args, auto_start_on_restore
         );
         let mut processes = self.processes.write().await;
 
@@ -198,7 +196,6 @@ impl ProcessManager {
         }
 
         let mut process = ManagedProcess::new(id.clone(), command, args, env, cwd);
-        process.info.auto_start_on_create = auto_start_on_create;
         process.info.auto_start_on_restore = auto_start_on_restore;
 
         let process_info = process.info.clone();
@@ -212,14 +209,6 @@ impl ProcessManager {
         match self.persistence.save_process(&process_info).await {
             Ok(_) => tracing::debug!("Process {} persisted successfully", id),
             Err(e) => tracing::warn!("Failed to persist process {}: {}", id, e),
-        }
-
-        // Auto-start on create if configured
-        if auto_start_on_create {
-            info!("Auto-starting process '{}' on creation", id);
-            if let Err(e) = self.start_process(id.clone()).await {
-                tracing::warn!("Failed to auto-start process '{}': {}", id, e);
-            }
         }
 
         Ok(())
@@ -572,7 +561,6 @@ impl ProcessManager {
     pub async fn update_process_config(
         &self,
         id: String,
-        auto_start_on_create: Option<bool>,
         auto_start_on_restore: Option<bool>,
     ) -> Result<(), String> {
         let processes = self.processes.read().await;
@@ -581,11 +569,6 @@ impl ProcessManager {
             .ok_or_else(|| format!("Process '{id}' not found"))?;
 
         let mut process = process_arc.write().await;
-
-        if let Some(value) = auto_start_on_create {
-            process.info.auto_start_on_create = value;
-            info!("Updated process '{}' auto_start_on_create to {}", id, value);
-        }
 
         if let Some(value) = auto_start_on_restore {
             process.info.auto_start_on_restore = value;
@@ -612,7 +595,6 @@ impl ProcessManager {
         args: Option<Vec<String>>,
         env: Option<HashMap<String, String>>,
         cwd: Option<String>,
-        auto_start_on_create: Option<bool>,
         auto_start_on_restore: Option<bool>,
     ) -> Result<(), String> {
         let processes = self.processes.read().await;
@@ -647,11 +629,6 @@ impl ProcessManager {
         }
 
         // Update auto_start flags if provided
-        if let Some(value) = auto_start_on_create {
-            process.info.auto_start_on_create = value;
-            info!("Updated process '{}' auto_start_on_create to {}", id, value);
-        }
-
         if let Some(value) = auto_start_on_restore {
             process.info.auto_start_on_restore = value;
             info!(

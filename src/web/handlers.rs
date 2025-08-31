@@ -15,7 +15,6 @@ use tokio_stream::StreamExt;
 
 #[derive(Deserialize)]
 pub struct ProcessConfigUpdate {
-    pub auto_start_on_create: Option<bool>,
     pub auto_start_on_restore: Option<bool>,
 }
 
@@ -201,7 +200,6 @@ pub async fn create_process(
             req.args,
             req.env,
             cwd,
-            req.auto_start_on_create,
             req.auto_start_on_restore,
         )
         .await
@@ -264,7 +262,6 @@ pub async fn update_process_config(
         .process_manager
         .update_process_config(
             id,
-            config.auto_start_on_create,
             config.auto_start_on_restore,
         )
         .await
@@ -286,7 +283,6 @@ pub async fn update_process(
             request.args,
             request.env,
             request.cwd,
-            request.auto_start_on_create,
             request.auto_start_on_restore,
         )
         .await
