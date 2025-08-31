@@ -190,7 +190,19 @@ async fn main() -> Result<()> {
     let pm_for_shutdown = process_manager.clone();
     tokio::spawn(async move {
         let _ = signal::ctrl_c().await;
-        tracing::info!("Received shutdown signal, exporting processes...");
+        tracing::info!("Received shutdown signal, stopping all processes and exporting...");
+
+        // まず全ての実行中プロセスを停止
+        match pm_for_shutdown.stop_all_processes().await {
+            Ok(stopped) => {
+                if !stopped.is_empty() {
+                    tracing::info!("Stopped {} running process(es): {:?}", stopped.len(), stopped);
+                }
+            }
+            Err(e) => {
+                tracing::error!("Failed to stop processes: {}", e);
+            }
+        }
 
         // Auto-export processes on shutdown
         let export_file = env::var("ICHIMI_EXPORT_FILE").unwrap_or_else(|_| {
@@ -267,6 +279,19 @@ async fn main() -> Result<()> {
                 tracing::info!("MCP server ready, waiting for requests");
                 service.waiting().await?;
                 tracing::info!("MCP server shutting down");
+                
+                // MCPサーバー終了時にも全プロセスを停止
+                match process_manager.stop_all_processes().await {
+                    Ok(stopped) => {
+                        if !stopped.is_empty() {
+                            tracing::info!("Stopped {} running process(es) on MCP shutdown: {:?}", stopped.len(), stopped);
+                        }
+                    }
+                    Err(e) => {
+                        tracing::error!("Failed to stop processes on MCP shutdown: {}", e);
+                    }
+                }
+                
                 (*server_arc).shutdown().await.ok();
             }
             Err(e) => {

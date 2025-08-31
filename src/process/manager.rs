@@ -10,7 +10,7 @@ use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::{Child, Command};
 use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
-use tracing::info;
+use tracing::{error, info, warn};
 
 /// 管理されるプロセス
 pub struct ManagedProcess {
@@ -376,6 +376,50 @@ impl ProcessManager {
         }
 
         Ok(())
+    }
+
+    /// 全ての実行中プロセスを停止
+    pub async fn stop_all_processes(&self) -> Result<Vec<String>, String> {
+        info!("Stopping all running processes...");
+        
+        let processes = self.processes.read().await;
+        let mut stopped_processes = Vec::new();
+        let mut errors = Vec::new();
+        
+        for (id, process_arc) in processes.iter() {
+            let process = process_arc.read().await;
+            
+            // 実行中のプロセスのみ対象
+            if matches!(process.info.state, ProcessState::Running { .. }) {
+                let id_clone = id.clone();
+                drop(process); // ロックを解放
+                
+                // プロセスを停止（5秒の猶予期間）
+                match self.stop_process(id_clone.clone(), Some(5000)).await {
+                    Ok(_) => {
+                        info!("Successfully stopped process '{}'", id_clone);
+                        stopped_processes.push(id_clone);
+                    }
+                    Err(e) => {
+                        error!("Failed to stop process '{}': {}", id_clone, e);
+                        errors.push(format!("{}: {}", id_clone, e));
+                    }
+                }
+            }
+        }
+        
+        drop(processes);
+        
+        if !errors.is_empty() {
+            warn!("Some processes failed to stop: {:?}", errors);
+        }
+        
+        info!(
+            "Stopped {} running process(es)",
+            stopped_processes.len()
+        );
+        
+        Ok(stopped_processes)
     }
 
     /// プロセスのステータスを取得
