@@ -140,7 +140,8 @@
                                         <th>状態</th>
                                         <th>PID</th>
                                         <th>開始時刻</th>
-                                        <th>自動起動</th>
+                                        <th>作成時起動</th>
+                                        <th>復元時起動</th>
                                         <th class="w-1"></th>
                                     </tr>
                                 </thead>
@@ -163,8 +164,13 @@
                                             <td x-text="process.info.state.pid || '-'"></td>
                                             <td x-text="helpers.formatDate(process.info.state.started_at)"></td>
                                             <td>
-                                                <span class="badge" :class="process.info.auto_start ? 'bg-blue' : 'bg-secondary'">
-                                                    <span x-text="process.info.auto_start ? 'ON' : 'OFF'"></span>
+                                                <span class="badge" :class="process.info.auto_start_on_create ? 'bg-blue' : 'bg-secondary'">
+                                                    <span x-text="process.info.auto_start_on_create ? 'ON' : 'OFF'"></span>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="badge" :class="process.info.auto_start_on_restore ? 'bg-green' : 'bg-secondary'">
+                                                    <span x-text="process.info.auto_start_on_restore ? 'ON' : 'OFF'"></span>
                                                 </span>
                                             </td>
                                             <td>
@@ -196,7 +202,7 @@
                                         </tr>
                                     </template>
                                     <tr x-show="getters.filteredProcesses().length === 0">
-                                        <td colspan="7" class="text-center text-muted">
+                                        <td colspan="8" class="text-center text-muted">
                                             プロセスがありません
                                         </td>
                                     </tr>
