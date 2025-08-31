@@ -311,8 +311,11 @@ ichimi-server/
 | 変数 | 説明 | デフォルト |
 |------|------|----------|
 | `RUST_LOG` | ログレベル (error, warn, info, debug, trace) | info |
-| `ICHIMI_DATA_DIR` | データファイル用ディレクトリ | .ichimi |
-| `ICHIMI_WEB_PORT` | Webダッシュボードポート | 12700 |
+| `ICHIMI_DATA_DIR` | データファイル用ディレクトリ | ~/.ichimi/data |
+| `ICHIMI_IMPORT_FILE` | 起動時にインポートするファイル | ~/.ichimi/data/processes.surql |
+| `ICHIMI_EXPORT_FILE` | シャットダウン時のエクスポート先 | ~/.ichimi/data/processes.surql |
+| `ICHIMI_STOP_ON_SHUTDOWN` | ichimi終了時にプロセスを停止するか（true/false） | false（継続） |
+| `ICHIMI_AUTO_EXPORT_INTERVAL` | 自動エクスポート間隔（秒） | なし |
 
 ## 🚧 開発
 

@@ -186,22 +186,40 @@ async fn main() -> Result<()> {
         tracing::debug!("No import file found at: {}", import_file);
     }
 
+    // Check if processes should be stopped on shutdown (default: false = continue running)
+    let stop_on_shutdown = env::var("ICHIMI_STOP_ON_SHUTDOWN")
+        .unwrap_or_else(|_| "false".to_string())
+        .to_lowercase()
+        .parse::<bool>()
+        .unwrap_or(false);
+
+    if stop_on_shutdown {
+        tracing::info!("Configured to STOP all processes on shutdown (ICHIMI_STOP_ON_SHUTDOWN=true)");
+    } else {
+        tracing::info!("Configured to CONTINUE processes on shutdown (default behavior)");
+    }
+
     // Setup signal handler for graceful shutdown
     let pm_for_shutdown = process_manager.clone();
     tokio::spawn(async move {
         let _ = signal::ctrl_c().await;
-        tracing::info!("Received shutdown signal, stopping all processes and exporting...");
-
-        // まず全ての実行中プロセスを停止
-        match pm_for_shutdown.stop_all_processes().await {
-            Ok(stopped) => {
-                if !stopped.is_empty() {
-                    tracing::info!("Stopped {} running process(es): {:?}", stopped.len(), stopped);
+        
+        if stop_on_shutdown {
+            tracing::info!("Received shutdown signal, stopping all processes and exporting...");
+            
+            // Stop all running processes
+            match pm_for_shutdown.stop_all_processes().await {
+                Ok(stopped) => {
+                    if !stopped.is_empty() {
+                        tracing::info!("Stopped {} running process(es): {:?}", stopped.len(), stopped);
+                    }
+                }
+                Err(e) => {
+                    tracing::error!("Failed to stop processes: {}", e);
                 }
             }
-            Err(e) => {
-                tracing::error!("Failed to stop processes: {}", e);
-            }
+        } else {
+            tracing::info!("Received shutdown signal, exporting processes (keeping them running)...");
         }
 
         // Auto-export processes on shutdown
@@ -280,15 +298,17 @@ async fn main() -> Result<()> {
                 service.waiting().await?;
                 tracing::info!("MCP server shutting down");
                 
-                // MCPサーバー終了時にも全プロセスを停止
-                match process_manager.stop_all_processes().await {
-                    Ok(stopped) => {
-                        if !stopped.is_empty() {
-                            tracing::info!("Stopped {} running process(es) on MCP shutdown: {:?}", stopped.len(), stopped);
+                // MCPサーバー終了時にも条件に応じてプロセスを停止
+                if stop_on_shutdown {
+                    match process_manager.stop_all_processes().await {
+                        Ok(stopped) => {
+                            if !stopped.is_empty() {
+                                tracing::info!("Stopped {} running process(es) on MCP shutdown: {:?}", stopped.len(), stopped);
+                            }
                         }
-                    }
-                    Err(e) => {
-                        tracing::error!("Failed to stop processes on MCP shutdown: {}", e);
+                        Err(e) => {
+                            tracing::error!("Failed to stop processes on MCP shutdown: {}", e);
+                        }
                     }
                 }
                 
