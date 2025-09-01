@@ -5,6 +5,7 @@ await $`mkdir -p dist`;
 
 // Copy files
 await $`cp src/index.html dist/`;
+await $`cp src/styles.css dist/`;
 await $`cp vendor/alpine.min.js dist/`;
 await $`cp vendor/alpine-persist.min.js dist/`;
 

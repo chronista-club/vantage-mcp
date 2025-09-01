@@ -3,7 +3,7 @@
 console.log('app.ts loaded');
 
 // このファイルをモジュールとして扱うためのexport
-export {};
+export { };
 
 // カラーモードのenum定義
 enum ColorMode {
@@ -131,14 +131,14 @@ declare module 'alpinejs' {
 // Alpine.js初期化時の処理
 document.addEventListener('alpine:init', () => {
   console.log('Alpine.js is initializing...');
-  
+
   // グローバルステートストア
   const stateStore: StateStore = {
     mode: ColorMode.Dark,
     autoRefresh: true,
     refreshInterval: 5000,
     initialized: false,
-    
+
     async loadSettings() {
       try {
         const response = await fetch('/api/settings');
@@ -153,7 +153,7 @@ document.addEventListener('alpine:init', () => {
         console.error('Failed to load settings:', error);
       }
     },
-    
+
     async toggleMode() {
       this.mode = this.mode === ColorMode.Dark ? ColorMode.Light : ColorMode.Dark;
       // DOMにクラスを適用
@@ -161,7 +161,7 @@ document.addEventListener('alpine:init', () => {
       // サーバーに保存
       await this.saveSettings();
     },
-    
+
     async saveSettings() {
       try {
         const response = await fetch('/api/settings', {
@@ -175,7 +175,7 @@ document.addEventListener('alpine:init', () => {
             refresh_interval: this.refreshInterval,
           }),
         });
-        
+
         if (!response.ok) {
           console.error('Failed to save settings');
         }
@@ -183,7 +183,7 @@ document.addEventListener('alpine:init', () => {
         console.error('Failed to save settings:', error);
       }
     },
-    
+
     updateTheme() {
       // ダークモードの場合はクラスを追加、ライトモードの場合は削除
       if (this.mode === ColorMode.Dark) {
@@ -192,7 +192,7 @@ document.addEventListener('alpine:init', () => {
         document.documentElement.classList.remove('dark');
       }
     },
-    
+
     async init() {
       if (this.initialized) {
         console.warn('State store init() called multiple times - skipping');
@@ -204,12 +204,12 @@ document.addEventListener('alpine:init', () => {
       await this.loadSettings();
     }
   };
-  
+
   window.Alpine.store('state', stateStore);
-  
+
   // Stateストアの初期化（一度だけ実行）
   stateStore.init();
-  
+
   // プロセス管理ストア
   const processesStore: ProcessesStore = {
     processes: [] as ProcessInfo[],
@@ -217,11 +217,11 @@ document.addEventListener('alpine:init', () => {
     error: null as string | null,
     refreshInterval: null as number | null,
     initialized: false,
-    
+
     async loadProcesses() {
       this.loading = true;
       this.error = null;
-      
+
       try {
         const response = await fetch('/api/processes');
         if (response.ok) {
@@ -236,13 +236,13 @@ document.addEventListener('alpine:init', () => {
         this.loading = false;
       }
     },
-    
+
     async startProcess(id: string) {
       try {
         const response = await fetch(`/api/processes/${id}/start`, {
           method: 'POST',
         });
-        
+
         if (response.ok) {
           await this.loadProcesses();
         } else {
@@ -254,13 +254,13 @@ document.addEventListener('alpine:init', () => {
         console.error('Failed to start process:', error);
       }
     },
-    
+
     async stopProcess(id: string) {
       try {
         const response = await fetch(`/api/processes/${id}/stop`, {
           method: 'POST',
         });
-        
+
         if (response.ok) {
           await this.loadProcesses();
         } else {
@@ -272,17 +272,17 @@ document.addEventListener('alpine:init', () => {
         console.error('Failed to stop process:', error);
       }
     },
-    
+
     async removeProcess(id: string) {
       if (!confirm(`Are you sure you want to remove process ${id}?`)) {
         return;
       }
-      
+
       try {
         const response = await fetch(`/api/processes/${id}`, {
           method: 'DELETE',
         });
-        
+
         if (response.ok) {
           await this.loadProcesses();
         } else {
@@ -294,7 +294,7 @@ document.addEventListener('alpine:init', () => {
         console.error('Failed to remove process:', error);
       }
     },
-    
+
     getStatusClass(state: ProcessState): string {
       switch (state) {
         case ProcessState.Running:
@@ -308,7 +308,7 @@ document.addEventListener('alpine:init', () => {
           return 'status-notstarted';
       }
     },
-    
+
     startAutoRefresh() {
       const stateStore = window.Alpine.store('state') as any;
       if (stateStore.autoRefresh && !this.refreshInterval) {
@@ -317,14 +317,14 @@ document.addEventListener('alpine:init', () => {
         }, stateStore.refreshInterval);
       }
     },
-    
+
     stopAutoRefresh() {
       if (this.refreshInterval) {
         clearInterval(this.refreshInterval);
         this.refreshInterval = null;
       }
     },
-    
+
     async init() {
       if (this.initialized) {
         console.warn('Processes store init() called multiple times - skipping');
@@ -336,12 +336,12 @@ document.addEventListener('alpine:init', () => {
       this.startAutoRefresh();
     },
   };
-  
+
   window.Alpine.store('processes', processesStore);
-  
+
   // Processesストアの初期化（一度だけ実行）
   processesStore.init();
-  
+
   // テンプレート管理ストア
   const templatesStore: TemplatesStore = {
     templates: [] as ProcessTemplate[],
@@ -352,11 +352,11 @@ document.addEventListener('alpine:init', () => {
     processId: '',
     variableValues: {} as Record<string, string>,
     initialized: false,
-    
+
     async loadTemplates() {
       this.loading = true;
       this.error = null;
-      
+
       try {
         const response = await fetch('/api/templates');
         if (response.ok) {
@@ -371,13 +371,13 @@ document.addEventListener('alpine:init', () => {
         this.loading = false;
       }
     },
-    
+
     selectTemplate(template: ProcessTemplate) {
       this.selectedTemplate = template;
       this.showModal = true;
       this.processId = `${template.template_id}-${Date.now()}`;
       this.variableValues = {};
-      
+
       // デフォルト値を設定
       template.variables.forEach(variable => {
         if (variable.default_value) {
@@ -385,17 +385,17 @@ document.addEventListener('alpine:init', () => {
         }
       });
     },
-    
+
     closeModal() {
       this.showModal = false;
       this.selectedTemplate = null;
       this.processId = '';
       this.variableValues = {};
     },
-    
+
     async instantiateTemplate() {
       if (!this.selectedTemplate) return;
-      
+
       try {
         const response = await fetch(`/api/templates/${this.selectedTemplate.template_id}/instantiate`, {
           method: 'POST',
@@ -407,7 +407,7 @@ document.addEventListener('alpine:init', () => {
             values: this.variableValues,
           }),
         });
-        
+
         if (response.ok) {
           // プロセスリストを更新
           const processesStore = window.Alpine.store('processes') as ProcessesStore;
@@ -422,7 +422,7 @@ document.addEventListener('alpine:init', () => {
         console.error('Failed to instantiate template:', error);
       }
     },
-    
+
     async init() {
       if (this.initialized) {
         console.warn('Templates store init() called multiple times - skipping');
@@ -433,11 +433,11 @@ document.addEventListener('alpine:init', () => {
       await this.loadTemplates();
     },
   };
-  
+
   window.Alpine.store('templates', templatesStore);
-  
+
   // Templatesストアの初期化（一度だけ実行）
-  templatesStore.init();
+  // templatesStore.init();
 });
 
 console.log('Event listener registered');
