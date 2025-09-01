@@ -122,38 +122,9 @@ async fn static_handler(
             .unwrap();
     }
     
-    // 通常の静的ファイル（vendorパスはstatic/vendorにマッピング）
-    let static_path = if path.starts_with("vendor/") {
-        format!("static/{}", path)
-    } else {
-        path.to_string()
-    };
-    
-    match Asset::get_with_mime(&static_path) {
-        Some((data, mime)) => {
-            Response::builder()
-                .status(StatusCode::OK)
-                .header("Content-Type", mime)
-                .body(axum::body::Body::from(data))
-                .unwrap()
-        }
-        None => {
-            // それでも見つからない場合は、通常のパスも試す
-            match Asset::get_with_mime(path) {
-                Some((data, mime)) => {
-                    Response::builder()
-                        .status(StatusCode::OK)
-                        .header("Content-Type", mime)
-                        .body(axum::body::Body::from(data))
-                        .unwrap()
-                }
-                None => {
-                    Response::builder()
-                        .status(StatusCode::NOT_FOUND)
-                        .body(axum::body::Body::from("404 Not Found"))
-                        .unwrap()
-                }
-            }
-        }
-    }
+    // ファイルが見つからない場合は404を返す
+    Response::builder()
+        .status(StatusCode::NOT_FOUND)
+        .body(axum::body::Body::from("404 Not Found"))
+        .unwrap()
 }
