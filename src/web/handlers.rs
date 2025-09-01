@@ -1,6 +1,8 @@
 use crate::messages::{CreateProcessRequest, StopProcessRequest, UpdateProcessRequest};
 use crate::process::{OutputStream, ProcessFilter, ProcessStateFilter};
+use crate::process::template::{ProcessTemplate, TemplateVariable};
 use crate::web::server::AppState;
+use std::collections::HashMap;
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
@@ -336,4 +338,262 @@ pub async fn stream_logs(
     .map(|_| Ok(Event::default().data("heartbeat")));
 
     Sse::new(stream).keep_alive(KeepAlive::default())
+}
+
+// Settings handlers
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Settings {
+    pub color_mode: String,
+    pub auto_refresh: bool,
+    pub refresh_interval: u32,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Settings {
+            color_mode: "dark".to_string(),
+            auto_refresh: true,
+            refresh_interval: 5000,
+        }
+    }
+}
+
+pub async fn get_settings(
+    State(state): State<AppState>,
+) -> Result<Json<Settings>, StatusCode> {
+    // Persistence Managerから設定を取得
+    let settings = state.process_manager
+        .get_settings()
+        .await
+        .unwrap_or_default();
+    
+    Ok(Json(settings))
+}
+
+pub async fn update_settings(
+    State(state): State<AppState>,
+    Json(settings): Json<Settings>,
+) -> Result<StatusCode, StatusCode> {
+    // Persistence Managerに設定を保存
+    state.process_manager
+        .save_settings(settings)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    
+    Ok(StatusCode::OK)
+}
+
+// Template handlers
+
+#[derive(Deserialize)]
+pub struct ListTemplatesQuery {
+    category: Option<String>,
+    tags: Option<String>, // comma-separated tags
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct CreateTemplateRequest {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub category: Option<String>,
+    pub command: String,
+    pub args: Vec<String>,
+    pub env: HashMap<String, String>,
+    pub default_cwd: Option<String>,
+    pub default_auto_start: bool,
+    pub variables: Vec<TemplateVariable>,
+    pub tags: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct UpdateTemplateRequest {
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub category: Option<String>,
+    pub command: Option<String>,
+    pub args: Option<Vec<String>>,
+    pub env: Option<HashMap<String, String>>,
+    pub default_cwd: Option<String>,
+    pub default_auto_start: Option<bool>,
+    pub variables: Option<Vec<TemplateVariable>>,
+    pub tags: Option<Vec<String>>,
+}
+
+#[derive(Deserialize)]
+pub struct InstantiateTemplateRequest {
+    pub process_id: String,
+    pub values: HashMap<String, String>,
+}
+
+pub async fn list_templates(
+    State(state): State<AppState>,
+    Query(query): Query<ListTemplatesQuery>,
+) -> Result<Json<Vec<ProcessTemplate>>, StatusCode> {
+    // タグをカンマ区切りで分割
+    let tags = query.tags
+        .map(|t| t.split(',').map(|s| s.trim().to_string()).collect())
+        .unwrap_or_default();
+    
+    // カテゴリとタグで検索
+    state.process_manager
+        .search_templates(query.category, tags)
+        .await
+        .map(Json)
+        .map_err(|e| {
+            tracing::error!("Failed to list templates: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })
+}
+
+pub async fn get_template(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<Json<ProcessTemplate>, StatusCode> {
+    state.process_manager
+        .get_template(&id)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to get template: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
+        .map(Json)
+        .ok_or(StatusCode::NOT_FOUND)
+}
+
+pub async fn create_template(
+    State(state): State<AppState>,
+    Json(req): Json<CreateTemplateRequest>,
+) -> Result<(StatusCode, Json<serde_json::Value>), (StatusCode, String)> {
+    let template = ProcessTemplate {
+        id: None,
+        template_id: req.id.clone(),
+        name: req.name,
+        description: req.description,
+        category: req.category,
+        command: req.command,
+        args: req.args,
+        env: req.env,
+        default_cwd: req.default_cwd,
+        default_auto_start: req.default_auto_start,
+        variables: req.variables,
+        tags: req.tags,
+        created_at: chrono::Utc::now(),
+        updated_at: chrono::Utc::now(),
+    };
+    
+    state.process_manager
+        .save_template(template)
+        .await
+        .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
+    
+    Ok((
+        StatusCode::CREATED,
+        Json(serde_json::json!({
+            "message": format!("Template '{}' created successfully", req.id)
+        })),
+    ))
+}
+
+pub async fn update_template(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    Json(req): Json<UpdateTemplateRequest>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    // 既存のテンプレートを取得
+    let mut template = state.process_manager
+        .get_template(&id)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?
+        .ok_or((StatusCode::NOT_FOUND, "Template not found".to_string()))?;
+    
+    // 更新する
+    if let Some(name) = req.name {
+        template.name = name;
+    }
+    if let Some(description) = req.description {
+        template.description = Some(description);
+    }
+    if let Some(category) = req.category {
+        template.category = Some(category);
+    }
+    if let Some(command) = req.command {
+        template.command = command;
+    }
+    if let Some(args) = req.args {
+        template.args = args;
+    }
+    if let Some(env) = req.env {
+        template.env = env;
+    }
+    if let Some(default_cwd) = req.default_cwd {
+        template.default_cwd = Some(default_cwd);
+    }
+    if let Some(default_auto_start) = req.default_auto_start {
+        template.default_auto_start = default_auto_start;
+    }
+    if let Some(variables) = req.variables {
+        template.variables = variables;
+    }
+    if let Some(tags) = req.tags {
+        template.tags = tags;
+    }
+    
+    template.updated_at = chrono::Utc::now();
+    
+    state.process_manager
+        .save_template(template)
+        .await
+        .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
+    
+    Ok(StatusCode::OK)
+}
+
+pub async fn delete_template(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    state.process_manager
+        .delete_template(&id)
+        .await
+        .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
+    
+    Ok(StatusCode::NO_CONTENT)
+}
+
+pub async fn instantiate_template(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    Json(req): Json<InstantiateTemplateRequest>,
+) -> Result<(StatusCode, Json<serde_json::Value>), (StatusCode, String)> {
+    // テンプレートを取得
+    let template = state.process_manager
+        .get_template(&id)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?
+        .ok_or((StatusCode::NOT_FOUND, "Template not found".to_string()))?;
+    
+    // テンプレートからプロセスを生成
+    let process_info = template.instantiate(req.process_id.clone(), req.values)
+        .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
+    
+    // プロセスを作成
+    state.process_manager
+        .create_process(
+            process_info.id.clone(),
+            process_info.command,
+            process_info.args,
+            process_info.env,
+            process_info.cwd,
+            process_info.auto_start_on_restore,
+        )
+        .await
+        .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
+    
+    Ok((
+        StatusCode::CREATED,
+        Json(serde_json::json!({
+            "message": format!("Process '{}' created from template '{}'", req.process_id, id)
+        })),
+    ))
 }

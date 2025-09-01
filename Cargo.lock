@@ -1760,6 +1760,7 @@ dependencies = [
  "futures",
  "isatty",
  "open",
+ "regex",
  "rmcp",
  "rust-embed",
  "schemars 1.0.4",

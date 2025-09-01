@@ -1,0 +1,14 @@
+{
+  "name": "ichimi-web-console",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "bun run build.ts",
+    "type-check": "tsc --noEmit",
+    "test": "bun run type-check && bun run build"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/alpinejs": "^3.13.11",
+    "typescript": "^5.0.0"
+  }
+}

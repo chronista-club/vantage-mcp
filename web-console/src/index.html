@@ -59,6 +59,21 @@
       align-items: center;
       gap: 12px;
     }
+    
+    .process-pid {
+      color: #6b7280;
+      font-size: 12px;
+    }
+    
+    .process-details {
+      margin-top: 8px;
+      font-size: 14px;
+      color: #6b7280;
+    }
+    
+    .process-details p {
+      margin: 4px 0;
+    }
 
     .process-status {
       padding: 4px 10px;
@@ -364,15 +379,121 @@
       width: 20px;
       height: 20px;
     }
+    /* ダークモード対応 */
+    :root {
+      --bg-color: #f9fafb;
+      --text-color: #111827;
+      --card-bg: white;
+      --border-color: #e5e7eb;
+    }
+
+    html.dark {
+      --bg-color: #111827;
+      --text-color: #f9fafb;
+      --card-bg: #1f2937;
+      --border-color: #374151;
+    }
+
+    body {
+      background: var(--bg-color);
+      color: var(--text-color);
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    h1, h2, h3 {
+      color: var(--text-color);
+    }
+
+    .container, .stat-card {
+      background: var(--card-bg);
+    }
+
+    .process-item {
+      background: var(--card-bg);
+      border-color: var(--border-color);
+    }
   </style>
+  <!-- App configuration -->
   <script src="app.js"></script>
+  <!-- Alpine.js Core -->
   <script defer src="alpine.min.js"></script>
 </head>
 
 <body x-data>
-  <h1>Ichimi Server - Process Manager</h1>
-  <p>Current mode: <span x-text="$store.state.mode"></span></p>
-  <button @click="$store.state.toggleMode()" class="btn-primary">Toggle Mode</button>
+  <div class="container">
+    <h1>Ichimi Server - Process Manager</h1>
+    
+    <!-- カラーモード切り替え -->
+    <div class="header-actions">
+      <div>
+        <span>Mode: </span>
+        <span x-text="$store.state.mode"></span>
+        <button @click="$store.state.toggleMode()" class="btn-secondary">Toggle Mode</button>
+      </div>
+    </div>
+    
+    <!-- エラーメッセージ -->
+    <div x-show="$store.processes.error" class="error" x-text="$store.processes.error"></div>
+    
+    <!-- プロセスリスト -->
+    <div class="process-list">
+      <h2>Processes</h2>
+      
+      <!-- ローディング表示 -->
+      <div x-show="$store.processes.loading" class="loading">
+        Loading processes...
+      </div>
+      
+      <!-- プロセスがない場合 -->
+      <div x-show="!$store.processes.loading && $store.processes.processes.length === 0" class="empty-state">
+        <p>No processes registered</p>
+      </div>
+      
+      <!-- プロセス一覧 -->
+      <template x-for="process in $store.processes.processes" :key="process.id">
+        <div class="process-item">
+          <div class="process-header">
+            <div class="process-info">
+              <strong x-text="process.id"></strong>
+              <span class="process-status" :class="$store.processes.getStatusClass(process.state)" x-text="process.state"></span>
+              <span x-show="process.pid" class="process-pid">
+                PID: <span x-text="process.pid"></span>
+              </span>
+            </div>
+          </div>
+          
+          <div class="process-details">
+            <p><code x-text="process.command + ' ' + process.args.join(' ')"></code></p>
+            <p x-show="process.cwd">CWD: <span x-text="process.cwd"></span></p>
+          </div>
+          
+          <div class="process-actions">
+            <button 
+              @click="$store.processes.startProcess(process.id)" 
+              class="btn-success"
+              :disabled="process.state === 'Running'"
+            >
+              Start
+            </button>
+            <button 
+              @click="$store.processes.stopProcess(process.id)" 
+              class="btn-warning"
+              :disabled="process.state !== 'Running'"
+            >
+              Stop
+            </button>
+            <button 
+              @click="$store.processes.removeProcess(process.id)" 
+              class="btn-danger"
+              :disabled="process.state === 'Running'"
+            >
+              Remove
+            </button>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
 </body>
 
 </html>

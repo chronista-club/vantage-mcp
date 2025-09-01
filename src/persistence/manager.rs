@@ -1,5 +1,7 @@
 use crate::db::Database;
+use crate::process::template::ProcessTemplate;
 use crate::process::types::{ProcessInfo, ProcessState};
+use crate::web::handlers::Settings;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -278,6 +280,189 @@ impl PersistenceManager {
         let path = "ichimi_export.json";
         self.export_to_file(path).await?;
         Ok(path.to_string())
+    }
+    
+    // Settings management
+    pub async fn get_settings(&self) -> Result<Settings, String> {
+        let client = self.database.client().await;
+        
+        // settingsテーブルからdefaultレコードを取得
+        let result: Result<Option<Settings>, _> = client
+            .select(("settings", "default"))
+            .await;
+        
+        match result {
+            Ok(Some(settings)) => Ok(settings),
+            Ok(None) => Ok(Settings::default()),
+            Err(e) => {
+                tracing::warn!("Failed to get settings: {}, using defaults", e);
+                Ok(Settings::default())
+            }
+        }
+    }
+    
+    pub async fn save_settings(&self, settings: Settings) -> Result<(), String> {
+        let client = self.database.client().await;
+        
+        // settingsテーブルにdefaultレコードを保存/更新
+        let result: Result<Option<Settings>, _> = client
+            .update(("settings", "default"))
+            .content(settings)
+            .await;
+        
+        match result {
+            Ok(_) => Ok(()),
+            Err(e) => Err(format!("Failed to save settings: {}", e))
+        }
+    }
+    
+    // テンプレート管理メソッド
+    
+    /// テンプレートを保存
+    pub async fn save_template(&self, template: &ProcessTemplate) -> Result<(), String> {
+        let client = self.database.client().await;
+        
+        let query = r#"
+            USE NS ichimi DB main;
+            DELETE template WHERE template_id = $template_id;
+            CREATE template CONTENT {
+                template_id: $template_id,
+                name: $name,
+                description: $description,
+                category: $category,
+                command: $command,
+                args: $args,
+                env: $env,
+                default_cwd: $default_cwd,
+                default_auto_start: $default_auto_start,
+                variables: $variables,
+                tags: $tags,
+                created_at: $created_at,
+                updated_at: time::now()
+            };
+        "#;
+        
+        client
+            .query(query)
+            .bind(("template_id", template.template_id.clone()))
+            .bind(("name", template.name.clone()))
+            .bind(("description", template.description.clone()))
+            .bind(("category", template.category.clone()))
+            .bind(("command", template.command.clone()))
+            .bind(("args", template.args.clone()))
+            .bind(("env", template.env.clone()))
+            .bind(("default_cwd", template.default_cwd.clone()))
+            .bind(("default_auto_start", template.default_auto_start))
+            .bind(("variables", serde_json::to_value(&template.variables).unwrap()))
+            .bind(("tags", template.tags.clone()))
+            .bind(("created_at", template.created_at.to_rfc3339()))
+            .await
+            .map_err(|e| format!("Failed to save template: {}", e))?;
+        
+        tracing::debug!("Saved template {} to SurrealDB", template.template_id);
+        Ok(())
+    }
+    
+    /// テンプレートを削除
+    pub async fn delete_template(&self, template_id: &str) -> Result<(), String> {
+        let client = self.database.client().await;
+        
+        let query = "USE NS ichimi DB main; DELETE template WHERE template_id = $template_id";
+        client
+            .query(query)
+            .bind(("template_id", template_id.to_string()))
+            .await
+            .map_err(|e| format!("Failed to delete template: {}", e))?;
+        
+        tracing::debug!("Deleted template {} from SurrealDB", template_id);
+        Ok(())
+    }
+    
+    /// すべてのテンプレートを取得
+    pub async fn load_all_templates(&self) -> Result<Vec<ProcessTemplate>, String> {
+        let client = self.database.client().await;
+        
+        let query = "USE NS ichimi DB main; SELECT * FROM template";
+        let mut response = client
+            .query(query)
+            .await
+            .map_err(|e| format!("Failed to query templates: {e}"))?;
+        
+        // USE文の結果をスキップ
+        let _ = response.take::<Option<()>>(0);
+        
+        // テンプレートレコードを直接ProcessTemplateとして取得
+        let templates: Vec<ProcessTemplate> = response
+            .take(1)
+            .map_err(|e| format!("Failed to deserialize template records: {e}"))?;
+        
+        tracing::info!("Loaded {} templates from SurrealDB", templates.len());
+        Ok(templates)
+    }
+    
+    /// テンプレートIDで取得
+    pub async fn get_template(&self, template_id: &str) -> Result<Option<ProcessTemplate>, String> {
+        let client = self.database.client().await;
+        
+        let query = "USE NS ichimi DB main; SELECT * FROM template WHERE template_id = $template_id";
+        let mut response = client
+            .query(query)
+            .bind(("template_id", template_id.to_string()))
+            .await
+            .map_err(|e| format!("Failed to query template: {e}"))?;
+        
+        // USE文の結果をスキップ
+        let _ = response.take::<Option<()>>(0);
+        
+        let templates: Vec<ProcessTemplate> = response
+            .take(1)
+            .map_err(|e| format!("Failed to deserialize template record: {e}"))?;
+        
+        Ok(templates.first().cloned())
+    }
+    
+    /// カテゴリでテンプレートを検索
+    pub async fn search_templates(&self, category: Option<String>, tags: Vec<String>) -> Result<Vec<ProcessTemplate>, String> {
+        let client = self.database.client().await;
+        
+        let mut query = "USE NS ichimi DB main; SELECT * FROM template".to_string();
+        let mut conditions = Vec::new();
+        
+        if category.is_some() {
+            conditions.push("category = $category");
+        }
+        
+        if !tags.is_empty() {
+            conditions.push("array::any(tags, |tag| array::includes($search_tags, tag))");
+        }
+        
+        if !conditions.is_empty() {
+            query.push_str(" WHERE ");
+            query.push_str(&conditions.join(" AND "));
+        }
+        
+        let mut query_builder = client.query(&query);
+        
+        if let Some(cat) = category {
+            query_builder = query_builder.bind(("category", cat));
+        }
+        
+        if !tags.is_empty() {
+            query_builder = query_builder.bind(("search_tags", tags));
+        }
+        
+        let mut response = query_builder
+            .await
+            .map_err(|e| format!("Failed to search templates: {e}"))?;
+        
+        // USE文の結果をスキップ
+        let _ = response.take::<Option<()>>(0);
+        
+        let templates: Vec<ProcessTemplate> = response
+            .take(1)
+            .map_err(|e| format!("Failed to deserialize template records: {e}"))?;
+        
+        Ok(templates)
     }
 }
 

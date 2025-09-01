@@ -108,7 +108,7 @@ impl Database {
         let client = self.client().await;
 
         // すべてのデータを取得（USE文を含む）
-        let query = "USE NS ichimi DB main; SELECT * FROM process; SELECT * FROM process_event;";
+        let query = "USE NS ichimi DB main; SELECT * FROM process; SELECT * FROM process_event; SELECT * FROM template;";
         debug!("Executing export query: {}", query);
         let mut result = client
             .query(query)
@@ -143,6 +143,18 @@ impl Database {
             export_content.push_str(&format!(
                 "CREATE process_event CONTENT {};\n",
                 serde_json::to_string(&event)?
+            ));
+        }
+
+        // テンプレートデータのエクスポート
+        // ProcessTemplateとして直接デシリアライズ
+        let templates: Vec<crate::process::template::ProcessTemplate> = result.take(3).unwrap_or_default();
+        
+        debug!("Found {} templates to export", templates.len());
+        for template in templates {
+            export_content.push_str(&format!(
+                "CREATE template CONTENT {};\n",
+                serde_json::to_string(&template)?
             ));
         }
 

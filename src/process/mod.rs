@@ -1,5 +1,6 @@
 pub mod buffer;
 pub mod manager;
+pub mod template;
 pub mod types;
 
 pub use buffer::CircularBuffer;

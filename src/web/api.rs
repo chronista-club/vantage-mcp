@@ -27,4 +27,14 @@ pub fn create_api_routes() -> Router<AppState> {
             "/processes/:id/logs/stream",
             get(super::handlers::stream_logs),
         )
+        // Settings endpoints
+        .route("/settings", get(super::handlers::get_settings))
+        .route("/settings", put(super::handlers::update_settings))
+        // Template endpoints
+        .route("/templates", get(super::handlers::list_templates))
+        .route("/templates", post(super::handlers::create_template))
+        .route("/templates/:id", get(super::handlers::get_template))
+        .route("/templates/:id", put(super::handlers::update_template))
+        .route("/templates/:id", delete(super::handlers::delete_template))
+        .route("/templates/:id/instantiate", post(super::handlers::instantiate_template))
 }

@@ -1,7 +1,9 @@
 use super::buffer::CircularBuffer;
 use super::types::*;
+use super::template::ProcessTemplate;
 use crate::db::Database;
 use crate::persistence::PersistenceManager;
+use crate::web::handlers::Settings;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process::Stdio;
@@ -644,5 +646,35 @@ impl ProcessManager {
         }
 
         Ok(())
+    }
+    
+    // Settings management methods
+    pub async fn get_settings(&self) -> Result<Settings, String> {
+        self.persistence.get_settings().await
+    }
+    
+    pub async fn save_settings(&self, settings: Settings) -> Result<(), String> {
+        self.persistence.save_settings(settings).await
+    }
+    
+    // Template management methods
+    pub async fn save_template(&self, template: ProcessTemplate) -> Result<(), String> {
+        self.persistence.save_template(&template).await
+    }
+    
+    pub async fn delete_template(&self, template_id: &str) -> Result<(), String> {
+        self.persistence.delete_template(template_id).await
+    }
+    
+    pub async fn load_all_templates(&self) -> Result<Vec<ProcessTemplate>, String> {
+        self.persistence.load_all_templates().await
+    }
+    
+    pub async fn get_template(&self, template_id: &str) -> Result<Option<ProcessTemplate>, String> {
+        self.persistence.get_template(template_id).await
+    }
+    
+    pub async fn search_templates(&self, category: Option<String>, tags: Vec<String>) -> Result<Vec<ProcessTemplate>, String> {
+        self.persistence.search_templates(category, tags).await
     }
 }
