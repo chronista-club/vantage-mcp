@@ -1,1 +1,1 @@
-console.log("app.js loaded");document.addEventListener("alpine:init",()=>{console.log("Alpine.js is initializing..."),Alpine.store("colorMode",{mode:"dark",toggle(){this.mode=this.mode==="dark"?"light":"dark"}})});console.log("Event listener registered");
+(()=>{console.log("app.ts loaded");document.addEventListener("alpine:init",()=>{console.log("Alpine.js is initializing..."),window.Alpine.store("state",{mode:"dark",toggleMode(){this.mode=this.mode==="dark"?"light":"dark"}})});console.log("Event listener registered");})();

@@ -366,13 +366,13 @@
     }
   </style>
   <script src="app.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script defer src="alpine.min.js"></script>
 </head>
 
 <body x-data>
   <h1>Ichimi Server - Process Manager</h1>
-  <p>Current mode: <span x-text="$store.colorMode.mode"></span></p>
-  <button @click="$store.colorMode.toggle()" class="btn-primary">Toggle Mode</button>
+  <p>Current mode: <span x-text="$store.state.mode"></span></p>
+  <button @click="$store.state.toggleMode()" class="btn-primary">Toggle Mode</button>
 </body>
 
 </html>

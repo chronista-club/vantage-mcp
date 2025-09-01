@@ -7,11 +7,13 @@ await $`mkdir -p dist`;
 await $`cp src/index.html dist/`;
 await $`cp vendor/alpine.min.js dist/`;
 
-// Build JS
+// Build TypeScript
 await Bun.build({
-  entrypoints: ["./src/app.js"],
+  entrypoints: ["./src/app.ts"],
   outdir: "./dist",
   minify: true,
+  target: "browser",
+  format: "iife",
 });
 
 console.log("✓ Build completed");
