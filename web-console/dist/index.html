@@ -1,178 +1,378 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ichimi Server</title>
-  <link rel="stylesheet" href="tabler.min.css">
-  <link rel="stylesheet" href="tabler-icons.min.css">
-  <script defer src="alpine.min.js"></script>
-  <script defer src="app.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+      background: #f9fafb;
+    }
+
+    h1 {
+      color: #111827;
+      font-size: 2rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .container {
+      background: white;
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .process-list {
+      margin-top: 20px;
+    }
+
+    .process-item {
+      background: #f9fafb;
+      padding: 16px;
+      margin-bottom: 12px;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      transition: all 0.2s;
+    }
+
+    .process-item:hover {
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .process-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .process-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .process-status {
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .status-running {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .status-stopped {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .status-failed {
+      background: #fef2f2;
+      color: #b91c1c;
+    }
+
+    .status-notstarted {
+      background: #f3f4f6;
+      color: #6b7280;
+    }
+
+    button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 14px;
+      transition: all 0.2s;
+      margin-right: 8px;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-primary {
+      background: #3b82f6;
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #2563eb;
+    }
+
+    .btn-success {
+      background: #10b981;
+      color: white;
+    }
+
+    .btn-success:hover:not(:disabled) {
+      background: #059669;
+    }
+
+    .btn-danger {
+      background: #ef4444;
+      color: white;
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      background: #dc2626;
+    }
+
+    .btn-warning {
+      background: #f59e0b;
+      color: white;
+    }
+
+    .btn-warning:hover:not(:disabled) {
+      background: #d97706;
+    }
+
+    .btn-secondary {
+      background: #6b7280;
+      color: white;
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: #4b5563;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 500;
+      color: #374151;
+      font-size: 14px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 14px;
+      transition: border-color 0.2s;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .loading {
+      text-align: center;
+      color: #6b7280;
+      padding: 20px;
+    }
+
+    .error {
+      background: #fef2f2;
+      color: #991b1b;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+      border: 1px solid #fecaca;
+    }
+
+    .process-actions {
+      margin-top: 12px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .stats {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: white;
+      padding: 16px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      flex: 1;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #6b7280;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #111827;
+      margin-top: 4px;
+    }
+
+    code {
+      background: #f3f4f6;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+      font-size: 13px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: #6b7280;
+    }
+
+    .empty-state svg {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 16px;
+      opacity: 0.3;
+    }
+
+    /* Modal Styles */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      animation: fadeIn 0.2s ease-out;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      padding: 0;
+      max-width: 500px;
+      width: 90%;
+      max-height: 90vh;
+      overflow: hidden;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      animation: slideUp 0.3s ease-out;
+    }
+
+    .modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #111827;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: #6b7280;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+
+    .modal-close:hover {
+      background: #f3f4f6;
+      color: #111827;
+    }
+
+    .modal-body {
+      padding: 24px;
+      max-height: calc(90vh - 140px);
+      overflow-y: auto;
+    }
+
+    .modal-footer {
+      padding: 16px 24px;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      background: #f9fafb;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes slideUp {
+      from {
+        transform: translateY(10px);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    .header-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .btn-icon {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .plus-icon {
+      width: 20px;
+      height: 20px;
+    }
+  </style>
+  <script src="app.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body>
-  <div class="page" x-data="app">
-    <!-- Header -->
-    <header class="navbar navbar-expand-md navbar-light d-print-none">
-      <div class="container-xl">
-        <h1 class="navbar-brand navbar-brand-autodark d-none-navbar-horizontal pe-0 pe-md-3">
-          <a href="/">
-            Ichimi Server
-          </a>
-        </h1>
-        <div class="navbar-nav flex-row order-md-last">
-          <button class="btn btn-primary" @click="showCreateModal = true">
-            <i class="ti ti-plus"></i>
-            New Process
-          </button>
-        </div>
-      </div>
-    </header>
 
-    <!-- Page Content -->
-    <div class="page-wrapper">
-      <div class="page-body">
-        <div class="container-xl">
-          <div class="page-header">
-            <div class="row align-items-center">
-              <div class="col">
-                <h2 class="page-title">Process Management</h2>
-                <div class="text-muted mt-1">
-                  <span x-text="processes.length"></span> processes
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Process List -->
-          <div class="row row-cards">
-            <template x-for="process in processes" :key="process.id">
-              <div class="col-sm-6 col-lg-4">
-                <div class="card">
-                  <div class="card-status-top" 
-                       :class="{
-                         'bg-success': process.state === 'running',
-                         'bg-secondary': process.state === 'stopped',
-                         'bg-danger': process.state === 'failed',
-                         'bg-warning': process.state === 'not_started'
-                       }"></div>
-                  <div class="card-body">
-                    <h3 class="card-title" x-text="process.id"></h3>
-                    <p class="text-muted">
-                      <code x-text="process.command + ' ' + process.args.join(' ')"></code>
-                    </p>
-                    <div class="mb-2">
-                      <span class="badge" 
-                            :class="{
-                              'bg-success': process.state === 'running',
-                              'bg-secondary': process.state === 'stopped',
-                              'bg-danger': process.state === 'failed',
-                              'bg-warning': process.state === 'not_started'
-                            }"
-                            x-text="process.state"></span>
-                      <span x-show="process.pid" class="ms-2 text-muted">
-                        PID: <span x-text="process.pid"></span>
-                      </span>
-                    </div>
-                  </div>
-                  <div class="card-footer">
-                    <div class="btn-list">
-                      <template x-if="process.state !== 'running'">
-                        <button class="btn btn-sm btn-success" @click="startProcess(process.id)">
-                          <i class="ti ti-player-play"></i> Start
-                        </button>
-                      </template>
-                      <template x-if="process.state === 'running'">
-                        <button class="btn btn-sm btn-danger" @click="stopProcess(process.id)">
-                          <i class="ti ti-player-stop"></i> Stop
-                        </button>
-                      </template>
-                      <button class="btn btn-sm btn-outline-danger" @click="removeProcess(process.id)">
-                        <i class="ti ti-trash"></i> Remove
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </template>
-          </div>
-
-          <!-- Empty State -->
-          <div x-show="processes.length === 0" class="empty">
-            <div class="empty-icon">
-              <i class="ti ti-server-off"></i>
-            </div>
-            <p class="empty-title">No processes found</p>
-            <p class="empty-subtitle text-muted">
-              Create your first process to get started
-            </p>
-            <div class="empty-action">
-              <button class="btn btn-primary" @click="showCreateModal = true">
-                <i class="ti ti-plus"></i>
-                Create Process
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Create Process Modal -->
-    <div class="modal modal-blur fade" 
-         :class="{ 'show': showCreateModal }" 
-         :style="showCreateModal ? 'display: block;' : 'display: none;'"
-         tabindex="-1">
-      <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Create New Process</h5>
-            <button type="button" class="btn-close" @click="showCreateModal = false"></button>
-          </div>
-          <form @submit.prevent="createProcess">
-            <div class="modal-body">
-              <div class="mb-3">
-                <label class="form-label required">Process ID</label>
-                <input type="text" class="form-control" x-model="newProcess.id" required>
-              </div>
-              <div class="mb-3">
-                <label class="form-label required">Command</label>
-                <input type="text" class="form-control" x-model="newProcess.command" required>
-              </div>
-              <div class="mb-3">
-                <label class="form-label">Arguments</label>
-                <input type="text" class="form-control" x-model="newProcess.args" 
-                       placeholder="Space-separated arguments">
-              </div>
-              <div class="mb-3">
-                <label class="form-label">Working Directory</label>
-                <input type="text" class="form-control" x-model="newProcess.cwd">
-              </div>
-              <div class="mb-3">
-                <label class="form-check">
-                  <input type="checkbox" class="form-check-input" 
-                         x-model="newProcess.auto_start_on_restore">
-                  <span class="form-check-label">Auto-start on restore</span>
-                </label>
-              </div>
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-link link-secondary" 
-                      @click="showCreateModal = false">Cancel</button>
-              <button type="submit" class="btn btn-primary">
-                <i class="ti ti-plus"></i> Create Process
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Modal Backdrop -->
-    <div class="modal-backdrop fade" 
-         :class="{ 'show': showCreateModal }"
-         :style="showCreateModal ? 'display: block;' : 'display: none;'"
-         @click="showCreateModal = false"></div>
-  </div>
-
-  <script src="tabler.min.js"></script>
+<body x-data>
+  <h1>Ichimi Server - Process Manager</h1>
+  <p>Current mode: <span x-text="$store.colorMode.mode"></span></p>
+  <button @click="$store.colorMode.toggle()" class="btn-primary">Toggle Mode</button>
 </body>
+
 </html>
