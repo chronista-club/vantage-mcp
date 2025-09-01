@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ichimi Server</title>
   <style>
+    [x-cloak] { display: none !important; }
+    
     * {
       box-sizing: border-box;
     }
@@ -434,6 +436,104 @@
     
     <!-- エラーメッセージ -->
     <div x-show="$store.processes.error" class="error" x-text="$store.processes.error"></div>
+    
+    <!-- テンプレートセクション -->
+    <div class="template-section" style="margin-bottom: 32px;">
+      <h2>Process Templates</h2>
+      
+      <!-- テンプレートからプロセスを作成するボタン -->
+      <button @click="$store.templates.showModal = true" class="btn-primary" style="margin-bottom: 16px;">
+        + Create Process from Template
+      </button>
+      
+      <!-- テンプレート選択モーダル -->
+      <div x-show="$store.templates.showModal" class="modal-backdrop" @click.self="$store.templates.closeModal()" style="display: none;" x-cloak>
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Select a Template</h3>
+            <button @click="$store.templates.closeModal()" class="btn-secondary">×</button>
+          </div>
+          
+          <div class="modal-body" style="padding: 24px; max-height: 60vh; overflow-y: auto;">
+            <!-- テンプレートリスト -->
+            <div x-show="$store.templates.templates.length === 0" class="empty-state">
+              <p>No templates available</p>
+            </div>
+            
+            <template x-for="template in $store.templates.templates" :key="template.template_id">
+              <div class="template-item" style="background: #f9fafb; padding: 16px; margin-bottom: 12px; border-radius: 8px; cursor: pointer;" 
+                   @click="$store.templates.selectTemplate(template)"
+                   :style="$store.templates.selectedTemplate?.template_id === template.template_id ? 'background: #e0e7ff; border: 2px solid #4f46e5;' : ''">
+                <h4 x-text="template.name" style="margin: 0 0 8px 0;"></h4>
+                <p x-text="template.description" style="margin: 0 0 8px 0; color: #6b7280; font-size: 14px;"></p>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                  <span x-show="template.category" class="badge" style="background: #f3f4f6; padding: 4px 8px; border-radius: 4px; font-size: 12px;">
+                    <span x-text="template.category"></span>
+                  </span>
+                  <template x-for="tag in template.tags" :key="tag">
+                    <span class="badge" style="background: #e5e7eb; padding: 4px 8px; border-radius: 4px; font-size: 12px;" x-text="tag"></span>
+                  </template>
+                </div>
+              </div>
+            </template>
+            
+            <!-- 選択されたテンプレートの変数入力 -->
+            <div x-show="$store.templates.selectedTemplate" style="margin-top: 24px; padding-top: 24px; border-top: 1px solid #e5e7eb;">
+              <h4>Configure Process</h4>
+              
+              <!-- プロセスID入力 -->
+              <div style="margin-bottom: 16px;">
+                <label style="display: block; margin-bottom: 4px; font-weight: 600;">Process ID</label>
+                <input type="text" x-model="$store.templates.processId" 
+                       style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px;">
+              </div>
+              
+              <!-- 変数入力 -->
+              <template x-for="variable in $store.templates.selectedTemplate?.variables || []" :key="variable.name">
+                <div style="margin-bottom: 16px;">
+                  <label style="display: block; margin-bottom: 4px; font-weight: 600;">
+                    <span x-text="variable.name"></span>
+                    <span x-show="variable.required" style="color: #ef4444;">*</span>
+                  </label>
+                  <p x-show="variable.description" x-text="variable.description" style="margin: 0 0 4px 0; color: #6b7280; font-size: 14px;"></p>
+                  
+                  <!-- 文字列・パス入力 -->
+                  <input x-show="variable.var_type === 'string' || variable.var_type === 'path'" 
+                         type="text" 
+                         x-model="$store.templates.variableValues[variable.name]"
+                         style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px;">
+                  
+                  <!-- 数値入力 -->
+                  <input x-show="variable.var_type === 'number'" 
+                         type="number" 
+                         x-model="$store.templates.variableValues[variable.name]"
+                         :min="variable.validation?.min"
+                         :max="variable.validation?.max"
+                         style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px;">
+                  
+                  <!-- ブール値選択 -->
+                  <select x-show="variable.var_type === 'boolean'" 
+                          x-model="$store.templates.variableValues[variable.name]"
+                          style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px;">
+                    <option value="true">True</option>
+                    <option value="false">False</option>
+                  </select>
+                </div>
+              </template>
+              
+              <!-- エラー表示 -->
+              <div x-show="$store.templates.error" class="error" x-text="$store.templates.error"></div>
+              
+              <!-- アクションボタン -->
+              <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 24px;">
+                <button @click="$store.templates.closeModal()" class="btn-secondary">Cancel</button>
+                <button @click="$store.templates.instantiateTemplate()" class="btn-primary">Create Process</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
     
     <!-- プロセスリスト -->
     <div class="process-list">

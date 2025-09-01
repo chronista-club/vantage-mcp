@@ -31,6 +31,39 @@ interface ProcessInfo {
   pid?: number;
 }
 
+// テンプレート変数の型定義
+interface TemplateVariable {
+  name: string;
+  description?: string;
+  var_type: 'string' | 'number' | 'boolean' | 'path' | 'enum';
+  default_value?: string;
+  required: boolean;
+  validation?: {
+    min?: number;
+    max?: number;
+    pattern?: string;
+    error_message?: string;
+  };
+}
+
+// テンプレートの型定義
+interface ProcessTemplate {
+  id?: any; // SurrealDB Thing
+  template_id: string;
+  name: string;
+  description?: string;
+  category?: string;
+  command: string;
+  args: string[];
+  env: Record<string, string>;
+  default_cwd?: string;
+  default_auto_start: boolean;
+  variables: TemplateVariable[];
+  tags: string[];
+  created_at: string;
+  updated_at: string;
+}
+
 // ストアの型定義
 interface StateStore {
   mode: ColorMode;
@@ -60,6 +93,22 @@ interface ProcessesStore {
   init(): Promise<void>;
 }
 
+interface TemplatesStore {
+  templates: ProcessTemplate[];
+  loading: boolean;
+  error: string | null;
+  selectedTemplate: ProcessTemplate | null;
+  showModal: boolean;
+  processId: string;
+  variableValues: Record<string, string>;
+  initialized: boolean;
+  loadTemplates(): Promise<void>;
+  selectTemplate(template: ProcessTemplate): void;
+  closeModal(): void;
+  instantiateTemplate(): Promise<void>;
+  init(): Promise<void>;
+}
+
 // Alpine型を拡張
 declare global {
   interface Window {
@@ -75,6 +124,7 @@ declare module 'alpinejs' {
   interface Stores {
     state: StateStore;
     processes: ProcessesStore;
+    templates: TemplatesStore;
   }
 }
 
@@ -291,6 +341,103 @@ document.addEventListener('alpine:init', () => {
   
   // Processesストアの初期化（一度だけ実行）
   processesStore.init();
+  
+  // テンプレート管理ストア
+  const templatesStore: TemplatesStore = {
+    templates: [] as ProcessTemplate[],
+    loading: false,
+    error: null as string | null,
+    selectedTemplate: null as ProcessTemplate | null,
+    showModal: false,
+    processId: '',
+    variableValues: {} as Record<string, string>,
+    initialized: false,
+    
+    async loadTemplates() {
+      this.loading = true;
+      this.error = null;
+      
+      try {
+        const response = await fetch('/api/templates');
+        if (response.ok) {
+          this.templates = await response.json();
+        } else {
+          this.error = 'Failed to load templates';
+        }
+      } catch (error) {
+        this.error = `Error loading templates: ${error}`;
+        console.error('Failed to load templates:', error);
+      } finally {
+        this.loading = false;
+      }
+    },
+    
+    selectTemplate(template: ProcessTemplate) {
+      this.selectedTemplate = template;
+      this.showModal = true;
+      this.processId = `${template.template_id}-${Date.now()}`;
+      this.variableValues = {};
+      
+      // デフォルト値を設定
+      template.variables.forEach(variable => {
+        if (variable.default_value) {
+          this.variableValues[variable.name] = variable.default_value;
+        }
+      });
+    },
+    
+    closeModal() {
+      this.showModal = false;
+      this.selectedTemplate = null;
+      this.processId = '';
+      this.variableValues = {};
+    },
+    
+    async instantiateTemplate() {
+      if (!this.selectedTemplate) return;
+      
+      try {
+        const response = await fetch(`/api/templates/${this.selectedTemplate.template_id}/instantiate`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            process_id: this.processId,
+            values: this.variableValues,
+          }),
+        });
+        
+        if (response.ok) {
+          // プロセスリストを更新
+          const processesStore = window.Alpine.store('processes') as ProcessesStore;
+          await processesStore.loadProcesses();
+          this.closeModal();
+        } else {
+          const error = await response.text();
+          this.error = `Failed to instantiate template: ${error}`;
+        }
+      } catch (error) {
+        this.error = `Error instantiating template: ${error}`;
+        console.error('Failed to instantiate template:', error);
+      }
+    },
+    
+    async init() {
+      if (this.initialized) {
+        console.warn('Templates store init() called multiple times - skipping');
+        return;
+      }
+      this.initialized = true;
+      console.log('Templates store init');
+      await this.loadTemplates();
+    },
+  };
+  
+  window.Alpine.store('templates', templatesStore);
+  
+  // Templatesストアの初期化（一度だけ実行）
+  templatesStore.init();
 });
 
 console.log('Event listener registered');
