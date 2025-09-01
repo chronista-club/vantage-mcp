@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ichimi Server</title>
+  <link rel="stylesheet" href="tabler.min.css">
+  <link rel="stylesheet" href="tabler-icons.min.css">
+  <script defer src="alpine.min.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <div class="page" x-data="app">
+    <!-- Header -->
+    <header class="navbar navbar-expand-md navbar-light d-print-none">
+      <div class="container-xl">
+        <h1 class="navbar-brand navbar-brand-autodark d-none-navbar-horizontal pe-0 pe-md-3">
+          <a href="/">
+            Ichimi Server
+          </a>
+        </h1>
+        <div class="navbar-nav flex-row order-md-last">
+          <button class="btn btn-primary" @click="showCreateModal = true">
+            <i class="ti ti-plus"></i>
+            New Process
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Page Content -->
+    <div class="page-wrapper">
+      <div class="page-body">
+        <div class="container-xl">
+          <div class="page-header">
+            <div class="row align-items-center">
+              <div class="col">
+                <h2 class="page-title">Process Management</h2>
+                <div class="text-muted mt-1">
+                  <span x-text="processes.length"></span> processes
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Process List -->
+          <div class="row row-cards">
+            <template x-for="process in processes" :key="process.id">
+              <div class="col-sm-6 col-lg-4">
+                <div class="card">
+                  <div class="card-status-top" 
+                       :class="{
+                         'bg-success': process.state === 'running',
+                         'bg-secondary': process.state === 'stopped',
+                         'bg-danger': process.state === 'failed',
+                         'bg-warning': process.state === 'not_started'
+                       }"></div>
+                  <div class="card-body">
+                    <h3 class="card-title" x-text="process.id"></h3>
+                    <p class="text-muted">
+                      <code x-text="process.command + ' ' + process.args.join(' ')"></code>
+                    </p>
+                    <div class="mb-2">
+                      <span class="badge" 
+                            :class="{
+                              'bg-success': process.state === 'running',
+                              'bg-secondary': process.state === 'stopped',
+                              'bg-danger': process.state === 'failed',
+                              'bg-warning': process.state === 'not_started'
+                            }"
+                            x-text="process.state"></span>
+                      <span x-show="process.pid" class="ms-2 text-muted">
+                        PID: <span x-text="process.pid"></span>
+                      </span>
+                    </div>
+                  </div>
+                  <div class="card-footer">
+                    <div class="btn-list">
+                      <template x-if="process.state !== 'running'">
+                        <button class="btn btn-sm btn-success" @click="startProcess(process.id)">
+                          <i class="ti ti-player-play"></i> Start
+                        </button>
+                      </template>
+                      <template x-if="process.state === 'running'">
+                        <button class="btn btn-sm btn-danger" @click="stopProcess(process.id)">
+                          <i class="ti ti-player-stop"></i> Stop
+                        </button>
+                      </template>
+                      <button class="btn btn-sm btn-outline-danger" @click="removeProcess(process.id)">
+                        <i class="ti ti-trash"></i> Remove
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+
+          <!-- Empty State -->
+          <div x-show="processes.length === 0" class="empty">
+            <div class="empty-icon">
+              <i class="ti ti-server-off"></i>
+            </div>
+            <p class="empty-title">No processes found</p>
+            <p class="empty-subtitle text-muted">
+              Create your first process to get started
+            </p>
+            <div class="empty-action">
+              <button class="btn btn-primary" @click="showCreateModal = true">
+                <i class="ti ti-plus"></i>
+                Create Process
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Create Process Modal -->
+    <div class="modal modal-blur fade" 
+         :class="{ 'show': showCreateModal }" 
+         :style="showCreateModal ? 'display: block;' : 'display: none;'"
+         tabindex="-1">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Create New Process</h5>
+            <button type="button" class="btn-close" @click="showCreateModal = false"></button>
+          </div>
+          <form @submit.prevent="createProcess">
+            <div class="modal-body">
+              <div class="mb-3">
+                <label class="form-label required">Process ID</label>
+                <input type="text" class="form-control" x-model="newProcess.id" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label required">Command</label>
+                <input type="text" class="form-control" x-model="newProcess.command" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Arguments</label>
+                <input type="text" class="form-control" x-model="newProcess.args" 
+                       placeholder="Space-separated arguments">
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Working Directory</label>
+                <input type="text" class="form-control" x-model="newProcess.cwd">
+              </div>
+              <div class="mb-3">
+                <label class="form-check">
+                  <input type="checkbox" class="form-check-input" 
+                         x-model="newProcess.auto_start_on_restore">
+                  <span class="form-check-label">Auto-start on restore</span>
+                </label>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-link link-secondary" 
+                      @click="showCreateModal = false">Cancel</button>
+              <button type="submit" class="btn btn-primary">
+                <i class="ti ti-plus"></i> Create Process
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Modal Backdrop -->
+    <div class="modal-backdrop fade" 
+         :class="{ 'show': showCreateModal }"
+         :style="showCreateModal ? 'display: block;' : 'display: none;'"
+         @click="showCreateModal = false"></div>
+  </div>
+
+  <script src="tabler.min.js"></script>
+</body>
+</html>

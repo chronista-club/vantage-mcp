@@ -1,6 +1,5 @@
 use crate::process::ProcessManager;
 use axum::{Router, response::{Html, IntoResponse, Response}, http::StatusCode};
-use axum::extract::State;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tower_http::cors::CorsLayer;
@@ -87,8 +86,8 @@ pub struct AppState {
 }
 
 async fn index_handler() -> impl IntoResponse {
-    // Serve the built Svelte app from embedded asset
-    match super::assets::Asset::get("web-svelte/dist/index.html") {
+    // Serve the built web app from embedded asset
+    match super::assets::Asset::get("web-console/dist/index.html") {
         Some(content) => Html(std::str::from_utf8(content.data.as_ref()).unwrap_or("Error loading page").to_string()),
         None => Html("Error: index.html not found".to_string()),
     }
@@ -113,8 +112,8 @@ async fn static_handler(
 
     tracing::debug!("Static file request: {} -> {}", uri.path(), path);
     
-    // Svelteビルドファイルをチェック（web-svelte/dist/ディレクトリ）
-    let dist_path = format!("web-svelte/dist/{}", path);
+    // Webビルドファイルをチェック（web-console/dist/ディレクトリ）
+    let dist_path = format!("web-console/dist/{}", path);
     if let Some((data, mime)) = Asset::get_with_mime(&dist_path) {
         return Response::builder()
             .status(StatusCode::OK)
@@ -123,8 +122,14 @@ async fn static_handler(
             .unwrap();
     }
     
-    // 通常の静的ファイル
-    match Asset::get_with_mime(path) {
+    // 通常の静的ファイル（vendorパスはstatic/vendorにマッピング）
+    let static_path = if path.starts_with("vendor/") {
+        format!("static/{}", path)
+    } else {
+        path.to_string()
+    };
+    
+    match Asset::get_with_mime(&static_path) {
         Some((data, mime)) => {
             Response::builder()
                 .status(StatusCode::OK)
@@ -133,9 +138,8 @@ async fn static_handler(
                 .unwrap()
         }
         None => {
-            // ファイルが見つからない場合、vendorディレクトリ以下も探す
-            let vendor_path = format!("vendor/{}", path);
-            match Asset::get_with_mime(&vendor_path) {
+            // それでも見つからない場合は、通常のパスも試す
+            match Asset::get_with_mime(path) {
                 Some((data, mime)) => {
                     Response::builder()
                         .status(StatusCode::OK)

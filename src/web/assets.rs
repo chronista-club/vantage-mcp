@@ -2,8 +2,7 @@ use rust_embed::RustEmbed;
 
 #[derive(RustEmbed)]
 #[folder = "."]
-#[include = "static/**/*"]
-#[include = "web-svelte/dist/**/*"]
+#[include = "web-console/dist/**/*"]
 pub struct Asset;
 
 impl Asset {
