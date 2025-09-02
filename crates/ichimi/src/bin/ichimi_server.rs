@@ -332,65 +332,9 @@ async fn main() -> Result<()> {
         }
     } else {
         tracing::info!("Running in standalone mode (web server only)");
-        // Wait for shutdown signal in web-only mode
-        #[cfg(unix)]
-        {
-            use tokio::signal::unix::{signal, SignalKind};
-            
-            let mut sigint = signal(SignalKind::interrupt()).expect("Failed to setup SIGINT handler");
-            let mut sigterm = signal(SignalKind::terminate()).expect("Failed to setup SIGTERM handler");
-            
-            tokio::select! {
-                _ = sigint.recv() => {
-                    tracing::info!("Received SIGINT (Ctrl+C) in web-only mode");
-                }
-                _ = sigterm.recv() => {
-                    tracing::info!("Received SIGTERM in web-only mode");
-                }
-            }
-        }
-        
-        #[cfg(not(unix))]
-        {
-            let _ = signal::ctrl_c().await;
-            tracing::info!("Received shutdown signal in web-only mode");
-        }
-        
-        // Export and stop processes on shutdown
-        let export_file = env::var("ICHIMI_EXPORT_FILE").unwrap_or_else(|_| {
-            std::env::current_dir()
-                .unwrap_or_else(|_| std::path::PathBuf::from("."))
-                .join(".ichimi")
-                .join("snapshot.surql")
-                .to_string_lossy()
-                .to_string()
-        });
-
-        // Create directory if it doesn't exist
-        if let Some(parent) = std::path::Path::new(&export_file).parent() {
-            let _ = std::fs::create_dir_all(parent);
-        }
-
-        match process_manager
-            .export_processes(Some(export_file.clone()))
-            .await
-        {
-            Ok(_) => tracing::info!("Successfully exported processes to {}", export_file),
-            Err(e) => tracing::error!("Failed to export processes on shutdown: {}", e),
-        }
-        
-        // Then stop ALL processes for clean shutdown
-        match process_manager.stop_all_processes().await {
-            Ok(stopped) => {
-                if !stopped.is_empty() {
-                    tracing::info!("Stopped {} process(es) for clean shutdown: {:?}", stopped.len(), stopped);
-                } else {
-                    tracing::info!("No running processes to stop");
-                }
-            }
-            Err(e) => {
-                tracing::error!("Failed to stop processes: {}", e);
-            }
+        // Keep the process alive - the signal handler in the spawned task will handle shutdown
+        loop {
+            tokio::time::sleep(tokio::time::Duration::from_secs(3600)).await;
         }
     }
 
