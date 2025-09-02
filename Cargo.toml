@@ -1,64 +1,25 @@
-[package]
-name = "ichimi-server"
-version = "0.1.0-beta15"
+[workspace]
+members = ["crates/ichimi"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0-beta17"
+authors = ["mito@chronista.club"]
 edition = "2024"
-authors = ["Mako <mito@chronista.club>"]
-description = "A powerful process management server for Claude Code via Model Context Protocol (MCP)"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/chronista-club/ichimi-server"
-keywords = ["mcp", "process-management", "claude", "server", "orchestration"]
-categories = ["command-line-utilities", "development-tools"]
 
-[[bin]]
-name = "ichimi"
-path = "src/bin/ichimi_server.rs"
-
-[dependencies]
-# MCP SDK
-rmcp = { git = "https://github.com/modelcontextprotocol/rust-sdk", rev = "7f20a87", features = ["server", "transport-io"] }
-
-# Async runtime
-tokio = { version = "1", features = ["full"] }
-
-# Serialization
+[workspace.dependencies]
+tokio = { version = "1.45", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-
-# Error handling
 anyhow = "1.0"
-thiserror = "2.0.16"
-
-# Logging
+thiserror = "2.0"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
-# Database (Memory-only for MCP compatibility)
-surrealdb = { version = "2.0", features = ["kv-mem"] }
-
-# Utils
-chrono = { version = "0.4", features = ["serde"] }
-schemars = "1.0"
-dirs = "5.0"
-open = "5.3"
-isatty = "0.1"
-
-# Web server
-axum = { version = "0.7", optional = true }
-tower = { version = "0.5", optional = true }
-tower-http = { version = "0.6", features = ["cors", "fs"], optional = true }
-axum-extra = { version = "0.9", features = ["typed-header"], optional = true }
-futures = { version = "0.3", optional = true }
-
-# Static file embedding
-rust-embed = { version = "8.5", features = ["include-exclude"], optional = true }
-tokio-stream = { version = "0.1", optional = true }
-tera = { version = "1.20", optional = true }
-regex = "1.11.2"
-
-[features]
-default = ["web"]
-web = ["dep:axum", "dep:tower", "dep:tower-http", "dep:axum-extra", "dep:futures", "dep:tokio-stream", "dep:tera", "dep:rust-embed"]
-
-
-[dev-dependencies]
-tempfile = "3.8"
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
