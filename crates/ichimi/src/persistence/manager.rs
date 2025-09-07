@@ -1,5 +1,5 @@
 use crate::db::Database;
-use crate::process::template::ProcessTemplate;
+use crate::process::template::{ProcessTemplate, ClipboardItem};
 use crate::process::types::{ProcessInfo, ProcessState};
 use crate::web::handlers::Settings;
 use anyhow::{Context, Result};
@@ -47,20 +47,25 @@ impl ProcessInfoRecord {
 }
 
 /// Persistence manager using SurrealDB for storage
+#[derive(Clone)]
 pub struct PersistenceManager {
     database: Arc<Database>,
+    snapshot_lock: Arc<tokio::sync::RwLock<()>>,
 }
+
 
 impl PersistenceManager {
     /// Create a new persistence manager with SurrealDB storage
     pub async fn new() -> Result<Self> {
         let database = Arc::new(Database::new().await?);
-        Ok(Self { database })
+        let snapshot_lock = Arc::new(tokio::sync::RwLock::new(()));
+        Ok(Self { database, snapshot_lock })
     }
 
     /// Create with existing database instance
     pub fn with_database(database: Arc<Database>) -> Self {
-        Self { database }
+        let snapshot_lock = Arc::new(tokio::sync::RwLock::new(()));
+        Self { database, snapshot_lock }
     }
 
     /// Save or update a process in SurrealDB
@@ -285,6 +290,146 @@ impl PersistenceManager {
         Ok(path.to_string())
     }
 
+    /// Export all tables to SurrealDB dump format (.surql)
+    pub async fn export_to_surql(&self, file_path: &str) -> Result<(), String> {
+        // スナップショット中の書き込みを防ぐためにロックを取得
+        let _lock = self.snapshot_lock.read().await;
+        
+        let client = self.database.client().await;
+        
+        // Create parent directory if it doesn't exist
+        if let Some(parent) = std::path::Path::new(file_path).parent() {
+            std::fs::create_dir_all(parent)
+                .map_err(|e| format!("Failed to create directory: {}", e))?;
+        }
+        
+        let mut surql_content = String::new();
+        
+        // Add header
+        surql_content.push_str("-- Ichimi Server Database Export\n");
+        surql_content.push_str(&format!("-- Generated at: {} UTC\n\n", chrono::Utc::now()));
+        surql_content.push_str("USE NS ichimi DB main;\n\n");
+        
+        // Export process table
+        let processes_query = "USE NS ichimi DB main; SELECT * FROM process";
+        let mut response = client
+            .query(processes_query)
+            .await
+            .map_err(|e| format!("Failed to query processes: {}", e))?;
+        
+        let _: Vec<surrealdb::Value> = response.take(0).unwrap_or_default();
+        let processes: Vec<serde_json::Value> = response.take(1).unwrap_or_default();
+        
+        if !processes.is_empty() {
+            surql_content.push_str("-- Process table\n");
+            for process in &processes {
+                let content = serde_json::to_string(process)
+                    .map_err(|e| format!("Failed to serialize process: {}", e))?;
+                surql_content.push_str(&format!("CREATE process CONTENT {};\n", content));
+            }
+            surql_content.push_str("\n");
+        }
+        
+        // Export template table
+        let templates_query = "USE NS ichimi DB main; SELECT * FROM template";
+        let mut response = client
+            .query(templates_query)
+            .await
+            .map_err(|e| format!("Failed to query templates: {}", e))?;
+        
+        let _: Vec<surrealdb::Value> = response.take(0).unwrap_or_default();
+        let templates: Vec<serde_json::Value> = response.take(1).unwrap_or_default();
+        
+        if !templates.is_empty() {
+            surql_content.push_str("-- Template table\n");
+            for template in &templates {
+                let content = serde_json::to_string(template)
+                    .map_err(|e| format!("Failed to serialize template: {}", e))?;
+                surql_content.push_str(&format!("CREATE template CONTENT {};\n", content));
+            }
+            surql_content.push_str("\n");
+        }
+        
+        // Export clipboard table
+        let clipboard_query = "USE NS ichimi DB main; SELECT * FROM clipboard";
+        tracing::debug!("Executing clipboard export query: {}", clipboard_query);
+        let mut response = client
+            .query(clipboard_query)
+            .await
+            .map_err(|e| format!("Failed to query clipboard: {}", e))?;
+        
+        let _: Vec<surrealdb::Value> = response.take(0).unwrap_or_default();
+        let clipboard_items: Vec<serde_json::Value> = response.take(1).unwrap_or_default();
+        tracing::debug!("Found {} clipboard items for export", clipboard_items.len());
+        
+        if !clipboard_items.is_empty() {
+            surql_content.push_str("-- Clipboard table\n");
+            for item in &clipboard_items {
+                let content = serde_json::to_string(item)
+                    .map_err(|e| format!("Failed to serialize clipboard item: {}", e))?;
+                surql_content.push_str(&format!("CREATE clipboard CONTENT {};\n", content));
+            }
+            surql_content.push_str("\n");
+        }
+        
+        // Write to file
+        std::fs::write(file_path, surql_content)
+            .map_err(|e| format!("Failed to write export file: {}", e))?;
+        
+        tracing::info!(
+            "Exported {} processes, {} templates, {} clipboard items to {}",
+            processes.len(),
+            templates.len(),
+            clipboard_items.len(),
+            file_path
+        );
+        
+        Ok(())
+    }
+    
+    /// Import all tables from SurrealDB dump format (.surql)
+    pub async fn import_from_surql(&self, file_path: &str) -> Result<(), String> {
+        let surql_content = std::fs::read_to_string(file_path)
+            .map_err(|e| format!("Failed to read import file: {}", e))?;
+        
+        let client = self.database.client().await;
+        
+        // Execute the entire script
+        client
+            .query(&surql_content)
+            .await
+            .map_err(|e| format!("Failed to import data: {}", e))?;
+        
+        tracing::info!("Successfully imported data from {}", file_path);
+        Ok(())
+    }
+    
+    /// Create a snapshot of the entire database
+    pub async fn create_snapshot(&self) -> Result<String, String> {
+        let snapshot_dir = std::env::var("HOME")
+            .map(|home| format!("{}/.ichimi", home))
+            .unwrap_or_else(|_| ".ichimi".to_string());
+        
+        let snapshot_path = format!("{}/snapshot.surql", snapshot_dir);
+        self.export_to_surql(&snapshot_path).await?;
+        Ok(snapshot_path)
+    }
+    
+    /// Restore from the latest snapshot
+    pub async fn restore_snapshot(&self) -> Result<(), String> {
+        let snapshot_dir = std::env::var("HOME")
+            .map(|home| format!("{}/.ichimi", home))
+            .unwrap_or_else(|_| ".ichimi".to_string());
+        
+        let snapshot_path = format!("{}/snapshot.surql", snapshot_dir);
+        
+        if !std::path::Path::new(&snapshot_path).exists() {
+            return Err(format!("Snapshot file not found: {}", snapshot_path));
+        }
+        
+        self.import_from_surql(&snapshot_path).await
+    }
+
     // Settings management
     pub async fn get_settings(&self) -> Result<Settings, String> {
         let client = self.database.client().await;
@@ -472,6 +617,191 @@ impl PersistenceManager {
             .map_err(|e| format!("Failed to deserialize template records: {e}"))?;
 
         Ok(templates)
+    }
+
+    // クリップボード管理メソッド
+
+    /// クリップボードアイテムを保存
+    pub async fn save_clipboard_item(&self, item: &ClipboardItem) -> Result<(), String> {
+        // 書き込み操作中はスナップショットをブロック
+        let _lock = self.snapshot_lock.write().await;
+        
+        let client = self.database.client().await;
+
+        let query = r#"
+            USE NS ichimi DB main;
+            CREATE type::thing('clipboard', $clipboard_id) CONTENT {
+                clipboard_id: $clipboard_id,
+                content: $content,
+                filename: $filename,
+                created_at: $created_at,
+                updated_at: $updated_at,
+                content_type: $content_type,
+                tags: $tags
+            };
+        "#;
+
+        client
+            .query(query)
+            .bind(("clipboard_id", item.id.clone()))
+            .bind(("content", item.content.clone()))
+            .bind(("filename", item.filename.clone()))
+            .bind(("created_at", item.created_at.to_rfc3339()))
+            .bind(("updated_at", item.updated_at.to_rfc3339()))
+            .bind(("content_type", item.content_type.clone()))
+            .bind(("tags", item.tags.clone()))
+            .await
+            .map_err(|e| format!("Failed to save clipboard item: {}", e))?;
+
+        tracing::debug!("Saved clipboard item {} to SurrealDB", item.id);
+        Ok(())
+    }
+
+    /// 最新のクリップボードアイテムを取得（単一アイテム用）
+    pub async fn get_latest_clipboard_item(&self) -> Result<Option<ClipboardItem>, String> {
+        tracing::debug!("Getting latest clipboard item from database");
+        let client = self.database.client().await;
+
+        let query = "USE NS ichimi DB main; SELECT clipboard_id as id, content, filename, created_at, updated_at, content_type, tags FROM clipboard ORDER BY updated_at DESC LIMIT 1";
+        tracing::debug!("Executing clipboard query: {}", query);
+        let mut response = client
+            .query(query)
+            .await
+            .map_err(|e| format!("Failed to query latest clipboard item: {}", e))?;
+
+        // USE文の結果をスキップ
+        let _: Vec<surrealdb::Value> = response.take(0).unwrap_or_default();
+
+        let items: Vec<ClipboardItem> = response
+            .take(1)
+            .map_err(|e| format!("Failed to deserialize latest clipboard item: {}", e))?;
+
+        tracing::debug!("Query returned {} clipboard items", items.len());
+        Ok(items.into_iter().next())
+    }
+
+    /// クリップボードにテキストを設定
+    pub async fn set_clipboard_text(&self, content: String) -> Result<ClipboardItem, String> {
+        let item = ClipboardItem::new(content, None, Some("text".to_string()));
+        self.save_clipboard_item(&item).await?;
+        Ok(item)
+    }
+
+    /// クリップボードにファイルを設定
+    pub async fn set_clipboard_file(&self, content: String, filename: String) -> Result<ClipboardItem, String> {
+        let item = ClipboardItem::new(content, Some(filename), Some("file".to_string()));
+        self.save_clipboard_item(&item).await?;
+        Ok(item)
+    }
+
+    /// すべてのクリップボードアイテムを取得（履歴表示用）
+    pub async fn load_all_clipboard_items(&self) -> Result<Vec<ClipboardItem>, String> {
+        let client = self.database.client().await;
+
+        let query = "USE NS ichimi DB main; SELECT * FROM clipboard ORDER BY updated_at DESC";
+        let mut response = client
+            .query(query)
+            .await
+            .map_err(|e| format!("Failed to query clipboard items: {}", e))?;
+
+        // USE文の結果をスキップ
+        let _: Vec<surrealdb::Value> = response.take(0).unwrap_or_default();
+
+        let items: Vec<ClipboardItem> = response
+            .take(1)
+            .map_err(|e| format!("Failed to deserialize clipboard items: {}", e))?;
+
+        tracing::info!("Loaded {} clipboard items from SurrealDB", items.len());
+        Ok(items)
+    }
+
+    /// Get clipboard history with optional limit
+    pub async fn get_clipboard_history(&self, limit: Option<usize>) -> Result<Vec<ClipboardItem>, String> {
+        let client = self.database.client().await;
+
+        let query = match limit {
+            Some(limit) => format!(
+                "USE NS ichimi DB main; SELECT clipboard_id as id, content, filename, created_at, updated_at, content_type, tags FROM clipboard ORDER BY updated_at DESC LIMIT {}", 
+                limit
+            ),
+            None => "USE NS ichimi DB main; SELECT clipboard_id as id, content, filename, created_at, updated_at, content_type, tags FROM clipboard ORDER BY updated_at DESC".to_string(),
+        };
+
+        let mut response = client
+            .query(&query)
+            .await
+            .map_err(|e| format!("Failed to query clipboard history: {}", e))?;
+
+        // USE文の結果をスキップ
+        let _: Vec<surrealdb::Value> = response.take(0).unwrap_or_default();
+
+        let items: Vec<ClipboardItem> = response
+            .take(1)
+            .map_err(|e| format!("Failed to deserialize clipboard history: {}", e))?;
+
+        Ok(items)
+    }
+
+    /// Search clipboard items by content
+    pub async fn search_clipboard_items(&self, query: &str, limit: Option<usize>) -> Result<Vec<ClipboardItem>, String> {
+        let client = self.database.client().await;
+
+        // パラメータ化されたクエリを使用してSQLインジェクションを防ぐ
+        let query_string = query.to_string(); // 所有権を持つ文字列に変換
+        
+        // パラメータ化されたクエリを使用
+        let mut response = if let Some(l) = limit {
+            client
+                .query("USE NS ichimi DB main")
+                .query(
+                    "SELECT clipboard_id as id, content, filename, created_at, updated_at 
+                     FROM clipboard 
+                     WHERE content CONTAINS $query OR filename CONTAINS $query 
+                     ORDER BY updated_at DESC 
+                     LIMIT $limit"
+                )
+                .bind(("query", query_string.clone()))
+                .bind(("limit", l))
+                .await
+                .map_err(|e| format!("Failed to search clipboard items: {}", e))?
+        } else {
+            client
+                .query("USE NS ichimi DB main")
+                .query(
+                    "SELECT clipboard_id as id, content, filename, created_at, updated_at 
+                     FROM clipboard 
+                     WHERE content CONTAINS $query OR filename CONTAINS $query 
+                     ORDER BY updated_at DESC"
+                )
+                .bind(("query", query_string))
+                .await
+                .map_err(|e| format!("Failed to search clipboard items: {}", e))?
+        };
+
+        // USE文の結果をスキップ
+        let _: Vec<surrealdb::Value> = response.take(0).unwrap_or_default();
+
+        let items: Vec<ClipboardItem> = response
+            .take(1)
+            .map_err(|e| format!("Failed to deserialize search results: {}", e))?;
+
+        Ok(items)
+    }
+
+    /// Clear all clipboard items
+    pub async fn clear_clipboard(&self) -> Result<(), String> {
+        // 書き込み操作中はスナップショットをブロック
+        let _lock = self.snapshot_lock.write().await;
+        
+        let client = self.database.client().await;
+
+        client
+            .query("USE NS ichimi DB main; DELETE clipboard")
+            .await
+            .map_err(|e| format!("Failed to clear clipboard: {}", e))?;
+
+        tracing::info!("Cleared all clipboard items from SurrealDB");
+        Ok(())
     }
 }
 
