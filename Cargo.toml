@@ -3,7 +3,7 @@ members = ["crates/ichimi"]
 resolver = "2"
 
 [workspace.package]
-version = "0.1.0-beta18"
+version = "0.1.0-beta19"
 authors = ["mito@chronista.club"]
 edition = "2024"
 license = "MIT OR Apache-2.0"
