@@ -1,68 +1,68 @@
 # Ichimi Server
 
-[English](./README.en.md) | **日本語**
+**English** | [日本語](./docs/README.ja.md)
 
-Process as a Resource - プロセスをリソースとして管理
+Process as a Resource - Manage processes as resources
 
-Model Context Protocol (MCP) を介した Claude Code 用の強力なプロセス管理サーバー。
+A powerful process management server for Claude Code via the Model Context Protocol (MCP).
 
 ![Version](https://img.shields.io/badge/version-0.1.0--beta20-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue)
 ![MCP Compatible](https://img.shields.io/badge/MCP-Compatible-green)
 
-## ✨ 特徴
+## ✨ Features
 
-### コア機能
-- 🚀 **プロセス管理**: あらゆるプロセスの起動、停止、監視をMCPツール経由で制御
-- 📊 **リアルタイムログ**: stdout/stderr 出力のキャプチャとストリーミング
-- 🔍 **ステータス監視**: プロセスの状態とメトリクスの追跡
-- 🎯 **柔軟なフィルタリング**: 状態やパターンでプロセスを検索
-- 💾 **永続化**: KDL形式での設定ファイル管理（`.ichimi/processes.kdl`）
-- 🔄 **自動起動**: `auto_start` フラグでサーバー起動時のプロセス自動起動
+### Core Features
+- 🚀 **Process Management**: Control start, stop, and monitoring of any process via MCP tools
+- 📊 **Real-time Logging**: Capture and stream stdout/stderr outputs
+- 🔍 **Status Monitoring**: Track process states and metrics
+- 🎯 **Flexible Filtering**: Search processes by state or pattern
+- 💾 **Persistence**: Configuration management in KDL format (`.ichimi/processes.kdl`)
+- 🔄 **Auto-start**: Automatic process startup with `auto_start` flag
 
-### Webダッシュボード (v0.1.0-beta20〜)
-- 🌐 **モダンなUI**: Vue 3 + TypeScript + Tablerによる洗練されたSPA
-- 📈 **リアルタイム更新**: 自動更新でプロセス状態を監視
-- 🔍 **検索機能**: プロセスの検索とフィルタリング
-- 🌙 **ダークモード**: ライト/ダークテーマの切り替え対応
-- 📱 **レスポンシブ**: モバイルからデスクトップまで対応
-- 🎯 **型安全**: TypeScriptによる完全な型付け
-- 📦 **コンポーネント指向**: Vue 3 SFC (Single File Component) アーキテクチャ
+### Web Dashboard (v0.1.0-beta20+)
+- 🌐 **Modern UI**: Sophisticated SPA with Vue 3 + TypeScript + Tabler
+- 📈 **Real-time Updates**: Monitor process states with auto-refresh
+- 🔍 **Search Features**: Process search and filtering
+- 🌙 **Dark Mode**: Light/dark theme switching
+- 📱 **Responsive**: Mobile to desktop support
+- 🎯 **Type Safety**: Complete typing with TypeScript
+- 📦 **Component-Oriented**: Vue 3 SFC (Single File Component) architecture
 
-### MCP統合
-- 🔌 **MCP準拠サーバー**: Model Context Protocolに完全準拠
-- 🤖 **Claude Code対応**: Claude Codeから直接利用可能
-- 🛠️ **豊富なツール**: 12種類以上のMCPツールを提供
-- 📡 **Web API**: RESTful APIによる外部統合
+### MCP Integration
+- 🔌 **MCP Compliant Server**: Fully compliant with Model Context Protocol
+- 🤖 **Claude Code Ready**: Direct integration with Claude Code
+- 🛠️ **Rich Tools**: 12+ MCP tools provided
+- 📡 **Web API**: RESTful API for external integration
 
-## 🚀 インストール
+## 🚀 Installation
 
-### Cargoを使用（推奨）
+### Using Cargo (Recommended)
 
 ```bash
 cargo install ichimi-server
-# コマンドは 'ichimi' として利用可能になります
+# The command will be available as 'ichimi'
 ```
 
-### ソースからのインストール
+### From Source
 
 ```bash
-# リポジトリをクローン
+# Clone the repository
 git clone https://github.com/chronista-club/ichimi-server
 cd ichimi-server
 
-# リリースビルド
+# Release build
 cargo build --release
 
-# バイナリは以下の場所に生成されます:
+# Binary will be at:
 # target/release/ichimi
 ```
 
-## 🔧 設定
+## Configuration
 
-### Claude Codeの設定
+### Claude Code Configuration
 
-`.mcp.json` または Claude Code の設定にサーバーを追加:
+Add the server to your `.mcp.json` or Claude Code settings:
 
 ```json
 {
@@ -71,52 +71,49 @@ cargo build --release
             "type": "stdio",
             "command": "ichimi",
             "env": {
-                "RUST_LOG": "info"
+                "RUST_LOG": "info",
+                "ICHIMI_AUTO_EXPORT_INTERVAL": "300"
             }
         }
     }
 }
 ```
 
-### 接続の確認
+### Verify Connection
 
-Claude Code で以下を実行:
+In Claude Code, run:
 ```
 /mcp
 ```
 
-"ichimi" サーバーが "connected" と表示されるはずです。
+You should see "ichimi" server as "connected".
 
-## 📚 使い方
+## Usage
 
-### 利用可能なMCPツール
+### Available Tools
 
-#### 基本ツール
-| ツール | 説明 |
-|--------|------|
-| `echo` | テスト用にメッセージをエコーバック |
-| `ping` | シンプルなヘルスチェック |
-| `get_status` | サーバーステータスと稼働時間を取得 |
+#### Basic Tools
+- `echo` - Echo back messages for testing
+- `ping` - Simple health check
+- `get_status` - Get server status and uptime
 
-#### プロセス管理ツール
-| ツール | 説明 |
-|--------|------|
-| `create_process` | 新しいプロセス設定を登録 |
-| `start_process` | 登録済みプロセスを起動 |
-| `stop_process` | 実行中のプロセスを正常停止 |
-| `get_process_status` | 詳細なプロセスステータスを取得 |
-| `get_process_output` | プロセスの stdout/stderr ログを取得 |
-| `list_processes` | フィルタを使用して管理中の全プロセスを一覧表示 |
-| `remove_process` | 管理からプロセスを削除 |
-| `export_processes` | 全プロセスをファイルにエクスポート |
-| `import_processes` | ファイルからプロセスをインポート |
+#### Process Management
+- `create_process` - Register a new process configuration
+- `start_process` - Start a registered process
+- `stop_process` - Stop a running process gracefully
+- `get_process_status` - Get detailed process status
+- `get_process_output` - Retrieve process stdout/stderr logs
+- `list_processes` - List all managed processes with filters
+- `remove_process` - Remove a process from management
+- `export_processes` - Export all processes to a .surql file
+- `import_processes` - Import processes from a .surql file
 
-### 使用例
+### Examples
 
-#### Webサーバーの管理
+#### Managing a Web Server
 
 ```python
-# Webサーバープロセスを登録
+# Register a web server process
 create_process(
     id="webserver",
     command="python",
@@ -125,56 +122,74 @@ create_process(
     cwd="./public"
 )
 
-# サーバーを起動
+# Start the server
 start_process(id="webserver")
 
-# ログを確認
+# Check the logs
 get_process_output(id="webserver", stream="Both", lines=50)
 
-# 正常停止
+# Stop gracefully
 stop_process(id="webserver", grace_period_ms=5000)
 ```
 
-#### Node.jsアプリケーションの管理
+#### Running a Database
 
 ```python
-# Node.jsアプリを登録
+# Start PostgreSQL
 create_process(
-    id="node-app",
-    command="node",
-    args=["server.js"],
-    env={"NODE_ENV": "production", "PORT": "3000"},
-    cwd="/app"
+    id="postgres",
+    command="postgres",
+    args=["-D", "/usr/local/var/postgres"],
+    env={"PGDATA": "/usr/local/var/postgres"}
 )
 
-# アプリを起動
-start_process(id="node-app")
+start_process(id="postgres")
 
-# ステータスを監視
-get_process_status(id="node-app")
+# Monitor status
+get_process_status(id="postgres")
 ```
 
-#### バッチプロセス管理
+#### Batch Process Management
 
 ```python
-# 実行中の全プロセスを一覧表示
+# List all running processes
 list_processes(filter={"state": "Running"})
 
-# パターンで特定のプロセスを検索
+# Find specific processes by pattern
 list_processes(filter={"name_pattern": "worker"})
 
-# 全ワーカーを停止
+# Stop all workers
 for process in list_processes(filter={"name_pattern": "worker"}):
     stop_process(id=process["id"])
 ```
 
-## 📝 永続化
+## API Reference
 
-### KDL設定ファイル
+### Process States
 
-Ichimi Server は、プロセス設定の永続化に [KDL (Cuddly Data Language)](https://kdl.dev/) フォーマットを使用します。設定ファイルは `.ichimi/processes.kdl` に自動的に保存されます。
+- `NotStarted` - Process registered but not yet started
+- `Running` - Process is currently running with PID
+- `Stopped` - Process terminated normally with exit code
+- `Failed` - Process failed with error message
 
-#### KDL設定ファイルの例
+### Output Streams
+
+- `Stdout` - Standard output only
+- `Stderr` - Standard error only
+- `Both` - Combined stdout and stderr
+
+### Process Filters
+
+- `state` - Filter by process state (Running/Stopped/Failed/All)
+- `name_pattern` - Filter by ID pattern (supports wildcards)
+
+## 📝 Persistence
+
+### KDL Configuration Files
+
+Ichimi Server uses [KDL (Cuddly Data Language)](https://kdl.dev/) format for process persistence. Configuration files are automatically saved to `.ichimi/processes.kdl`.
+
+#### Example KDL Configuration
 
 ```kdl
 // Ichimi Server Process Configuration
@@ -182,7 +197,7 @@ meta {
     version "1.0.0"
 }
 
-// Webサーバープロセス
+// Web server process
 process "webserver" {
     command "python"
     args "-m" "http.server" "8000"
@@ -190,213 +205,201 @@ process "webserver" {
     auto_start #false
 }
 
-// バックグラウンドワーカー
+// Background worker
 process "worker" {
     command "/usr/local/bin/worker"
     args "--config" "worker.conf"
     cwd "/app"
-    auto_start #true  // サーバー起動時に自動起動
+    auto_start #true  // Auto-start on server launch
 }
 ```
 
-#### 設定項目
+#### Configuration Fields
 
-| 項目 | 説明 | 必須 |
-|------|------|------|
-| `command` | 実行するコマンドのパス | ✅ |
-| `args` | コマンドライン引数（複数可） | ❌ |
-| `cwd` | 作業ディレクトリ | ❌ |
-| `auto_start` | サーバー起動時の自動起動 | ❌ |
+| Field | Description | Required |
+|-------|-------------|----------|
+| `command` | Path to executable | ✅ |
+| `args` | Command line arguments (multiple allowed) | ❌ |
+| `cwd` | Working directory | ❌ |
+| `auto_start` | Auto-start on server launch | ❌ |
 
-### JSONエクスポート/インポート
+### JSON Export/Import
 
-プロセス設定はJSON形式でもエクスポート/インポートできます：
+Process configurations can also be exported/imported in JSON format:
 
 ```bash
-# プロセスをJSONファイルにエクスポート
+# Export processes to JSON file
 curl http://127.0.0.1:12700/api/export > ichimi_export.json
 
-# JSONファイルからプロセスをインポート
+# Import processes from JSON file
 curl -X POST http://127.0.0.1:12700/api/import \
   -H "Content-Type: application/json" \
   -d @ichimi_export.json
 ```
 
-## 🌐 Webダッシュボード
+## 🌐 Web Dashboard
 
-### ダッシュボードの起動
+### Starting the Dashboard
 
 ```bash
-# Webダッシュボードで起動（デフォルトポート 12700）
+# Start with web dashboard (default port 12700)
 ichimi --web
 
-# カスタムポートを指定
+# Specify custom port
 ichimi --web --web-port 8080
 
-# Webダッシュボードのみ（MCPサーバーなし）
+# Web dashboard only (no MCP server)
 ichimi --web-only
 ```
 
-ブラウザで `http://localhost:12700` を開きます。
+Open your browser to `http://localhost:12700`
 
-### ダッシュボード機能
+### Dashboard Features
 
-#### メイン画面
-- **統計カード**: 総プロセス数、実行中、停止中、エラーの状態を表示
-- **プロセスリスト**: 全プロセスのテーブル表示
-- **リアルタイム更新**: 5秒ごとに自動更新
-- **検索機能**: プロセスID、コマンドで検索
+#### Main Screen
+- **Stats Cards**: Display total processes, running, stopped, and error states
+- **Process List**: Table view of all processes
+- **Real-time Updates**: Auto-refresh every 5 seconds
+- **Search**: Search by process ID or command
 
-#### プロセス操作
-- **起動/停止**: ワンクリックでプロセス制御
-- **ログ表示**: stdout/stderrの最新ログを表示
-- **削除**: 不要なプロセスを削除
-- **新規追加**: モーダルダイアログでプロセス追加
+#### Process Operations
+- **Start/Stop**: One-click process control
+- **Log Viewing**: Display latest stdout/stderr logs
+- **Delete**: Remove unwanted processes
+- **Add New**: Modal dialog for process creation
 
 #### UI/UX
-- **レスポンシブデザイン**: モバイル対応
-- **ダークモード**: ライト/ダークテーマ切り替え
-- **モダンなデザイン**: Tabler UIフレームワーク使用
+- **Responsive Design**: Mobile-friendly
+- **Dark Mode**: Light/dark theme switching
+- **Modern Design**: Tabler UI framework
 
 ### REST API
 
-| エンドポイント | メソッド | 説明 |
-|--------------|----------|------|
-| `/api/status` | GET | サーバーステータス |
-| `/api/dashboard` | GET | ダッシュボード統計データ |
-| `/api/processes` | GET | プロセス一覧 |
-| `/api/processes` | POST | プロセス追加 |
-| `/api/processes/:id` | GET | プロセス詳細 |
-| `/api/processes/:id` | DELETE | プロセス削除 |
-| `/api/processes/:id/start` | POST | プロセス起動 |
-| `/api/processes/:id/stop` | POST | プロセス停止 |
-| `/api/processes/:id/logs` | GET | ログ取得 |
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/status` | GET | Server status |
+| `/api/dashboard` | GET | Dashboard stats |
+| `/api/processes` | GET | List processes |
+| `/api/processes` | POST | Add process |
+| `/api/processes/:id` | GET | Process details |
+| `/api/processes/:id` | DELETE | Delete process |
+| `/api/processes/:id/start` | POST | Start process |
+| `/api/processes/:id/stop` | POST | Stop process |
+| `/api/processes/:id/logs` | GET | Get logs |
 
-## 🏗️ プロジェクト構造
+## Development
+
+### Building from Source
+
+```bash
+# Debug build
+cargo build
+
+# Release build
+cargo build --release
+
+# Run tests
+cargo test
+
+# Run with debug logging
+RUST_LOG=debug cargo run
+```
+
+### Project Structure
 
 ```
 ichimi-server/
 ├── crates/
-│   ├── ichimi/                 # メインサーバークレート
+│   ├── ichimi/                 # Main server crate
 │   │   ├── src/
-│   │   │   ├── lib.rs          # コアサーバー実装
+│   │   │   ├── lib.rs          # Core server implementation
 │   │   │   ├── bin/
-│   │   │   │   └── ichimi_server.rs  # バイナリエントリーポイント
-│   │   │   ├── process/        # プロセス管理
+│   │   │   │   └── ichimi_server.rs  # Binary entry point
+│   │   │   ├── process/        # Process management
 │   │   │   │   ├── mod.rs
 │   │   │   │   ├── manager.rs
 │   │   │   │   ├── buffer.rs
 │   │   │   │   └── protocol.rs
-│   │   │   ├── web/            # Webサーバー
+│   │   │   ├── web/            # Web server
 │   │   │   │   ├── server.rs
 │   │   │   │   ├── handlers.rs
 │   │   │   │   └── api.rs
-│   │   │   ├── messages/       # MCP メッセージ型
-│   │   │   ├── ci/             # CI/CD監視
-│   │   │   └── events/         # イベントシステム
+│   │   │   ├── messages/       # MCP message types
+│   │   │   ├── ci/             # CI/CD monitoring
+│   │   │   └── events/         # Event system
 │   │   └── tests/
-│   └── ichimi-persistence/     # 永続化レイヤー
+│   └── ichimi-persistence/     # Persistence layer
 │       ├── src/
-│       │   ├── lib.rs          # 永続化インターフェース
-│       │   ├── kdl/            # KDL形式の永続化
-│       │   └── surrealdb/      # SurrealDB統合
+│       │   ├── lib.rs          # Persistence interface
+│       │   ├── kdl/            # KDL format persistence
+│       │   └── surrealdb/      # SurrealDB integration
 │       └── tests/
 ├── ui/
 │   └── web/                    # Vue 3 SPA
-│   │   ├── src/
-│   │   │   ├── App.vue         # ルートコンポーネント
-│   │   │   ├── main.ts         # エントリーポイント
-│   │   │   ├── router/         # Vue Router設定
-│   │   │   ├── stores/         # Piniaストア
-│   │   │   ├── components/     # Vueコンポーネント
-│   │   │   ├── views/          # ページコンポーネント
-│   │   │   ├── api/            # APIクライアント
-│   │   │   ├── types/          # TypeScript型定義
-│   │   │   └── themes.ts       # テーマ設定
-│   │   ├── package.json
-│   │   ├── tsconfig.json
-│   │   └── vite.config.ts
-│       ├── dist/               # 本番ビルド
-├── .ichimi/                     # データディレクトリ
-│   └── processes.kdl           # プロセス設定ファイル
-└── examples/                    # 使用例
+│       ├── src/
+│       │   ├── App.vue         # Root component
+│       │   ├── main.ts         # Entry point
+│       │   ├── router/         # Vue Router config
+│       │   ├── stores/         # Pinia stores
+│       │   ├── components/     # Vue components
+│       │   ├── views/          # Page components
+│       │   ├── api/            # API client
+│       │   ├── types/          # TypeScript types
+│       │   └── themes.ts       # Theme configuration
+│       ├── package.json
+│       ├── tsconfig.json
+│       └── vite.config.ts
+│       ├── dist/               # Production build
+├── .ichimi/                    # Data directory
+│   └── processes.kdl           # Process config file
+└── examples/                   # Usage examples
 ```
 
-## 🔑 環境変数
+## Contributing
 
-| 変数 | 説明 | デフォルト |
-|------|------|----------|
-| `RUST_LOG` | ログレベル (error, warn, info, debug, trace) | info |
-| `ICHIMI_DATA_DIR` | データファイル用ディレクトリ | ~/.ichimi/data |
-| `ICHIMI_IMPORT_FILE` | 起動時にインポートするファイル | ~/.ichimi/data/processes.surql |
-| `ICHIMI_EXPORT_FILE` | シャットダウン時のエクスポート先 | ~/.ichimi/data/processes.surql |
-| `ICHIMI_STOP_ON_SHUTDOWN` | ichimi終了時にプロセスを停止するか（true/false） | false（継続） |
-| `ICHIMI_AUTO_EXPORT_INTERVAL` | 自動エクスポート間隔（秒） | なし |
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-## 🚧 開発
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-### ローカル開発
+## License
 
-```bash
-# デバッグビルド
-cargo build
+This project is dual-licensed under either of:
 
-# テストの実行
-cargo test
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+- MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
 
-# デバッグログで実行
-RUST_LOG=debug cargo run
+at your option.
 
-# Webダッシュボードの開発
-RUST_LOG=debug cargo run -- --web
-```
+## 🔑 Environment Variables
 
-### リリースビルド
+| Variable | Description | Default |
+|----------|-------------|---------|  
+| `RUST_LOG` | Log level (error, warn, info, debug, trace) | info |
+| `ICHIMI_DATA_DIR` | Directory for data files | ~/.ichimi/data |
+| `ICHIMI_IMPORT_FILE` | File to import on startup | ~/.ichimi/data/processes.surql |
+| `ICHIMI_EXPORT_FILE` | Export destination on shutdown | ~/.ichimi/data/processes.surql |
+| `ICHIMI_STOP_ON_SHUTDOWN` | Stop processes on ichimi exit (true/false) | false (continue) |
+| `ICHIMI_AUTO_EXPORT_INTERVAL` | Auto-export interval in seconds | - |
 
-```bash
-# 最適化されたリリースビルド
-cargo build --release
-
-# インストール
-cargo install --path .
-```
-
-## 🤝 コントリビューション
-
-コントリビューションを歓迎します！
-
-1. リポジトリをフォーク
-2. フィーチャーブランチを作成 (`git checkout -b feature/amazing-feature`)
-3. 変更をコミット (`git commit -m 'Add some amazing feature'`)
-4. ブランチにプッシュ (`git push origin feature/amazing-feature`)
-5. プルリクエストを開く
-
-## 📄 ライセンス
-
-このプロジェクトは以下のいずれかのライセンスでデュアルライセンスされています:
-
-- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) または http://www.apache.org/licenses/LICENSE-2.0)
-- MIT license ([LICENSE-MIT](LICENSE-MIT) または http://opensource.org/licenses/MIT)
-
-お好みの方をお選びください。
-
-## 🙏 謝辞
+## 🙏 Acknowledgments
 
 - [rmcp](https://github.com/modelcontextprotocol/rust-sdk) - Rust MCP SDK
-- [Tera](https://tera.netlify.app/) - テンプレートエンジン
-- UIフレームワーク: [Vue 3](https://vuejs.org/) + [TypeScript](https://www.typescriptlang.org/) + [Vite](https://vitejs.dev/) + [Tabler](https://tabler.io/)
-- [KDL](https://kdl.dev/) - 設定フォーマット
-- Model Context Protocol 仕様に触発
-- Chronista Club エコシステムの一部
+- [Tera](https://tera.netlify.app/) - Template engine
+- UI framework: [Vue 3](https://vuejs.org/) + [TypeScript](https://www.typescriptlang.org/) + [Vite](https://vitejs.dev/) + [Tabler](https://tabler.io/)
+- [KDL](https://kdl.dev/) - Configuration format
+- Inspired by the Model Context Protocol specification
+- Part of the Chronista Club ecosystem
 
-## 📞 サポート
+## Support
 
-問題、質問、提案については:
-- [GitHub Issues](https://github.com/chronista-club/ichimi-server/issues) で Issue を開く
-- [Discussions](https://github.com/chronista-club/ichimi-server/discussions) で議論
+For issues, questions, or suggestions:
+- Open an issue on [GitHub](https://github.com/chronista-club/ichimi-server/issues)
+- Check the [documentation](https://github.com/chronista-club/ichimi-server/wiki)
 
 ---
 
-*Ichimi Server - Claude Code のためのシンプルかつ強力なプロセス管理。一味が支えます。*
-
-**Latest Release:** v0.1.0-beta7 🎉
+*Ichimi Server - Making process management simple and powerful for Claude Code*
