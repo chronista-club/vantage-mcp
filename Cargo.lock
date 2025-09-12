@@ -1812,6 +1812,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "ichimi-persistence"
+version = "0.1.0-beta19"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "nanoid",
+ "serde",
+ "serde_json",
+ "surrealdb",
+ "thiserror 2.0.16",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "ichimi-server"
 version = "0.1.0-beta19"
 dependencies = [
@@ -1821,6 +1837,7 @@ dependencies = [
  "chrono",
  "dirs",
  "futures",
+ "ichimi-persistence",
  "isatty",
  "nix",
  "open",
@@ -1831,7 +1848,6 @@ dependencies = [
  "schemars 1.0.4",
  "serde",
  "serde_json",
- "surrealdb",
  "tempfile",
  "tera",
  "thiserror 2.0.16",

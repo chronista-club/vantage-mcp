@@ -9,16 +9,16 @@ Ichimi Server は Model Context Protocol (MCP) を介した Claude Code 用の�
 ### 主な機能
 - プロセスのライフサイクル管理（作成、起動、停止、削除）
 - リアルタイムログキャプチャ（stdout/stderr）
-- SurrealDB インメモリデータベースによる永続化
-- .surql ファイルへのエクスポート/インポート機能
-- Webダッシュボード（Alpine.js + Tabler UI）
+- KDL形式での永続化と設定ファイル管理（.ichimi/processes.kdl）
+- SurrealDB統合による高度な永続化（別クレート）
+- Webダッシュボード（Vue 3 + TypeScript + Vite + Tabler UI）
 - 自動バックアップ機能
 
 ## インストール方法
 
 ```bash
 # GitHubから特定のバージョンを直接インストール（推奨）
-cargo install --git https://github.com/chronista-club/ichimi-server --tag v0.1.0-beta10
+cargo install --git https://github.com/chronista-club/ichimi-server --tag v0.1.0-beta20
 
 # 最新のmainブランチからインストール
 cargo install --git https://github.com/chronista-club/ichimi-server
@@ -26,7 +26,7 @@ cargo install --git https://github.com/chronista-club/ichimi-server
 # ローカルでビルドしてインストール
 git clone https://github.com/chronista-club/ichimi-server.git
 cd ichimi-server
-cargo install --path .
+cargo install --path crates/ichimi
 ```
 
 ## ビルド・開発コマンド
@@ -63,24 +63,23 @@ ICHIMI_AUTO_EXPORT_INTERVAL=300 cargo run  # 5分ごとに自動エクスポー�
 
 ### モジュール構造
 
-コードベースは機能別モジュールに整理されています：
+プロジェクトはワークスペース構造で整理されています：
+
+### crates/ichimi - メインサーバークレート
 
 - **`src/lib.rs`**: MCP ツールハンドラーを持つメインサーバー実装。各ツールメソッドは `#[tool]` 属性で装飾され、Claude に公開される MCP ツールにマッピングされます。
 
 - **`src/messages/`**: リクエスト/レスポンスメッセージ構造体
   - `basic.rs`: シンプルなメッセージタイプ（echo、ping）
-  - `process.rs`: プロセス管理リクエストタイプ
+  - `process.rs`: プロセス管理リクエストタイプ（内部型）
   - `ci.rs`: CI監視リクエストタイプ
+  - `clipboard.rs`: クリップボード管理タイプ
   
 - **`src/process/`**: コアプロセス管理ロジック
-  - `manager.rs`: `ProcessManager` - プロセスライフサイクルを処理し、プロセスレジストリを維持
+  - `manager.rs`: `ProcessManager` - プロセスライフサイクルを処理
   - `buffer.rs`: `CircularBuffer` - 固定容量でメモリ効率的なログストレージ
-  - `types.rs`: ドメインタイプ（`ProcessState`、`ProcessInfo`、`ProcessStatus`）
-
-- **`src/persistence.rs`**: SurrealDB インメモリデータベースによる永続化層
-  - `PersistenceManager` - プロセスデータの保存/読み込み
-  - .surql ファイル形式でのエクスポート/インポート
-  - 起動時の自動インポート、定期的な自動エクスポート
+  - `protocol.rs`: プロセスプロトコル定義
+  - `shell.rs`: シェル統合
 
 - **`src/ci/`**: GitHub Actions CI監視
   - `CiMonitor` - gh CLIを使用したCI/CD パイプライン監視
@@ -88,10 +87,37 @@ ICHIMI_AUTO_EXPORT_INTERVAL=300 cargo run  # 5分ごとに自動エクスポー�
 
 - **`src/web/`**: Webダッシュボードサーバー
   - `server.rs`: HTTP サーバー実装（自動ポート選択機能付き）
+  - `handlers.rs`: APIハンドラー実装
+  - `api.rs`: APIルーティング
   - デフォルトポート 12700、占有時は自動で別ポートを選択
 
-- **`static/`**: Webダッシュボードアセット
-  - `index.html`: Alpine.js と Tabler UI を使用したSPA
+### crates/ichimi-persistence - 永続化レイヤー
+
+- **`src/lib.rs`**: 永続化インターフェース定義
+- **`src/kdl/`**: KDL形式の永続化実装（メイン）
+  - KDLファイル（.ichimi/processes.kdl）での設定管理
+  - 人間が読み書きしやすい形式
+- **`src/surrealdb/`**: SurrealDB統合
+  - 高度なクエリ機能
+  - JSONエクスポート/インポート
+  - 内部型からDB型への変換ロジック
+
+### ui/web - Vue 3 SPA
+
+- **モダンなフロントエンドスタック**:
+  - Vue 3 + TypeScript + Vite
+  - Pinia によるステート管理
+  - Vue Router によるルーティング
+  - Tabler UI フレームワーク
+  - Bun パッケージマネージャー
+
+- **主要ディレクトリ**:
+  - `src/components/`: 再利用可能なVueコンポーネント（SFC）
+  - `src/views/`: ページレベルコンポーネント
+  - `src/stores/`: Piniaステート管理
+  - `src/api/`: APIクライアント層
+  - `src/types/`: TypeScript型定義
+  - `src/themes.ts`: Ichimi Design System（OKLCH色空間）
 
 ### 主要な設計パターン
 
@@ -103,7 +129,10 @@ ICHIMI_AUTO_EXPORT_INTERVAL=300 cargo run  # 5分ごとに自動エクスポー�
 
 4. **ツールルーター**: `#[tool_router]` マクロが MCP ツールルーティングを生成。ツールは `CallToolResult` を返す非同期関数です。
 
-5. **永続化アーキテクチャ**: SurrealDB インメモリエンジン（kv-mem）を使用。プロセス定義は `UPDATE` クエリで保存され、配列やオブジェクトが適切に保持されます。
+5. **永続化アーキテクチャ**: 
+   - KDL形式（デフォルト）: 人間が読み書きしやすい設定ファイル形式
+   - SurrealDB統合: 高度なクエリと永続化が必要な場合に使用
+   - 内部型（ProcessInfo）とDB型（DbProcessInfo）の分離による柔軟な設計
 
 ## MCP 統合ポイント
 
@@ -155,17 +184,31 @@ cargo test test_export_import # 特定のテストを実行
 ## 開発のヒント
 
 1. **新しいMCPツールを追加する場合**：
-   - `src/messages/process.rs` にリクエスト型を定義
-   - `src/lib.rs` の `IchimiServer` impl ブロックにツールメソッドを追加
+   - `crates/ichimi/src/messages/` にリクエスト型を定義
+   - `crates/ichimi/src/lib.rs` の `IchimiServer` impl ブロックにツールメソッドを追加
    - `#[tool]` 属性でメソッドを装飾
 
 2. **プロセス管理ロジックを変更する場合**：
-   - `src/process/manager.rs` の `ProcessManager` を更新
-   - 状態遷移は `ProcessState` enum で定義
+   - `crates/ichimi/src/process/manager.rs` の `ProcessManager` を更新
+   - 内部型は `crates/ichimi/src/messages/process.rs` で定義
 
 3. **永続化を変更する場合**：
-   - `src/persistence.rs` の `PersistenceManager` を更新
-   - SurrealDB スキーマ定義に注意
+   - `crates/ichimi-persistence/src/` の該当モジュールを更新
+   - KDL形式とSurrealDB形式の両方をサポート
+   - 型変換関数（to_db_process_info/from_db_process_info）の更新
+
+4. **WebUI開発**：
+   ```bash
+   cd ui/web-vue
+   bun install        # 依存関係インストール
+   bun run dev        # 開発サーバー起動（ポート 5173）
+   bun run build      # プロダクションビルド → ui/web/dist
+   ```
+   
+   - Vue 3 SFCでコンポーネントを開発
+   - TypeScriptで完全な型安全性を確保
+   - Pinia storeで状態管理
+   - ui/web/distにビルド出力（Rustから配信）
 
 ## リリース手順
 

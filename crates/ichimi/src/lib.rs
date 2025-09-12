@@ -8,12 +8,10 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 pub mod ci;
-pub mod db;
 pub mod error;
 pub mod events;
 pub mod learning;
 pub mod messages;
-pub mod persistence;
 pub mod process;
 pub mod security;
 #[cfg(feature = "web")]
@@ -22,7 +20,7 @@ pub mod web;
 pub use error::{IchimiError, IchimiResult};
 
 use ci::CiMonitor;
-use db::Database;
+use ichimi_persistence::{Database, PersistenceManager};
 use events::EventSystem;
 use learning::LearningEngine;
 use messages::*;
@@ -375,6 +373,39 @@ impl IchimiServer {
         ))]))
     }
 
+    #[tool(description = "Create a snapshot of the entire database (processes, templates, clipboard)")]
+    async fn create_snapshot(&self) -> std::result::Result<CallToolResult, McpError> {
+        let path = self
+            .process_manager
+            .create_snapshot()
+            .await
+            .map_err(|e| McpError {
+                message: e.into(),
+                code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+                data: None,
+            })?;
+
+        Ok(CallToolResult::success(vec![Content::text(format!(
+            "Snapshot created successfully at {path}"
+        ))]))
+    }
+
+    #[tool(description = "Restore the database from the latest snapshot")]
+    async fn restore_snapshot(&self) -> std::result::Result<CallToolResult, McpError> {
+        self.process_manager
+            .restore_snapshot()
+            .await
+            .map_err(|e| McpError {
+                message: e.into(),
+                code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+                data: None,
+            })?;
+
+        Ok(CallToolResult::success(vec![Content::text(
+            "Snapshot restored successfully".to_string(),
+        )]))
+    }
+
     #[tool(description = "Update process configuration (auto_start flags)")]
     async fn update_process_config(
         &self,
@@ -667,6 +698,94 @@ impl IchimiServer {
             "CI monitoring started with {}s polling interval",
             request.poll_interval
         ))]))
+    }
+
+    // クリップボード関連ツール
+
+    #[tool(description = "Set clipboard content with text")]
+    async fn set_clipboard_text(
+        &self,
+        Parameters(SetClipboardTextRequest { content, tags }): Parameters<SetClipboardTextRequest>,
+    ) -> std::result::Result<CallToolResult, McpError> {
+        let persistence = PersistenceManager::with_database(self.database.clone());
+        
+        let mut item = persistence
+            .set_clipboard_text(content)
+            .await
+            .map_err(|e| McpError {
+                message: e.into(),
+                code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+                data: None,
+            })?;
+
+        if !tags.is_empty() {
+            item.tags = tags;
+            persistence
+                .save_clipboard_item(&item)
+                .await
+                .map_err(|e| McpError {
+                    message: e.into(),
+                    code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+                    data: None,
+                })?;
+        }
+
+        let response = ClipboardResponse {
+            id: item.clipboard_id,
+            content: item.content,
+            filename: item.filename,
+            created_at: item.created_at.to_rfc3339(),
+            updated_at: item.updated_at.to_rfc3339(),
+            content_type: item.content_type.unwrap_or_else(|| "text".to_string()),
+            tags: item.tags,
+        };
+
+        let json = serde_json::to_string_pretty(&response).map_err(|e| McpError {
+            message: format!("Failed to serialize response: {e}").into(),
+            code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+            data: None,
+        })?;
+
+        Ok(CallToolResult::success(vec![Content::text(json)]))
+    }
+
+    #[tool(description = "Get the latest clipboard content")]
+    async fn get_clipboard(
+        &self,
+        Parameters(_request): Parameters<GetClipboardRequest>,
+    ) -> std::result::Result<CallToolResult, McpError> {
+        let persistence = PersistenceManager::with_database(self.database.clone());
+        
+        let item = persistence
+            .get_latest_clipboard_item()
+            .await
+            .map_err(|e| McpError {
+                message: e.into(),
+                code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+                data: None,
+            })?;
+
+        if let Some(item) = item {
+            let response = ClipboardResponse {
+                id: item.clipboard_id,
+                content: item.content,
+                filename: item.filename,
+                created_at: item.created_at.to_rfc3339(),
+                updated_at: item.updated_at.to_rfc3339(),
+                content_type: item.content_type.unwrap_or_else(|| "text".to_string()),
+                tags: item.tags,
+            };
+
+            let json = serde_json::to_string_pretty(&response).map_err(|e| McpError {
+                message: format!("Failed to serialize response: {e}").into(),
+                code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+                data: None,
+            })?;
+
+            Ok(CallToolResult::success(vec![Content::text(json)]))
+        } else {
+            Ok(CallToolResult::success(vec![Content::text("No clipboard content available")]))
+        }
     }
 
     #[tool(description = "Open the Ichimi web console in your browser")]

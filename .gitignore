@@ -36,9 +36,17 @@ Thumbs.db
 # Vendor files (Tabler and other external libraries)
 static/vendor/ichimi_export.json
 
+# Node modules
+node_modules/
+ui/web/node_modules/
+ui/web-vue/node_modules/
+ui/web-vue/dist/
+
 # フォークしたリポジトリ（別途管理）
 facet-kdl/
 facet-toml/
 
 # データベースファイル
 data/
+
+.ichimi

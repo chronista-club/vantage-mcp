@@ -322,7 +322,7 @@ at your option.
 
 - Built with [rmcp](https://github.com/modelcontextprotocol/rust-sdk) - Rust MCP SDK
 - Database powered by [SurrealDB](https://surrealdb.com/) - In-memory document database
-- UI framework: [Alpine.js](https://alpinejs.dev/) & [Tabler](https://tabler.io/)
+- UI framework: [Vue 3](https://vuejs.org/) + [TypeScript](https://www.typescriptlang.org/) + [Vite](https://vitejs.dev/) + [Tabler](https://tabler.io/)
 - Inspired by the Model Context Protocol specification
 - Part of the Chronista Club ecosystem
 

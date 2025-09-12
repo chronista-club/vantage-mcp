@@ -1,14 +1,29 @@
 {
-  "name": "ichimi-web-console",
-  "version": "0.1.0",
+  "name": "ichimi-web-vue",
+  "private": true,
+  "version": "0.1.0-beta20",
+  "description": "Vue 3 + TypeScript Web Dashboard for Ichimi Server - Process Management MCP Server",
+  "type": "module",
   "scripts": {
-    "build": "bun run build.ts",
-    "type-check": "tsc --noEmit",
-    "test": "bun run type-check && bun run build"
+    "dev": "vite",
+    "build": "vue-tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@tabler/core": "^1.4.0",
+    "@tabler/icons-vue": "^3.34.1",
+    "axios": "^1.12.0",
+    "pinia": "^3.0.3",
+    "vue": "^3.5.18",
+    "vue-router": "4"
   },
   "devDependencies": {
-    "@types/bun": "^1.2.21",
-    "@types/alpinejs": "^3.13.11",
-    "typescript": "^5.0.0"
+    "@types/node": "^24.3.1",
+    "@vitejs/plugin-vue": "^6.0.1",
+    "@vue/tsconfig": "^0.8.1",
+    "sass": "^1.92.1",
+    "typescript": "~5.8.3",
+    "vite": "^7.1.2",
+    "vue-tsc": "^3.0.5"
   }
 }

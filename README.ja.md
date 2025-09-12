@@ -344,7 +344,7 @@ ichimi-server/
 - **[Model Context Protocol](https://modelcontextprotocol.io/)** - 革新的な統合仕様
 - **[rmcp](https://github.com/modelcontextprotocol/rust-sdk)** - Rust MCP SDK
 - **[SurrealDB](https://surrealdb.com/)** - 高性能インメモリデータベース  
-- **UI フレームワーク**: [Alpine.js](https://alpinejs.dev/) & [Tabler](https://tabler.io/)
+- **UI フレームワーク**: [Vue 3](https://vuejs.org/) + [TypeScript](https://www.typescriptlang.org/) + [Vite](https://vitejs.dev/) + [Tabler](https://tabler.io/)
 - **Chronista Club エコシステム** - 革新的ツールチェーンの一部
 
 ## 💬 サポート & コミュニティ

@@ -149,7 +149,7 @@ async fn main() -> Result<()> {
             .init();
 
         if web_only {
-            tracing::info!("Starting Ichimi Server (web-only mode)");
+            tracing::info!("🚀 Starting Ichimi Development Server (web-only mode)");
         } else if run_mcp && web_enabled {
             tracing::info!("Starting Ichimi Server (MCP + web mode)");
         } else {
@@ -261,9 +261,10 @@ async fn main() -> Result<()> {
         tracing::info!("Web dashboard enabled on port {}", web_port);
 
         let web_manager = process_manager.clone();
+        let web_persistence = ichimi_persistence::PersistenceManager::with_database(process_manager.database());
 
         // Start web server and get actual port
-        let actual_port = match ichimi_server::web::start_web_server(web_manager, web_port).await {
+        let actual_port = match ichimi_server::web::start_web_server(web_manager, web_persistence, web_port).await {
             Ok(port) => {
                 tracing::debug!("Web server started on actual port {}", port);
                 port

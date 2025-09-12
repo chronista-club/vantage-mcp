@@ -1,9 +1,7 @@
 use super::buffer::CircularBuffer;
-use super::template::ProcessTemplate;
 use super::types::*;
-use crate::db::Database;
-use crate::persistence::PersistenceManager;
-use crate::web::handlers::Settings;
+use ichimi_persistence::{Database, PersistenceManager, ProcessTemplate, Settings};
+use ichimi_persistence::{ProcessInfo as DbProcessInfo, ProcessState as DbProcessState, ProcessStatus as DbProcessStatus};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process::Stdio;
@@ -13,6 +11,7 @@ use tokio::process::{Child, Command};
 use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
 use tracing::{debug, error, info, warn};
+use chrono::Utc;
 
 /// 管理されるプロセス
 pub struct ManagedProcess {
@@ -57,6 +56,81 @@ pub struct ProcessManager {
     database: Arc<Database>,
 }
 
+// 型変換ヘルパー関数
+impl ProcessManager {
+    fn to_db_process_info(info: &ProcessInfo) -> DbProcessInfo {
+        DbProcessInfo {
+            id: None,
+            process_id: info.id.clone(),
+            name: info.id.clone(),
+            command: info.command.clone(),
+            args: info.args.clone(),
+            env: info.env.clone(),
+            cwd: info.cwd.as_ref().map(|p| p.to_string_lossy().to_string()),
+            status: DbProcessStatus {
+                state: match &info.state {
+                    ProcessState::NotStarted => DbProcessState::NotStarted,
+                    ProcessState::Running { .. } => DbProcessState::Running,
+                    ProcessState::Stopped { .. } => DbProcessState::Stopped,
+                    ProcessState::Failed { .. } => DbProcessState::Failed,
+                },
+                pid: match &info.state {
+                    ProcessState::Running { pid, .. } => Some(*pid),
+                    _ => None,
+                },
+                exit_code: match &info.state {
+                    ProcessState::Stopped { exit_code, .. } => *exit_code,
+                    _ => None,
+                },
+                started_at: match &info.state {
+                    ProcessState::Running { started_at, .. } => Some(*started_at),
+                    _ => None,
+                },
+                stopped_at: match &info.state {
+                    ProcessState::Stopped { stopped_at, .. } => Some(*stopped_at),
+                    ProcessState::Failed { failed_at, .. } => Some(*failed_at),
+                    _ => None,
+                },
+                error: match &info.state {
+                    ProcessState::Failed { error, .. } => Some(error.clone()),
+                    _ => None,
+                },
+            },
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            tags: vec![],
+            auto_start: info.auto_start_on_restore,
+        }
+    }
+
+    fn from_db_process_info(db_info: DbProcessInfo) -> ProcessInfo {
+        ProcessInfo {
+            id: db_info.process_id.clone(),
+            command: db_info.command,
+            args: db_info.args,
+            env: db_info.env,
+            cwd: db_info.cwd.map(PathBuf::from),
+            state: match (db_info.status.state, db_info.status.pid, db_info.status.started_at, db_info.status.stopped_at, db_info.status.exit_code, db_info.status.error.as_ref()) {
+                (DbProcessState::NotStarted, _, _, _, _, _) => ProcessState::NotStarted,
+                (DbProcessState::Running, Some(pid), Some(started_at), _, _, _) => ProcessState::Running {
+                    pid,
+                    started_at,
+                },
+                (DbProcessState::Stopped, _, _, Some(stopped_at), exit_code, _) => ProcessState::Stopped {
+                    exit_code,
+                    stopped_at,
+                },
+                (DbProcessState::Failed, _, _, Some(failed_at), _, Some(error)) => ProcessState::Failed {
+                    error: error.clone(),
+                    failed_at,
+                },
+                _ => ProcessState::NotStarted, // Default fallback
+            },
+            auto_start_on_restore: db_info.auto_start,
+        }
+    }
+}
+
 impl ProcessManager {
     pub async fn new() -> Self {
         let database = match Database::new().await {
@@ -73,6 +147,11 @@ impl ProcessManager {
     /// Get the database instance
     pub fn database(&self) -> Arc<Database> {
         self.database.clone()
+    }
+
+    /// Get the persistence manager instance
+    pub fn persistence_manager(&self) -> Arc<PersistenceManager> {
+        self.persistence.clone()
     }
 
     pub async fn with_database(database: Arc<Database>) -> Self {
@@ -92,26 +171,38 @@ impl ProcessManager {
             }
         });
 
-        // Start auto-export if enabled
-        if let Ok(interval_str) = std::env::var("ICHIMI_AUTO_EXPORT_INTERVAL") {
-            if let Ok(interval_secs) = interval_str.parse::<u64>() {
-                if interval_secs > 0 {
-                    let manager_clone = manager.clone();
-                    tokio::spawn(async move {
-                        let mut interval =
-                            tokio::time::interval(tokio::time::Duration::from_secs(interval_secs));
-                        loop {
-                            interval.tick().await;
-                            if let Err(e) = manager_clone.export_processes(None).await {
-                                tracing::warn!("Auto-export failed: {}", e);
-                            } else {
-                                tracing::debug!("Auto-export completed");
-                            }
-                        }
-                    });
-                    tracing::info!("Auto-export enabled with interval: {}s", interval_secs);
-                }
+        // Restore from snapshot on startup
+        let persistence_clone = persistence.clone();
+        tokio::spawn(async move {
+            // Check if snapshot exists and restore
+            if let Err(e) = persistence_clone.restore_snapshot().await {
+                tracing::debug!("No snapshot to restore or restore failed: {}", e);
+            } else {
+                tracing::info!("Successfully restored from snapshot");
             }
+        });
+
+        // Start auto-export with default interval of 60 seconds if not specified
+        let interval_secs = std::env::var("ICHIMI_AUTO_EXPORT_INTERVAL")
+            .ok()
+            .and_then(|s| s.parse::<u64>().ok())
+            .unwrap_or(60); // Default to 60 seconds
+
+        if interval_secs > 0 {
+            let persistence_clone = persistence.clone();
+            tokio::spawn(async move {
+                let mut interval =
+                    tokio::time::interval(tokio::time::Duration::from_secs(interval_secs));
+                loop {
+                    interval.tick().await;
+                    if let Err(e) = persistence_clone.create_snapshot().await {
+                        tracing::warn!("Auto-snapshot failed: {}", e);
+                    } else {
+                        tracing::debug!("Auto-snapshot completed");
+                    }
+                }
+            });
+            tracing::info!("Auto-snapshot enabled with interval: {}s", interval_secs);
         }
 
         manager
@@ -122,12 +213,13 @@ impl ProcessManager {
         let mut processes = self.processes.write().await;
         let mut auto_start_processes = Vec::new();
 
-        for (id, info) in loaded_processes {
+        for (id, db_info) in loaded_processes {
             // Check if this process should be auto-started on restore
-            if info.auto_start_on_restore {
+            if db_info.auto_start {
                 auto_start_processes.push(id.clone());
             }
 
+            let info = Self::from_db_process_info(db_info);
             let managed = ManagedProcess {
                 info,
                 stdout_buffer: CircularBuffer::new(1000),
@@ -208,7 +300,8 @@ impl ProcessManager {
         drop(processes);
 
         // Persist the process
-        match self.persistence.save_process(&process_info).await {
+        let db_process_info = Self::to_db_process_info(&process_info);
+        match self.persistence.save_process(&db_process_info).await {
             Ok(_) => tracing::debug!("Process {} persisted successfully", id),
             Err(e) => tracing::warn!("Failed to persist process {}: {}", id, e),
         }
@@ -298,7 +391,8 @@ impl ProcessManager {
         process.output_handles = Some((stdout_handle, stderr_handle));
 
         // Persist the updated state
-        if let Err(e) = self.persistence.update_process(&process.info).await {
+        let db_info = Self::to_db_process_info(&process.info);
+        if let Err(e) = self.persistence.update_process(&db_info).await {
             tracing::warn!("Failed to persist process state: {}", e);
         }
 
@@ -328,7 +422,8 @@ impl ProcessManager {
                         };
                         
                         // 永続化
-                        if let Err(e) = persistence_clone.update_process(&process.info).await {
+                        let db_info = ProcessManager::to_db_process_info(&process.info);
+                        if let Err(e) = persistence_clone.update_process(&db_info).await {
                             tracing::warn!("Failed to persist stopped process state: {}", e);
                         }
                         
@@ -345,7 +440,8 @@ impl ProcessManager {
                         };
                         
                         // 永続化
-                        if let Err(e) = persistence_clone.update_process(&process.info).await {
+                        let db_info = ProcessManager::to_db_process_info(&process.info);
+                        if let Err(e) = persistence_clone.update_process(&db_info).await {
                             tracing::warn!("Failed to persist failed process state: {}", e);
                         }
                     }
@@ -410,7 +506,8 @@ impl ProcessManager {
             };
 
             // Persist the updated state
-            if let Err(e) = self.persistence.update_process(&process.info).await {
+            let db_info = Self::to_db_process_info(&process.info);
+            if let Err(e) = self.persistence.update_process(&db_info).await {
                 tracing::warn!("Failed to persist process state: {}", e);
             }
 
@@ -579,16 +676,22 @@ impl ProcessManager {
     /// Export processes to surql file
     pub async fn export_processes(&self, file_path: Option<String>) -> Result<String, String> {
         let path = match file_path {
-            Some(p) => std::path::PathBuf::from(p),
-            None => Database::get_default_data_path(),
+            Some(p) => p,
+            None => {
+                let snapshot_dir = std::env::var("HOME")
+                    .map(|home| format!("{}/.ichimi", home))
+                    .unwrap_or_else(|_| ".ichimi".to_string());
+                format!("{}/snapshot.surql", snapshot_dir)
+            }
         };
 
-        self.database
-            .export_to_file(&path)
+        // Use PersistenceManager's export_to_surql to include all tables
+        self.persistence
+            .export_to_surql(&path)
             .await
-            .map_err(|e| format!("Failed to export processes: {e}"))?;
+            .map_err(|e| format!("Failed to export: {e}"))?;
 
-        Ok(path.to_string_lossy().to_string())
+        Ok(path)
     }
 
     /// Import processes from surql file
@@ -605,6 +708,18 @@ impl ProcessManager {
         self.load_persisted_processes().await?;
 
         Ok(())
+    }
+
+    /// Create a snapshot of the entire database
+    pub async fn create_snapshot(&self) -> Result<String, String> {
+        let persistence = PersistenceManager::with_database(self.database.clone());
+        persistence.create_snapshot().await
+    }
+
+    /// Restore from the latest snapshot
+    pub async fn restore_snapshot(&self) -> Result<(), String> {
+        let persistence = PersistenceManager::with_database(self.database.clone());
+        persistence.restore_snapshot().await
     }
 
     /// Update process configuration (auto_start flags)
@@ -629,7 +744,8 @@ impl ProcessManager {
         }
 
         // Persist the updated configuration
-        if let Err(e) = self.persistence.update_process(&process.info).await {
+        let db_info = Self::to_db_process_info(&process.info);
+        if let Err(e) = self.persistence.update_process(&db_info).await {
             return Err(format!("Failed to persist process config update: {e}"));
         }
 
@@ -687,7 +803,8 @@ impl ProcessManager {
         }
 
         // Persist the updated configuration
-        if let Err(e) = self.persistence.update_process(&process.info).await {
+        let db_info = Self::to_db_process_info(&process.info);
+        if let Err(e) = self.persistence.update_process(&db_info).await {
             return Err(format!("Failed to persist process update: {e}"));
         }
 

@@ -1,0 +1,92 @@
+[tools]
+bun = "latest"
+
+[tasks.build-web]
+description = "Build web UI with Bun"
+dir = "ui/web"
+run = "bun run build"
+
+[tasks.web]
+description = "Run Ichimi server with web dashboard"
+run = "RUST_LOG=info cargo run --bin ichimi -- --web-only"
+
+[tasks.dev]
+description = "Build web console and run Ichimi server"
+depends = ["build-web"]
+run = "RUST_LOG=info cargo run --bin ichimi -- --web-only"
+
+[tasks.dev-watch]
+description = "Development server with auto-reload (Rust + Web)"
+run = """
+    # Kill any existing processes
+    pkill -f 'cargo run.*ichimi' || true
+    # Start cargo-watch for Rust code auto-reload
+    cargo watch -x 'run --bin ichimi -- --web-only' &
+    # Store PID for cleanup
+    CARGO_PID=$!
+    echo "Started cargo-watch with PID: $CARGO_PID"
+    # Wait for SIGTERM
+    trap "kill $CARGO_PID 2>/dev/null || true" EXIT
+    wait
+"""
+
+[tasks.web-watch]
+description = "Watch and build web assets only"
+dir = "ui/web"
+run = "bun run build --watch"
+
+# ローカルインストールタスク
+[tasks.install]
+description = "Build release and install to ~/.local/bin"
+run = """
+    echo "🚀 Building release version..."
+    cargo build --release
+    mkdir -p ~/.local/bin
+    cp target/release/ichimi ~/.local/bin/
+    chmod +x ~/.local/bin/ichimi
+    echo "✅ Installed to ~/.local/bin/ichimi"
+    ~/.local/bin/ichimi --version
+"""
+
+[tasks.install-debug]
+description = "Build debug and install to ~/.local/bin (fast)"
+run = """
+    echo "🚀 Building debug version..."
+    cargo build
+    mkdir -p ~/.local/bin
+    cp target/debug/ichimi ~/.local/bin/
+    chmod +x ~/.local/bin/ichimi
+    echo "✅ Installed debug build to ~/.local/bin/ichimi"
+    ~/.local/bin/ichimi --version
+"""
+
+[tasks.build]
+description = "Build release version"
+run = "cargo build --release"
+
+[tasks.build-debug]
+description = "Build debug version"
+run = "cargo build"
+
+[tasks.test]
+description = "Run all tests"
+run = "cargo test"
+
+[tasks.check]
+description = "Check code without building"
+run = "cargo check"
+
+[tasks.clean]
+description = "Clean build artifacts"
+run = "cargo clean"
+
+[tasks.uninstall]
+description = "Remove ichimi from ~/.local/bin"
+run = """
+    if [ -f ~/.local/bin/ichimi ]; then
+        rm -f ~/.local/bin/ichimi
+        echo "✅ Uninstalled ichimi from ~/.local/bin"
+    else
+        echo "⚠️  ichimi not found in ~/.local/bin"
+    fi
+"""

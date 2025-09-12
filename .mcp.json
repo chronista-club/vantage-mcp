@@ -1,17 +1,5 @@
 {
   "mcpServers": {
-    "ichimi": {
-      "type": "stdio",
-      "command": "./target/release/ichimi",
-      "args": [
-        "--web",
-        "--web-port",
-        "12699"
-      ],
-      "env": {
-        "RUST_LOG": "info"
-      }
-    },
     "serena": {
       "type": "stdio",
       "command": "uvx",

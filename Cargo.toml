@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/ichimi"]
+members = ["crates/ichimi", "crates/ichimi-persistence"]
 resolver = "2"
 
 [workspace.package]

@@ -1,0 +1,76 @@
+// Ichimi Design System - プロセスフロー準拠カラーシステム
+// OKLCH色空間を使用した色定義
+
+// Creative: 実行・開始 (プロセス開始) - 青色系テーマカラー
+$btn-green-bg: oklch(0.55 0.12 240);
+$btn-green-hover: oklch(0.5 0.14 240);
+$btn-green-active: oklch(0.45 0.16 240);
+
+// Provision: 配備・停止 (プロセス停止)
+$btn-yellow-bg: oklch(0.55 0.12 45);
+$btn-yellow-hover: oklch(0.5 0.14 45);
+$btn-yellow-active: oklch(0.45 0.16 45);
+
+// Broadcast: 削除・終了 (プロセス削除)
+$btn-red-bg: oklch(0.6843 0.1921 351.47);
+$btn-red-hover: oklch(0.6343 0.2121 351.47);
+$btn-red-active: oklch(0.5843 0.2321 351.47);
+
+// Develop: メイン開発機能 (プライマリアクション)
+$btn-primary-bg: oklch(0.4823 0.0922 308.37);
+$btn-primary-hover: oklch(0.4323 0.1122 308.37);
+$btn-primary-active: oklch(0.3823 0.1322 308.37);
+
+// Research: セカンダリ・調査 (サポート機能)
+$btn-secondary-bg: oklch(0.2627 0.0977 311.87);
+$btn-secondary-hover: oklch(0.2627 0.0977 311.87 / 0.1);
+$btn-secondary-active: oklch(0.2627 0.0977 311.87 / 0.15);
+
+// Finished: 完了・終了 (完了済み状態)
+$btn-gray-bg: oklch(0.5547 0.0134 258.34);
+$btn-gray-hover: oklch(0.5047 0.0234 258.34);
+$btn-gray-active: oklch(0.4547 0.0334 258.34);
+
+// CSS Custom Properties for runtime theming
+:root {
+  // Creative button (Start)
+  --ichimi-btn-green-bg: #{$btn-green-bg};
+  --ichimi-btn-green-hover: #{$btn-green-hover};
+  --ichimi-btn-green-active: #{$btn-green-active};
+  
+  // Provision button (Stop)
+  --ichimi-btn-yellow-bg: #{$btn-yellow-bg};
+  --ichimi-btn-yellow-hover: #{$btn-yellow-hover};
+  --ichimi-btn-yellow-active: #{$btn-yellow-active};
+  
+  // Broadcast button (Remove)
+  --ichimi-btn-red-bg: #{$btn-red-bg};
+  --ichimi-btn-red-hover: #{$btn-red-hover};
+  --ichimi-btn-red-active: #{$btn-red-active};
+  
+  // Develop button (Primary)
+  --ichimi-btn-primary-bg: #{$btn-primary-bg};
+  --ichimi-btn-primary-hover: #{$btn-primary-hover};
+  --ichimi-btn-primary-active: #{$btn-primary-active};
+  
+  // Research button (Secondary)
+  --ichimi-btn-secondary-bg: #{$btn-secondary-bg};
+  --ichimi-btn-secondary-hover: #{$btn-secondary-hover};
+  --ichimi-btn-secondary-active: #{$btn-secondary-active};
+  
+  // Finished button (Gray)
+  --ichimi-btn-gray-bg: #{$btn-gray-bg};
+  --ichimi-btn-gray-hover: #{$btn-gray-hover};
+  --ichimi-btn-gray-active: #{$btn-gray-active};
+}
+
+// Dark mode overrides
+.dark {
+  // Adjust lightness for dark mode
+  --ichimi-btn-green-bg: oklch(0.65 0.12 240);
+  --ichimi-btn-yellow-bg: oklch(0.65 0.12 45);
+  --ichimi-btn-red-bg: oklch(0.7843 0.1921 351.47);
+  --ichimi-btn-primary-bg: oklch(0.5823 0.0922 308.37);
+  --ichimi-btn-secondary-bg: oklch(0.3627 0.0977 311.87);
+  --ichimi-btn-gray-bg: oklch(0.6547 0.0134 258.34);
+}
