@@ -23,7 +23,13 @@ export const useSettingsStore = defineStore('settings', () => {
     loading.value = true;
     error.value = null;
     try {
-      settings.value = await apiClient.getSettings();
+      const serverSettings = await apiClient.getSettings();
+      // Preserve local theme preference if it exists
+      const localTheme = localStorage.getItem('ichimi-theme') as 'light' | 'dark' | null;
+      if (localTheme) {
+        serverSettings.theme = localTheme;
+      }
+      settings.value = serverSettings;
       applyTheme(settings.value.theme);
     } catch (e: any) {
       error.value = e.message || 'Failed to load settings';
@@ -53,7 +59,16 @@ export const useSettingsStore = defineStore('settings', () => {
 
   function toggleTheme() {
     const newTheme = settings.value.theme === 'light' ? 'dark' : 'light';
-    updateSettings({ theme: newTheme });
+    settings.value.theme = newTheme;
+    applyTheme(newTheme);
+    // Save to backend asynchronously
+    updateSettings({ theme: newTheme }).catch((e) => {
+      console.error('Failed to save theme preference:', e);
+      // Revert on error
+      const oldTheme = newTheme === 'light' ? 'dark' : 'light';
+      settings.value.theme = oldTheme;
+      applyTheme(oldTheme);
+    });
   }
 
   function setViewMode(mode: 'card' | 'table') {
