@@ -814,9 +814,9 @@ impl IchimiServer {
             content: item.content,
             filename: item.filename,
             created_at: item.created_at.to_rfc3339(),
-                updated_at: item.updated_at.to_rfc3339(),
-                content_type: item.content_type.unwrap_or_else(|| "text".to_string()),
-                tags: item.tags,
+            updated_at: item.updated_at.to_rfc3339(),
+            content_type: item.content_type.unwrap_or_else(|| "text".to_string()),
+            tags: item.tags,
         };
 
         let json = serde_json::to_string_pretty(&response).map_err(|e| McpError {

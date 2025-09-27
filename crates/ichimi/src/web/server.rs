@@ -73,7 +73,10 @@ async fn bind_to_available_port(
     }
 }
 
-fn create_app(process_manager: ProcessManager, persistence_manager: Arc<PersistenceManager>) -> Router {
+fn create_app(
+    process_manager: ProcessManager,
+    persistence_manager: Arc<PersistenceManager>,
+) -> Router {
     let app_state = AppState {
         process_manager: Arc::new(process_manager),
         persistence_manager,

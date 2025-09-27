@@ -286,7 +286,11 @@ impl PersistenceManager {
     }
 
     /// Search clipboard items by content
-    pub async fn search_clipboard_items(&self, query: &str, limit: usize) -> Result<Vec<ClipboardItem>, String> {
+    pub async fn search_clipboard_items(
+        &self,
+        query: &str,
+        limit: usize,
+    ) -> Result<Vec<ClipboardItem>, String> {
         let clipboard = self.clipboard.read().await;
         let query_lower = query.to_lowercase();
         let items: Vec<ClipboardItem> = clipboard

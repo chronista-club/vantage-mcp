@@ -18,7 +18,6 @@ pub enum ProcessState {
     Failed,
 }
 
-
 /// Process status including state and additional information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProcessStatus {
