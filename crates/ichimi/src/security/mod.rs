@@ -59,10 +59,9 @@ pub fn validate_args(args: &[String]) -> Result<(), String> {
         }
 
         // シェル展開文字をチェック（ただし、オプション引数は許可）
-        if !arg.starts_with('-')
-            && (arg.contains('$') || arg.contains('`') || arg.contains("$(")) {
-                return Err(format!("Argument contains shell expansion: '{arg}'"));
-            }
+        if !arg.starts_with('-') && (arg.contains('$') || arg.contains('`') || arg.contains("$(")) {
+            return Err(format!("Argument contains shell expansion: '{arg}'"));
+        }
     }
 
     Ok(())
