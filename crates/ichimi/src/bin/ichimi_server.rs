@@ -282,27 +282,45 @@ async fn main() -> Result<()> {
     let webdriver_client_for_shutdown = webdriver_client.clone();
 
     // Auto-import processes on startup if configured
-    let import_file = env::var("ICHIMI_IMPORT_FILE").unwrap_or_else(|_| {
-        std::env::current_dir()
-            .unwrap_or_else(|_| std::path::PathBuf::from("."))
-            .join(".ichimi")
-            .join("snapshot.surql")
-            .to_string_lossy()
-            .to_string()
-    });
+    // First try YAML snapshot for auto-start processes
+    let yaml_snapshot = std::env::var("HOME")
+        .map(|home| format!("{}/.ichimi/snapshot.yaml", home))
+        .unwrap_or_else(|_| ".ichimi/snapshot.yaml".to_string());
 
-    if std::path::Path::new(&import_file).exists() {
-        tracing::info!("Auto-importing processes from: {}", import_file);
-        match process_manager.import_processes(&import_file).await {
+    if std::path::Path::new(&yaml_snapshot).exists() {
+        tracing::info!("Restoring from YAML snapshot: {}", yaml_snapshot);
+        match process_manager.restore_yaml_snapshot().await {
             Ok(_) => {
-                tracing::info!("Successfully imported processes from {}", import_file);
+                tracing::info!("Successfully restored processes from YAML snapshot");
             }
             Err(e) => {
-                tracing::warn!("Failed to auto-import processes: {}", e);
+                tracing::warn!("Failed to restore YAML snapshot: {}", e);
             }
         }
     } else {
-        tracing::debug!("No import file found at: {}", import_file);
+        // Fall back to SurrealDB import if no YAML snapshot
+        let import_file = env::var("ICHIMI_IMPORT_FILE").unwrap_or_else(|_| {
+            std::env::current_dir()
+                .unwrap_or_else(|_| std::path::PathBuf::from("."))
+                .join(".ichimi")
+                .join("snapshot.surql")
+                .to_string_lossy()
+                .to_string()
+        });
+
+        if std::path::Path::new(&import_file).exists() {
+            tracing::info!("Auto-importing processes from: {}", import_file);
+            match process_manager.import_processes(&import_file).await {
+                Ok(_) => {
+                    tracing::info!("Successfully imported processes from {}", import_file);
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to auto-import processes: {}", e);
+                }
+            }
+        } else {
+            tracing::debug!("No import file found at: {}", import_file);
+        }
     }
 
     // Note: We always stop all processes on shutdown to ensure clean state
@@ -339,7 +357,17 @@ async fn main() -> Result<()> {
             tracing::info!("Received shutdown signal, exporting processes and stopping all...");
         }
         
-        // First, export the current state
+        // First, create YAML snapshot of auto-start processes
+        match pm_for_shutdown.create_auto_start_snapshot().await {
+            Ok(path) => {
+                tracing::info!("Created auto-start snapshot at {}", path);
+            }
+            Err(e) => {
+                tracing::error!("Failed to create auto-start snapshot: {}", e);
+            }
+        }
+
+        // Also export the full SurrealDB snapshot
         let export_file = env::var("ICHIMI_EXPORT_FILE").unwrap_or_else(|_| {
             std::env::current_dir()
                 .unwrap_or_else(|_| std::path::PathBuf::from("."))

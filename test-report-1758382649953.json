@@ -1,0 +1,39 @@
+{
+  "suites": [
+    {
+      "name": "Graceful Shutdown Tests",
+      "tests": [
+        {
+          "name": "Graceful Shutdown",
+          "passed": false,
+          "duration": 11064,
+          "error": "Process did not stop within timeout"
+        },
+        {
+          "name": "Force Kill",
+          "passed": false,
+          "duration": 11044,
+          "error": "Process did not stop within timeout"
+        },
+        {
+          "name": "Normal Completion",
+          "passed": false,
+          "duration": 15084,
+          "error": "undefined is not an object (evaluating 'logs.length')"
+        }
+      ]
+    }
+  ],
+  "totalTests": 3,
+  "passedTests": 0,
+  "failedTests": 3,
+  "totalDuration": 1,
+  "startTime": "2025-09-20T15:37:29.952Z",
+  "endTime": "2025-09-20T15:37:29.953Z",
+  "timestamp": "2025-09-20T15:37:29.953Z",
+  "environment": {
+    "platform": "darwin",
+    "node_version": "v24.3.0",
+    "bun_version": "1.2.22"
+  }
+}

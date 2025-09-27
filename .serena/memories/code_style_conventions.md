@@ -1,71 +1,101 @@
-# Ichimi Server コーディング規約
+# Code Style and Conventions
 
-## Rustコードスタイル
+## Rust Code Style
 
-### 命名規則
-- **構造体/Enum**: PascalCase（例: `ProcessManager`, `ProcessState`）
-- **関数/メソッド**: snake_case（例: `create_process`, `get_status`）
-- **定数**: SCREAMING_SNAKE_CASE（例: `DEFAULT_BUFFER_SIZE`）
-- **モジュール**: snake_case（例: `process_manager`）
+### General Principles
+- Follow standard Rust naming conventions (snake_case for functions/variables, CamelCase for types)
+- Use `rustfmt` for automatic formatting
+- Follow `clippy` recommendations
+- Prefer explicit error handling with `Result<T, E>`
+- Use `async/await` for asynchronous operations
 
-### 型とエラーハンドリング
-- `Result<T, String>` を広く使用（簡易エラー型）
-- 本番コードでは `anyhow::Result` を使用
-- `Arc<RwLock<T>>` で共有状態を管理
-- `async/await` を積極的に使用
+### Project-Specific Patterns
 
-### ドキュメント
-- モジュールレベルに `///` コメント
-- 公開APIには必ずドキュメント
-- 日本語コメントOK（内部実装の説明）
+#### Arc<RwLock> Pattern
+- Used for thread-safe concurrent access to shared state
+- ProcessManager uses `Arc<RwLock<HashMap>>` for process management
+- Each process wrapped in `Arc<RwLock>` for fine-grained locking
 
-### コード構成
-```rust
-// 1. use文（外部クレート → 標準ライブラリ → 内部モジュール）
-use anyhow::Result;
-use std::sync::Arc;
-use crate::process::ProcessManager;
+#### State Machine Pattern
+- Process states: `NotStarted` → `Running` → `Stopped`/`Failed`
+- State transitions are atomic with timestamps
 
-// 2. 型定義
-pub struct Server {
-    // ...
-}
+#### Error Handling
+- Use `anyhow` for application errors
+- Use `thiserror` for library errors
+- All process operations return `Result<T, String>`
+- MCP errors use `ErrorCode::INTERNAL_ERROR`
 
-// 3. impl ブロック
-impl Server {
-    pub async fn new() -> Result<Self> {
-        // ...
-    }
-}
-
-// 4. プライベート関数
-fn helper_function() {
-    // ...
-}
+#### Module Organization
+```
+crates/
+├── ichimi/           # Main server crate
+│   ├── src/
+│   │   ├── lib.rs    # Core server with MCP tools
+│   │   ├── bin/      # Binary entry points
+│   │   ├── process/  # Process management
+│   │   ├── web/      # Web server
+│   │   ├── messages/ # MCP message types
+│   │   ├── ci/       # CI/CD monitoring
+│   │   └── events/   # Event system
+└── ichimi-persistence/ # Persistence layer
+    ├── src/
+    │   ├── lib.rs    # Persistence interface
+    │   ├── kdl/      # KDL format
+    │   └── surrealdb/ # SurrealDB integration
 ```
 
-### テスト
-- ユニットテストは同じファイルの `#[cfg(test)]` モジュール内
-- 統合テストは `tests/` ディレクトリ
-- `cargo test` で全テスト実行
+### Documentation
+- Use doc comments (`///`) for public APIs
+- Include examples in doc comments when helpful
+- Document safety requirements for unsafe code
 
-### フォーマットとLint
-- `cargo fmt` でフォーマット（コミット前に必須）
-- `cargo clippy` でLintチェック
-- 警告は可能な限り解消
+## Frontend Code Style (Vue 3 + TypeScript)
 
-## MCPツール定義規約
-```rust
-#[tool(description = "ツールの説明")]
-async fn tool_name(
-    &self,
-    Parameters(Request { field }): Parameters<Request>,
-) -> Result<CallToolResult, McpError> {
-    // 実装
-}
+### Vue Components
+- Use Single File Components (SFC) with `<script setup>` syntax
+- TypeScript for all components
+- Composition API preferred over Options API
+
+### TypeScript
+- Strict mode enabled
+- Define interfaces for all data structures
+- Use type inference where appropriate
+- Avoid `any` type
+
+### File Organization
+```
+ui/web/src/
+├── components/   # Reusable components
+├── views/        # Page components
+├── stores/       # Pinia stores
+├── api/          # API client
+├── types/        # TypeScript types
+├── router/       # Vue Router config
+└── themes.ts     # Theme configuration
 ```
 
-## Git コミットメッセージ
-- 日本語または英語
-- prefix: `feat:`, `fix:`, `docs:`, `test:`, `refactor:`
-- 例: `feat: SurrealDB永続化を実装`
+### Naming Conventions
+- Components: PascalCase (e.g., `ProcessCard.vue`)
+- Composables: camelCase with `use` prefix (e.g., `useProcess`)
+- Stores: camelCase (e.g., `processStore`)
+- Types/Interfaces: PascalCase with `I` prefix for interfaces
+
+## Commit Message Convention
+```
+type: description
+
+- feat: New feature
+- fix: Bug fix
+- docs: Documentation changes
+- style: Code style changes
+- refactor: Code refactoring
+- test: Test additions/changes
+- chore: Build/tooling changes
+```
+
+## Testing Conventions
+- Unit tests next to source files
+- Integration tests in `tests/` directory
+- Use descriptive test names
+- Test both success and failure cases

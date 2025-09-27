@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use surrealdb::sql::Thing;
 use chrono::{DateTime, Utc};
 
 /// Generate a unique ID for templates and clipboard items
@@ -51,9 +50,9 @@ impl Default for ProcessStatus {
 /// Process information stored in database
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProcessInfo {
-    /// SurrealDB record ID
+    /// Database record ID (removed SurrealDB dependency)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<Thing>,
+    pub id: Option<String>,
     
     /// Process unique identifier
     pub process_id: String,
@@ -86,15 +85,15 @@ pub struct ProcessInfo {
     pub tags: Vec<String>,
     
     /// Whether to auto-start on restore
-    pub auto_start: bool,
+    pub auto_start_on_restore: bool,
 }
 
 /// プロセステンプレート - よく使うプロセス設定を保存して再利用
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProcessTemplate {
-    /// SurrealDB record ID
+    /// Database record ID (removed SurrealDB dependency)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<Thing>,
+    pub id: Option<String>,
 
     /// テンプレートの一意識別子
     pub template_id: String,
@@ -192,7 +191,7 @@ impl ProcessTemplate {
             created_at: Utc::now(),
             updated_at: Utc::now(),
             tags: self.tags.clone(),
-            auto_start: self.default_auto_start,
+            auto_start_on_restore: self.default_auto_start,
         })
     }
 }
@@ -245,9 +244,9 @@ pub struct TemplateVariable {
 /// クリップボードアイテム - ファイルやテキストの共有
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClipboardItem {
-    /// SurrealDB record ID  
+    /// Database record ID (removed SurrealDB dependency)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<Thing>,
+    pub id: Option<String>,
 
     /// 一意のID
     pub clipboard_id: String,

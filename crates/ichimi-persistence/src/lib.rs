@@ -1,9 +1,8 @@
-pub mod db;
 pub mod persistence;
 pub mod types;
+pub mod yaml;
 
 // Re-export main types
-pub use db::Database;
 pub use persistence::manager::PersistenceManager;
 
 // Re-export types for convenience
