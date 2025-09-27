@@ -932,7 +932,7 @@ dependencies = [
 
 [[package]]
 name = "ichimi-persistence"
-version = "0.1.0-beta20"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -949,7 +949,7 @@ dependencies = [
 
 [[package]]
 name = "ichimi-server"
-version = "0.1.0-beta20"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "axum",
