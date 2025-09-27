@@ -1,7 +1,10 @@
 use super::buffer::CircularBuffer;
 use super::types::*;
+use chrono::Utc;
 use ichimi_persistence::{PersistenceManager, ProcessTemplate, Settings};
-use ichimi_persistence::{ProcessInfo as DbProcessInfo, ProcessState as DbProcessState, ProcessStatus as DbProcessStatus};
+use ichimi_persistence::{
+    ProcessInfo as DbProcessInfo, ProcessState as DbProcessState, ProcessStatus as DbProcessStatus,
+};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process::Stdio;
@@ -11,7 +14,6 @@ use tokio::process::{Child, Command};
 use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
 use tracing::{debug, error, info, warn};
-use chrono::Utc;
 
 /// 管理されるプロセス
 pub struct ManagedProcess {
@@ -109,20 +111,30 @@ impl ProcessManager {
             args: db_info.args,
             env: db_info.env,
             cwd: db_info.cwd.map(PathBuf::from),
-            state: match (db_info.status.state, db_info.status.pid, db_info.status.started_at, db_info.status.stopped_at, db_info.status.exit_code, db_info.status.error.as_ref()) {
+            state: match (
+                db_info.status.state,
+                db_info.status.pid,
+                db_info.status.started_at,
+                db_info.status.stopped_at,
+                db_info.status.exit_code,
+                db_info.status.error.as_ref(),
+            ) {
                 (DbProcessState::NotStarted, _, _, _, _, _) => ProcessState::NotStarted,
-                (DbProcessState::Running, Some(pid), Some(started_at), _, _, _) => ProcessState::Running {
-                    pid,
-                    started_at,
-                },
-                (DbProcessState::Stopped, _, _, Some(stopped_at), exit_code, _) => ProcessState::Stopped {
-                    exit_code,
-                    stopped_at,
-                },
-                (DbProcessState::Failed, _, _, Some(failed_at), _, Some(error)) => ProcessState::Failed {
-                    error: error.clone(),
-                    failed_at,
-                },
+                (DbProcessState::Running, Some(pid), Some(started_at), _, _, _) => {
+                    ProcessState::Running { pid, started_at }
+                }
+                (DbProcessState::Stopped, _, _, Some(stopped_at), exit_code, _) => {
+                    ProcessState::Stopped {
+                        exit_code,
+                        stopped_at,
+                    }
+                }
+                (DbProcessState::Failed, _, _, Some(failed_at), _, Some(error)) => {
+                    ProcessState::Failed {
+                        error: error.clone(),
+                        failed_at,
+                    }
+                }
                 _ => ProcessState::NotStarted, // Default fallback
             },
             auto_start_on_restore: db_info.auto_start_on_restore,
@@ -158,7 +170,7 @@ impl ProcessManager {
 
         for (id, db_info) in loaded_processes {
             // Check if this process should be auto-started on restore
-            if db_info.auto_start {
+            if db_info.auto_start_on_restore {
                 auto_start_processes.push(id.clone());
             }
 
@@ -349,39 +361,42 @@ impl ProcessManager {
                 let mut process = process_arc_clone.write().await;
                 process.child.take()
             };
-            
+
             if let Some(mut child) = child_opt {
                 // プロセスの終了を待つ
                 match child.wait().await {
                     Ok(status) => {
                         let exit_code = status.code();
                         debug!("Process '{}' exited with code: {:?}", process_id, exit_code);
-                        
+
                         // プロセス状態を更新
                         let mut process = process_arc_clone.write().await;
                         process.info.state = ProcessState::Stopped {
                             exit_code,
                             stopped_at: chrono::Utc::now(),
                         };
-                        
+
                         // 永続化
                         let db_info = ProcessManager::to_db_process_info(&process.info);
                         if let Err(e) = persistence_clone.update_process(&db_info).await {
                             tracing::warn!("Failed to persist stopped process state: {}", e);
                         }
-                        
-                        info!("Process '{}' stopped with exit code: {:?}", process_id, exit_code);
+
+                        info!(
+                            "Process '{}' stopped with exit code: {:?}",
+                            process_id, exit_code
+                        );
                     }
                     Err(e) => {
                         error!("Failed to wait for process '{}': {}", process_id, e);
-                        
+
                         // エラー状態を設定
                         let mut process = process_arc_clone.write().await;
                         process.info.state = ProcessState::Failed {
                             error: format!("Process wait failed: {}", e),
                             failed_at: chrono::Utc::now(),
                         };
-                        
+
                         // 永続化
                         let db_info = ProcessManager::to_db_process_info(&process.info);
                         if let Err(e) = persistence_clone.update_process(&db_info).await {
@@ -420,31 +435,39 @@ impl ProcessManager {
         if let Some(mut child) = process.child.take() {
             // デフォルトのグレースピリオドは5秒
             let grace_ms = grace_period_ms.unwrap_or(5000);
-            
+
             // まずSIGTERMを送信してグレースフルシャットダウンを試みる
             #[cfg(unix)]
             {
                 use nix::sys::signal::{self, Signal};
                 use nix::unistd::Pid;
-                
+
                 if let Some(pid) = child.id() {
                     let pid = Pid::from_raw(pid as i32);
-                    
+
                     // SIGTERMを送信
                     if let Err(e) = signal::kill(pid, Signal::SIGTERM) {
                         tracing::warn!("Failed to send SIGTERM to process {}: {}", id, e);
                     } else {
-                        info!("Sent SIGTERM to process '{}', waiting up to {}ms for graceful shutdown", id, grace_ms);
-                        
+                        info!(
+                            "Sent SIGTERM to process '{}', waiting up to {}ms for graceful shutdown",
+                            id, grace_ms
+                        );
+
                         // グレースピリオド内での終了を待つ
                         let timeout = tokio::time::Duration::from_millis(grace_ms);
                         match tokio::time::timeout(timeout, child.wait()).await {
                             Ok(Ok(status)) => {
                                 // グレースフルに終了した
-                                info!("Process '{}' terminated gracefully with status: {:?}", id, status);
-                                
+                                info!(
+                                    "Process '{}' terminated gracefully with status: {:?}",
+                                    id, status
+                                );
+
                                 // 出力ハンドルをクリーンアップ
-                                if let Some((stdout_handle, stderr_handle)) = process.output_handles.take() {
+                                if let Some((stdout_handle, stderr_handle)) =
+                                    process.output_handles.take()
+                                {
                                     stdout_handle.abort();
                                     stderr_handle.abort();
                                 }
@@ -469,19 +492,22 @@ impl ProcessManager {
                             }
                             Err(_) => {
                                 // タイムアウト - SIGKILLで強制終了
-                                info!("Process '{}' did not terminate within grace period, sending SIGKILL", id);
+                                info!(
+                                    "Process '{}' did not terminate within grace period, sending SIGKILL",
+                                    id
+                                );
                             }
                         }
                     }
                 }
             }
-            
+
             // Windows または SIGTERM失敗時、またはタイムアウト時はkill()を使用
             child
                 .kill()
                 .await
                 .map_err(|e| format!("Failed to kill process: {e}"))?;
-            
+
             // プロセスの終了を待つ
             let _ = child.wait().await;
 
@@ -684,7 +710,11 @@ impl ProcessManager {
     }
 
     /// Export processes to YAML file
-    pub async fn export_yaml(&self, file_path: Option<String>, only_auto_start: bool) -> Result<String, String> {
+    pub async fn export_yaml(
+        &self,
+        file_path: Option<String>,
+        only_auto_start: bool,
+    ) -> Result<String, String> {
         let path = match file_path {
             Some(p) => p,
             None => {
@@ -716,7 +746,7 @@ impl ProcessManager {
                 env: info.env,
                 cwd: info.cwd.map(std::path::PathBuf::from),
                 state: crate::process::types::ProcessState::NotStarted,
-                auto_start_on_restore: info.auto_start,
+                auto_start_on_restore: info.auto_start_on_restore,
             };
 
             let process = ManagedProcess {
@@ -899,7 +929,7 @@ impl ProcessManager {
     }
 
     pub async fn save_settings(&self, settings: Settings) -> Result<(), String> {
-        self.persistence.save_settings(settings).await
+        self.persistence.save_settings(&settings).await
     }
 
     // Template management methods
@@ -916,7 +946,11 @@ impl ProcessManager {
     }
 
     pub async fn get_template(&self, template_id: &str) -> Result<Option<ProcessTemplate>, String> {
-        self.persistence.get_template(template_id).await
+        match self.persistence.get_template(template_id).await {
+            Ok(template) => Ok(Some(template)),
+            Err(e) if e.contains("not found") => Ok(None),
+            Err(e) => Err(e),
+        }
     }
 
     pub async fn search_templates(
@@ -924,6 +958,16 @@ impl ProcessManager {
         category: Option<String>,
         tags: Vec<String>,
     ) -> Result<Vec<ProcessTemplate>, String> {
-        self.persistence.search_templates(category, tags).await
+        // PersistenceManager's search_templates takes a query string
+        // Convert category and tags into a query
+        let query = if let Some(cat) = category {
+            cat
+        } else if !tags.is_empty() {
+            tags.join(" ")
+        } else {
+            String::new()
+        };
+
+        self.persistence.search_templates(&query).await
     }
 }

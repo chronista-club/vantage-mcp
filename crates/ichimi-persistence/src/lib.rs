@@ -7,7 +7,6 @@ pub use persistence::manager::PersistenceManager;
 
 // Re-export types for convenience
 pub use types::{
-    ProcessTemplate, TemplateVariable, ClipboardItem,
-    ProcessInfo, ProcessState, ProcessStatus,
-    Settings, generate_id,
+    ClipboardItem, ProcessInfo, ProcessState, ProcessStatus, ProcessTemplate, Settings,
+    TemplateVariable, generate_id,
 };

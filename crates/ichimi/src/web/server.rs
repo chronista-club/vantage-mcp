@@ -1,13 +1,17 @@
 use crate::process::ProcessManager;
+use axum::{
+    Router,
+    http::StatusCode,
+    response::{Html, IntoResponse, Response},
+};
 use ichimi_persistence::PersistenceManager;
-use axum::{Router, response::{Html, IntoResponse, Response}, http::StatusCode};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 
 pub async fn start_web_server(
     process_manager: ProcessManager,
-    persistence_manager: PersistenceManager,
+    persistence_manager: Arc<PersistenceManager>,
     port: u16,
 ) -> Result<u16, Box<dyn std::error::Error>> {
     let app = create_app(process_manager, persistence_manager);
@@ -69,10 +73,10 @@ async fn bind_to_available_port(
     }
 }
 
-fn create_app(process_manager: ProcessManager, persistence_manager: PersistenceManager) -> Router {
+fn create_app(process_manager: ProcessManager, persistence_manager: Arc<PersistenceManager>) -> Router {
     let app_state = AppState {
         process_manager: Arc::new(process_manager),
-        persistence_manager: Arc::new(persistence_manager),
+        persistence_manager,
     };
 
     Router::new()
@@ -92,19 +96,21 @@ pub struct AppState {
 async fn index_handler() -> impl IntoResponse {
     // Serve the built web app from embedded asset
     match super::assets::Asset::get("ui/web/dist/index.html") {
-        Some(content) => Html(std::str::from_utf8(content.data.as_ref()).unwrap_or("Error loading page").to_string()),
+        Some(content) => Html(
+            std::str::from_utf8(content.data.as_ref())
+                .unwrap_or("Error loading page")
+                .to_string(),
+        ),
         None => Html("Error: index.html not found".to_string()),
     }
 }
 
-async fn static_handler(
-    uri: axum::http::Uri,
-) -> impl IntoResponse {
+async fn static_handler(uri: axum::http::Uri) -> impl IntoResponse {
     use super::assets::Asset;
-    
+
     // URIからパスを取得
     let path = uri.path();
-    
+
     // パスの正規化
     let path = if path.is_empty() || path == "/" {
         "index.html"
@@ -115,7 +121,7 @@ async fn static_handler(
     };
 
     tracing::debug!("Static file request: {} -> {}", uri.path(), path);
-    
+
     // Webビルドファイルをチェック（ui/web/dist/ディレクトリ）
     let dist_path = format!("ui/web/dist/{}", path);
     if let Some((data, mime)) = Asset::get_with_mime(&dist_path) {
@@ -125,7 +131,7 @@ async fn static_handler(
             .body(axum::body::Body::from(data))
             .unwrap();
     }
-    
+
     // ファイルが見つからない場合は404を返す
     Response::builder()
         .status(StatusCode::NOT_FOUND)

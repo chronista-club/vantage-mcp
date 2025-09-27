@@ -1,13 +1,14 @@
-use crate::types::{ProcessTemplate, ClipboardItem, ProcessInfo, Settings};
-use crate::yaml::{Snapshot, ProcessSnapshot};
+use crate::types::{ClipboardItem, ProcessInfo, ProcessTemplate, Settings};
+use crate::yaml::{ProcessSnapshot, Snapshot};
 use anyhow::Result;
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::path::Path;
+use std::sync::Arc;
 
 /// Persistence manager for file-based storage
 #[derive(Clone)]
 pub struct PersistenceManager {
+    #[allow(dead_code)]
     snapshot_lock: Arc<tokio::sync::RwLock<()>>,
     // In-memory storage for now, will be replaced with file-based persistence
     processes: Arc<tokio::sync::RwLock<HashMap<String, ProcessInfo>>>,
@@ -62,13 +63,15 @@ impl PersistenceManager {
     }
 
     /// Export processes to YAML format
-    pub async fn export_to_yaml(&self, file_path: &str, only_auto_start: bool) -> Result<(), String> {
+    pub async fn export_to_yaml(
+        &self,
+        file_path: &str,
+        only_auto_start: bool,
+    ) -> Result<(), String> {
         let processes = self.load_all_processes().await?;
 
-        let snapshots: Vec<ProcessSnapshot> = processes
-            .values()
-            .map(ProcessSnapshot::from)
-            .collect();
+        let snapshots: Vec<ProcessSnapshot> =
+            processes.values().map(ProcessSnapshot::from).collect();
 
         let snapshot = if only_auto_start {
             Snapshot::new_auto_start_only(snapshots)
@@ -79,7 +82,7 @@ impl PersistenceManager {
         snapshot
             .save_to_file(Path::new(file_path))
             .await
-            .map_err(|e| format!("Failed to save YAML snapshot: {}", e))?;
+            .map_err(|e| format!("Failed to save YAML snapshot: {e}"))?;
 
         tracing::info!(
             "Exported {} processes to YAML (auto_start_only: {})",
@@ -91,16 +94,19 @@ impl PersistenceManager {
     }
 
     /// Import processes from YAML format
-    pub async fn import_from_yaml(&self, file_path: &str) -> Result<HashMap<String, ProcessInfo>, String> {
+    pub async fn import_from_yaml(
+        &self,
+        file_path: &str,
+    ) -> Result<HashMap<String, ProcessInfo>, String> {
         let path = Path::new(file_path);
 
         if !path.exists() {
-            return Err(format!("YAML file not found: {}", file_path));
+            return Err(format!("YAML file not found: {file_path}"));
         }
 
         let snapshot = Snapshot::load_from_file(path)
             .await
-            .map_err(|e| format!("Failed to load YAML snapshot: {}", e))?;
+            .map_err(|e| format!("Failed to load YAML snapshot: {e}"))?;
 
         if !snapshot.is_compatible() {
             return Err(format!(
@@ -129,14 +135,17 @@ impl PersistenceManager {
     }
 
     /// Create a YAML snapshot with only auto-start processes
-    pub async fn create_auto_start_snapshot(&self, file_path: Option<&str>) -> Result<String, String> {
+    pub async fn create_auto_start_snapshot(
+        &self,
+        file_path: Option<&str>,
+    ) -> Result<String, String> {
         let path = match file_path {
             Some(p) => p.to_string(),
             None => {
                 let snapshot_dir = std::env::var("HOME")
-                    .map(|home| format!("{}/.ichimi", home))
+                    .map(|home| format!("{home}/.ichimi"))
                     .unwrap_or_else(|_| ".ichimi".to_string());
-                format!("{}/snapshot.yaml", snapshot_dir)
+                format!("{snapshot_dir}/snapshot.yaml")
             }
         };
 
@@ -145,19 +154,22 @@ impl PersistenceManager {
     }
 
     /// Restore processes from YAML snapshot
-    pub async fn restore_yaml_snapshot(&self, file_path: Option<&str>) -> Result<HashMap<String, ProcessInfo>, String> {
+    pub async fn restore_yaml_snapshot(
+        &self,
+        file_path: Option<&str>,
+    ) -> Result<HashMap<String, ProcessInfo>, String> {
         let path = match file_path {
             Some(p) => p.to_string(),
             None => {
                 let snapshot_dir = std::env::var("HOME")
-                    .map(|home| format!("{}/.ichimi", home))
+                    .map(|home| format!("{home}/.ichimi"))
                     .unwrap_or_else(|_| ".ichimi".to_string());
-                format!("{}/snapshot.yaml", snapshot_dir)
+                format!("{snapshot_dir}/snapshot.yaml")
             }
         };
 
         if !std::path::Path::new(&path).exists() {
-            return Err(format!("YAML snapshot not found: {}", path));
+            return Err(format!("YAML snapshot not found: {path}"));
         }
 
         self.import_from_yaml(&path).await
@@ -205,7 +217,7 @@ impl PersistenceManager {
         templates
             .get(template_id)
             .cloned()
-            .ok_or_else(|| format!("Template {} not found", template_id))
+            .ok_or_else(|| format!("Template {template_id} not found"))
     }
 
     pub async fn list_templates(&self) -> Result<Vec<ProcessTemplate>, String> {
@@ -237,12 +249,7 @@ impl PersistenceManager {
 
     pub async fn get_clipboard_history(&self, limit: usize) -> Result<Vec<ClipboardItem>, String> {
         let clipboard = self.clipboard.read().await;
-        let items: Vec<ClipboardItem> = clipboard
-            .iter()
-            .rev()
-            .take(limit)
-            .cloned()
-            .collect();
+        let items: Vec<ClipboardItem> = clipboard.iter().rev().take(limit).cloned().collect();
         Ok(items)
     }
 
@@ -251,6 +258,45 @@ impl PersistenceManager {
         clipboard.clear();
         tracing::info!("Cleared clipboard history");
         Ok(())
+    }
+
+    /// Get the latest clipboard item
+    pub async fn get_latest_clipboard_item(&self) -> Result<ClipboardItem, String> {
+        let clipboard = self.clipboard.read().await;
+        clipboard
+            .last()
+            .cloned()
+            .ok_or_else(|| "No clipboard items available".to_string())
+    }
+
+    /// Set clipboard with text content
+    pub async fn set_clipboard_text(&self, content: String) -> Result<ClipboardItem, String> {
+        let item = ClipboardItem {
+            id: None,
+            clipboard_id: crate::types::generate_id(),
+            content,
+            filename: None,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+            content_type: Some("text/plain".to_string()),
+            tags: Vec::new(),
+        };
+        self.save_clipboard_item(&item).await?;
+        Ok(item)
+    }
+
+    /// Search clipboard items by content
+    pub async fn search_clipboard_items(&self, query: &str, limit: usize) -> Result<Vec<ClipboardItem>, String> {
+        let clipboard = self.clipboard.read().await;
+        let query_lower = query.to_lowercase();
+        let items: Vec<ClipboardItem> = clipboard
+            .iter()
+            .filter(|item| item.content.to_lowercase().contains(&query_lower))
+            .rev()
+            .take(limit)
+            .cloned()
+            .collect();
+        Ok(items)
     }
 
     // Settings management
@@ -310,6 +356,37 @@ impl PersistenceManager {
     }
 
     /// Search processes by command or args
+    /// Save settings
+    pub async fn save_settings(&self, settings: &Settings) -> Result<(), String> {
+        let mut settings_guard = self.settings.write().await;
+        *settings_guard = settings.clone();
+        tracing::info!("Saved settings");
+        Ok(())
+    }
+
+    /// Load all templates (alias for list_templates)
+    pub async fn load_all_templates(&self) -> Result<Vec<ProcessTemplate>, String> {
+        self.list_templates().await
+    }
+
+    /// Search templates by name or description
+    pub async fn search_templates(&self, query: &str) -> Result<Vec<ProcessTemplate>, String> {
+        let templates = self.templates.read().await;
+        let query_lower = query.to_lowercase();
+        let filtered: Vec<ProcessTemplate> = templates
+            .values()
+            .filter(|t| {
+                t.name.to_lowercase().contains(&query_lower)
+                    || t.description
+                        .as_ref()
+                        .map(|d| d.to_lowercase().contains(&query_lower))
+                        .unwrap_or(false)
+            })
+            .cloned()
+            .collect();
+        Ok(filtered)
+    }
+
     pub async fn search_processes(&self, search_term: &str) -> Result<Vec<ProcessInfo>, String> {
         let processes = self.processes.read().await;
         let search_lower = search_term.to_lowercase();
@@ -317,8 +394,10 @@ impl PersistenceManager {
         let filtered: Vec<ProcessInfo> = processes
             .values()
             .filter(|p| {
-                p.command.to_lowercase().contains(&search_lower) ||
-                p.args.iter().any(|arg| arg.to_lowercase().contains(&search_lower))
+                p.command.to_lowercase().contains(&search_lower)
+                    || p.args
+                        .iter()
+                        .any(|arg| arg.to_lowercase().contains(&search_lower))
             })
             .cloned()
             .collect();

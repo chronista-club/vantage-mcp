@@ -1,10 +1,7 @@
-use crate::messages::{CreateProcessRequest, StopProcessRequest, UpdateProcessRequest};
 use crate::messages::clipboard::*;
+use crate::messages::{CreateProcessRequest, StopProcessRequest, UpdateProcessRequest};
 use crate::process::{OutputStream, ProcessFilter, ProcessStateFilter};
-use ichimi_persistence::{ProcessTemplate, TemplateVariable, ClipboardItem};
 use crate::web::server::AppState;
-use std::collections::HashMap;
-use std::path::PathBuf;
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
@@ -12,8 +9,11 @@ use axum::{
     response::sse::{Event, KeepAlive, Sse},
 };
 use futures::stream::Stream;
+use ichimi_persistence::{ClipboardItem, ProcessTemplate, TemplateVariable};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::convert::Infallible;
+use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio_stream::StreamExt;
 
@@ -264,10 +264,7 @@ pub async fn update_process_config(
 ) -> Result<StatusCode, (StatusCode, String)> {
     state
         .process_manager
-        .update_process_config(
-            id,
-            config.auto_start_on_restore,
-        )
+        .update_process_config(id, config.auto_start_on_restore)
         .await
         .map(|_| StatusCode::OK)
         .map_err(|e| (StatusCode::BAD_REQUEST, e))
@@ -360,22 +357,21 @@ impl Default for Settings {
     }
 }
 
-pub async fn get_settings(
-    State(state): State<AppState>,
-) -> Result<Json<Settings>, StatusCode> {
+pub async fn get_settings(State(state): State<AppState>) -> Result<Json<Settings>, StatusCode> {
     // Persistence Managerから設定を取得
-    let db_settings = state.process_manager
+    let db_settings = state
+        .process_manager
         .get_settings()
         .await
         .unwrap_or_default();
-    
+
     // Convert from DB settings to handler settings
     let settings = Settings {
         color_mode: db_settings.theme,
         auto_refresh: db_settings.enable_auto_restart,
         refresh_interval: db_settings.auto_save_interval.unwrap_or(5000) as u32,
     };
-    
+
     Ok(Json(settings))
 }
 
@@ -393,13 +389,14 @@ pub async fn update_settings(
         env_variables: HashMap::new(),
         updated_at: chrono::Utc::now(),
     };
-    
+
     // Persistence Managerに設定を保存
-    state.process_manager
+    state
+        .process_manager
         .save_settings(db_settings)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    
+
     Ok(StatusCode::OK)
 }
 
@@ -451,12 +448,14 @@ pub async fn list_templates(
     Query(query): Query<ListTemplatesQuery>,
 ) -> Result<Json<Vec<ProcessTemplate>>, StatusCode> {
     // タグをカンマ区切りで分割
-    let tags = query.tags
+    let tags = query
+        .tags
         .map(|t| t.split(',').map(|s| s.trim().to_string()).collect())
         .unwrap_or_default();
-    
+
     // カテゴリとタグで検索
-    state.process_manager
+    state
+        .process_manager
         .search_templates(query.category, tags)
         .await
         .map(Json)
@@ -470,7 +469,8 @@ pub async fn get_template(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<Json<ProcessTemplate>, StatusCode> {
-    state.process_manager
+    state
+        .process_manager
         .get_template(&id)
         .await
         .map_err(|e| {
@@ -501,12 +501,13 @@ pub async fn create_template(
         created_at: chrono::Utc::now(),
         updated_at: chrono::Utc::now(),
     };
-    
-    state.process_manager
+
+    state
+        .process_manager
         .save_template(template)
         .await
         .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
-    
+
     Ok((
         StatusCode::CREATED,
         Json(serde_json::json!({
@@ -521,12 +522,13 @@ pub async fn update_template(
     Json(req): Json<UpdateTemplateRequest>,
 ) -> Result<StatusCode, (StatusCode, String)> {
     // 既存のテンプレートを取得
-    let mut template = state.process_manager
+    let mut template = state
+        .process_manager
         .get_template(&id)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?
         .ok_or((StatusCode::NOT_FOUND, "Template not found".to_string()))?;
-    
+
     // 更新する
     if let Some(name) = req.name {
         template.name = name;
@@ -558,14 +560,15 @@ pub async fn update_template(
     if let Some(tags) = req.tags {
         template.tags = tags;
     }
-    
+
     template.updated_at = chrono::Utc::now();
-    
-    state.process_manager
+
+    state
+        .process_manager
         .save_template(template)
         .await
         .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
-    
+
     Ok(StatusCode::OK)
 }
 
@@ -573,11 +576,12 @@ pub async fn delete_template(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    state.process_manager
+    state
+        .process_manager
         .delete_template(&id)
         .await
         .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
-    
+
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -587,29 +591,32 @@ pub async fn instantiate_template(
     Json(req): Json<InstantiateTemplateRequest>,
 ) -> Result<(StatusCode, Json<serde_json::Value>), (StatusCode, String)> {
     // テンプレートを取得
-    let template = state.process_manager
+    let template = state
+        .process_manager
         .get_template(&id)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?
         .ok_or((StatusCode::NOT_FOUND, "Template not found".to_string()))?;
-    
+
     // テンプレートからプロセスを生成
-    let process_info = template.instantiate(req.process_id.clone(), req.values)
+    let process_info = template
+        .instantiate(req.process_id.clone(), req.values)
         .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
-    
+
     // プロセスを作成
-    state.process_manager
+    state
+        .process_manager
         .create_process(
             process_info.process_id.clone(),
             process_info.command,
             process_info.args,
             process_info.env,
             process_info.cwd.map(PathBuf::from),
-            process_info.auto_start,
+            process_info.auto_start_on_restore,
         )
         .await
         .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
-    
+
     Ok((
         StatusCode::CREATED,
         Json(serde_json::json!({
@@ -623,24 +630,24 @@ pub async fn instantiate_template(
 // ========================================
 
 /// Get the latest clipboard item
-pub async fn get_clipboard(State(state): State<AppState>) -> Result<Json<ClipboardResponse>, (StatusCode, String)> {
-    let item = state.persistence_manager
+pub async fn get_clipboard(
+    State(state): State<AppState>,
+) -> Result<Json<ClipboardResponse>, (StatusCode, String)> {
+    let item = state
+        .persistence_manager
         .get_latest_clipboard_item()
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
 
-    match item {
-        Some(item) => Ok(Json(ClipboardResponse {
-            id: item.clipboard_id,
-            content: item.content,
-            filename: item.filename,
-            created_at: item.created_at.to_rfc3339(),
-            updated_at: item.updated_at.to_rfc3339(),
-            content_type: item.content_type.unwrap_or_else(|| "text".to_string()),
-            tags: item.tags,
-        })),
-        None => Err((StatusCode::NOT_FOUND, "No clipboard items found".to_string()))
-    }
+    Ok(Json(ClipboardResponse {
+        id: item.clipboard_id,
+        content: item.content,
+        filename: item.filename,
+        created_at: item.created_at.to_rfc3339(),
+        updated_at: item.updated_at.to_rfc3339(),
+        content_type: item.content_type.unwrap_or_else(|| "text".to_string()),
+        tags: item.tags,
+    }))
 }
 
 /// Get clipboard history
@@ -651,13 +658,14 @@ pub struct ClipboardHistoryQuery {
 
 pub async fn get_clipboard_history(
     Query(query): Query<ClipboardHistoryQuery>,
-    State(state): State<AppState>
+    State(state): State<AppState>,
 ) -> Result<Json<ClipboardHistoryResponse>, (StatusCode, String)> {
-    let items = state.persistence_manager
-        .get_clipboard_history(query.limit)
+    let items = state
+        .persistence_manager
+        .get_clipboard_history(query.limit.unwrap_or(100))
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
-    
+
     let response_items: Vec<ClipboardResponse> = items
         .into_iter()
         .map(|item| ClipboardResponse {
@@ -680,9 +688,10 @@ pub async fn get_clipboard_history(
 /// Set clipboard text content
 pub async fn set_clipboard_text(
     State(state): State<AppState>,
-    Json(req): Json<SetClipboardTextRequest>
+    Json(req): Json<SetClipboardTextRequest>,
 ) -> Result<Json<ClipboardResponse>, (StatusCode, String)> {
-    let item = state.persistence_manager
+    let item = state
+        .persistence_manager
         .set_clipboard_text(req.content)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
@@ -692,7 +701,8 @@ pub async fn set_clipboard_text(
         let mut updated_item = item;
         updated_item.tags = req.tags;
         // Save updated item
-        state.persistence_manager
+        state
+            .persistence_manager
             .save_clipboard_item(&updated_item)
             .await
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
@@ -707,7 +717,9 @@ pub async fn set_clipboard_text(
         filename: final_item.filename,
         created_at: final_item.created_at.to_rfc3339(),
         updated_at: final_item.updated_at.to_rfc3339(),
-        content_type: final_item.content_type.unwrap_or_else(|| "text".to_string()),
+        content_type: final_item
+            .content_type
+            .unwrap_or_else(|| "text".to_string()),
         tags: final_item.tags,
     }))
 }
@@ -715,7 +727,7 @@ pub async fn set_clipboard_text(
 /// Set clipboard file content
 pub async fn set_clipboard_file(
     State(state): State<AppState>,
-    Json(req): Json<SetClipboardFileRequest>
+    Json(req): Json<SetClipboardFileRequest>,
 ) -> Result<Json<ClipboardResponse>, (StatusCode, String)> {
     let item = ClipboardItem {
         id: None,
@@ -728,7 +740,8 @@ pub async fn set_clipboard_file(
         tags: req.tags,
     };
 
-    state.persistence_manager
+    state
+        .persistence_manager
         .save_clipboard_item(&item)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
@@ -747,10 +760,11 @@ pub async fn set_clipboard_file(
 /// Search clipboard items
 pub async fn search_clipboard(
     Query(req): Query<SearchClipboardRequest>,
-    State(state): State<AppState>
+    State(state): State<AppState>,
 ) -> Result<Json<ClipboardHistoryResponse>, (StatusCode, String)> {
-    let items = state.persistence_manager
-        .search_clipboard_items(&req.query, req.limit)
+    let items = state
+        .persistence_manager
+        .search_clipboard_items(&req.query, req.limit.unwrap_or(50))
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
 
@@ -775,12 +789,16 @@ pub async fn search_clipboard(
 
 /// Clear all clipboard items
 pub async fn clear_clipboard(
-    State(state): State<AppState>
+    State(state): State<AppState>,
 ) -> Result<(StatusCode, String), (StatusCode, String)> {
-    state.persistence_manager
+    state
+        .persistence_manager
         .clear_clipboard()
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
 
-    Ok((StatusCode::NO_CONTENT, "All clipboard items cleared".to_string()))
+    Ok((
+        StatusCode::NO_CONTENT,
+        "All clipboard items cleared".to_string(),
+    ))
 }

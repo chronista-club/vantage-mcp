@@ -20,7 +20,6 @@ pub mod web;
 pub use error::{IchimiError, IchimiResult};
 
 use ci::CiMonitor;
-use ichimi_persistence::{Database, PersistenceManager};
 use events::EventSystem;
 use learning::LearningEngine;
 use messages::*;
@@ -78,14 +77,11 @@ impl IchimiServer {
     pub async fn with_process_manager(process_manager: ProcessManager) -> anyhow::Result<Self> {
         tracing::info!("Initializing IchimiServer with existing ProcessManager");
 
-        // Get database from ProcessManager
-        let database = process_manager.database();
+        // Initialize event system
+        let event_system = Arc::new(EventSystem::new());
 
-        // Initialize event system with shared database
-        let event_system = Arc::new(EventSystem::new(database.clone()));
-
-        // Initialize learning engine with shared database
-        let learning_engine = Arc::new(LearningEngine::new(database.clone(), event_system.clone()));
+        // Initialize learning engine
+        let learning_engine = Arc::new(LearningEngine::new(event_system.clone()));
 
         // Start learning
         if let Err(e) = learning_engine.start_learning().await {
@@ -103,7 +99,6 @@ impl IchimiServer {
         Ok(Self {
             start_time: Arc::new(Mutex::new(chrono::Utc::now())),
             process_manager,
-            database,
             event_system,
             learning_engine,
             ci_monitor: ci_monitor_2,
@@ -349,7 +344,9 @@ impl IchimiServer {
         ))]))
     }
 
-    #[tool(description = "Create a snapshot of the entire database (processes, templates, clipboard)")]
+    #[tool(
+        description = "Create a snapshot of the entire database (processes, templates, clipboard)"
+    )]
     async fn create_snapshot(&self) -> std::result::Result<CallToolResult, McpError> {
         let path = self
             .process_manager
@@ -436,14 +433,10 @@ impl IchimiServer {
         let path = match format {
             SnapshotFormat::Yaml => {
                 self.process_manager
-                    .export_yaml(file_path, true)  // Only auto-start for snapshots
+                    .export_yaml(file_path, true) // Only auto-start for snapshots
                     .await
             }
-            SnapshotFormat::Surql => {
-                self.process_manager
-                    .export_processes(file_path)
-                    .await
-            }
+            SnapshotFormat::Surql => self.process_manager.export_processes(file_path).await,
         }
         .map_err(|e| McpError {
             message: e.into(),
@@ -759,7 +752,7 @@ impl IchimiServer {
         Parameters(SetClipboardTextRequest { content, tags }): Parameters<SetClipboardTextRequest>,
     ) -> std::result::Result<CallToolResult, McpError> {
         let persistence = self.process_manager.persistence_manager();
-        
+
         let mut item = persistence
             .set_clipboard_text(content)
             .await
@@ -806,7 +799,7 @@ impl IchimiServer {
         Parameters(_request): Parameters<GetClipboardRequest>,
     ) -> std::result::Result<CallToolResult, McpError> {
         let persistence = self.process_manager.persistence_manager();
-        
+
         let item = persistence
             .get_latest_clipboard_item()
             .await
@@ -816,27 +809,23 @@ impl IchimiServer {
                 data: None,
             })?;
 
-        if let Some(item) = item {
-            let response = ClipboardResponse {
-                id: item.clipboard_id,
-                content: item.content,
-                filename: item.filename,
-                created_at: item.created_at.to_rfc3339(),
+        let response = ClipboardResponse {
+            id: item.clipboard_id,
+            content: item.content,
+            filename: item.filename,
+            created_at: item.created_at.to_rfc3339(),
                 updated_at: item.updated_at.to_rfc3339(),
                 content_type: item.content_type.unwrap_or_else(|| "text".to_string()),
                 tags: item.tags,
-            };
+        };
 
-            let json = serde_json::to_string_pretty(&response).map_err(|e| McpError {
-                message: format!("Failed to serialize response: {e}").into(),
-                code: rmcp::model::ErrorCode::INTERNAL_ERROR,
-                data: None,
-            })?;
+        let json = serde_json::to_string_pretty(&response).map_err(|e| McpError {
+            message: format!("Failed to serialize response: {e}").into(),
+            code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+            data: None,
+        })?;
 
-            Ok(CallToolResult::success(vec![Content::text(json)]))
-        } else {
-            Ok(CallToolResult::success(vec![Content::text("No clipboard content available")]))
-        }
+        Ok(CallToolResult::success(vec![Content::text(json)]))
     }
 
     #[tool(description = "Open the Ichimi web console in your browser")]
@@ -846,12 +835,12 @@ impl IchimiServer {
     ) -> std::result::Result<CallToolResult, McpError> {
         let port = request.port.unwrap_or(12700);
         let auto_open = request.auto_open.unwrap_or(true);
-        
+
         tracing::info!("Opening web console on port {}", port);
-        
+
         // Check if web server is already running by trying to connect
         let url = format!("http://localhost:{}", port);
-        
+
         // Try to check if the server is already running
         match reqwest::get(&format!("{}/api/status", url)).await {
             Ok(response) if response.status().is_success() => {

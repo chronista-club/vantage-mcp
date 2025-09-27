@@ -141,10 +141,12 @@ async fn test_export_and_import() {
 
         // 各プロセスの詳細を検証
         for original_process in &processes_to_save {
-            let imported = after_import.get(&original_process.process_id).expect(&format!(
-                "Process {} should exist after import",
-                original_process.process_id
-            ));
+            let imported = after_import
+                .get(&original_process.process_id)
+                .expect(&format!(
+                    "Process {} should exist after import",
+                    original_process.process_id
+                ));
 
             println!("  Verifying process: {}", original_process.process_id);
             assert_eq!(

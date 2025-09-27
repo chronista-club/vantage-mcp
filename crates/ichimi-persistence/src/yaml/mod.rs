@@ -51,10 +51,7 @@ pub enum ProcessStateSnapshot {
     #[serde(rename = "not_started")]
     NotStarted,
     #[serde(rename = "running")]
-    Running {
-        pid: u32,
-        started_at: DateTime<Utc>,
-    },
+    Running { pid: u32, started_at: DateTime<Utc> },
     #[serde(rename = "stopped")]
     Stopped {
         exit_code: Option<i32>,
@@ -70,10 +67,7 @@ pub enum ProcessStateSnapshot {
 impl Snapshot {
     /// Create a new snapshot
     pub fn new(processes: Vec<ProcessSnapshot>) -> Self {
-        let auto_start_count = processes
-            .iter()
-            .filter(|p| p.auto_start_on_restore)
-            .count();
+        let auto_start_count = processes.iter().filter(|p| p.auto_start_on_restore).count();
 
         Self {
             version: SNAPSHOT_VERSION.to_string(),
@@ -183,8 +177,7 @@ impl From<&ProcessStatus> for ProcessStateSnapshot {
                 }
             }
             ProcessState::Failed => {
-                if let (Some(error), Some(stopped_at)) =
-                    (status.error.clone(), status.stopped_at) {
+                if let (Some(error), Some(stopped_at)) = (status.error.clone(), status.stopped_at) {
                     ProcessStateSnapshot::Failed {
                         error,
                         failed_at: stopped_at,
@@ -237,7 +230,10 @@ impl ProcessStateSnapshot {
                 stopped_at: None,
                 error: None,
             },
-            ProcessStateSnapshot::Stopped { exit_code, stopped_at } => ProcessStatus {
+            ProcessStateSnapshot::Stopped {
+                exit_code,
+                stopped_at,
+            } => ProcessStatus {
                 state: ProcessState::Stopped,
                 pid: None,
                 exit_code: *exit_code,
@@ -263,19 +259,17 @@ mod tests {
 
     #[test]
     fn test_snapshot_serialization() {
-        let snapshot = Snapshot::new(vec![
-            ProcessSnapshot {
-                id: "test-process".to_string(),
-                name: "Test Process".to_string(),
-                command: "echo".to_string(),
-                args: vec!["hello".to_string()],
-                env: HashMap::new(),
-                cwd: None,
-                auto_start_on_restore: true,
-                state: ProcessStateSnapshot::NotStarted,
-                tags: vec![],
-            },
-        ]);
+        let snapshot = Snapshot::new(vec![ProcessSnapshot {
+            id: "test-process".to_string(),
+            name: "Test Process".to_string(),
+            command: "echo".to_string(),
+            args: vec!["hello".to_string()],
+            env: HashMap::new(),
+            cwd: None,
+            auto_start_on_restore: true,
+            state: ProcessStateSnapshot::NotStarted,
+            tags: vec![],
+        }]);
 
         let yaml = snapshot.to_yaml().unwrap();
         assert!(yaml.contains("version: '1.0'"));
