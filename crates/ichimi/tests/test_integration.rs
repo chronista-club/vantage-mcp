@@ -156,10 +156,14 @@ async fn test_long_running_process_management() {
     use ichimi_server::process::types::ProcessState;
     // デバッグ出力
     println!("Process state after stop: {:?}", status.info.state);
-    assert!(matches!(
-        status.info.state,
-        ProcessState::Stopped { .. } | ProcessState::Failed { .. }
-    ), "Process should be stopped or failed, but was: {:?}", status.info.state);
+    assert!(
+        matches!(
+            status.info.state,
+            ProcessState::Stopped { .. } | ProcessState::Failed { .. }
+        ),
+        "Process should be stopped or failed, but was: {:?}",
+        status.info.state
+    );
 
     // Clean up
     manager
