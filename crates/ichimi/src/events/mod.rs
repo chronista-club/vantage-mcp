@@ -48,6 +48,12 @@ pub struct EventSystem {
     sender: broadcast::Sender<ProcessEvent>,
 }
 
+impl Default for EventSystem {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EventSystem {
     pub fn new() -> Self {
         let (sender, _) = broadcast::channel(100);

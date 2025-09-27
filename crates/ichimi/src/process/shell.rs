@@ -83,7 +83,7 @@ impl ShellProcess {
         // Spawn the process
         let mut child = cmd
             .spawn()
-            .map_err(|e| format!("Failed to spawn process: {}", e))?;
+            .map_err(|e| format!("Failed to spawn process: {e}"))?;
 
         // Get the PID
         let pid = child
@@ -215,7 +215,7 @@ impl ShellProcess {
             child
                 .kill()
                 .await
-                .map_err(|e| format!("Failed to kill process: {}", e))?;
+                .map_err(|e| format!("Failed to kill process: {e}"))?;
 
             self.info.state = ProcessState::Stopped {
                 exit_code: None,

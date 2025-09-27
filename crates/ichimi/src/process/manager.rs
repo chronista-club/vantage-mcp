@@ -393,7 +393,7 @@ impl ProcessManager {
                         // エラー状態を設定
                         let mut process = process_arc_clone.write().await;
                         process.info.state = ProcessState::Failed {
-                            error: format!("Process wait failed: {}", e),
+                            error: format!("Process wait failed: {e}"),
                             failed_at: chrono::Utc::now(),
                         };
 
@@ -559,7 +559,7 @@ impl ProcessManager {
                     }
                     Err(e) => {
                         error!("Failed to stop process '{}': {}", id_clone, e);
-                        errors.push(format!("{}: {}", id_clone, e));
+                        errors.push(format!("{id_clone}: {e}"));
                     }
                 }
             }
@@ -697,9 +697,9 @@ impl ProcessManager {
             Some(p) => p,
             None => {
                 let snapshot_dir = std::env::var("HOME")
-                    .map(|home| format!("{}/.ichimi", home))
+                    .map(|home| format!("{home}/.ichimi"))
                     .unwrap_or_else(|_| ".ichimi".to_string());
-                format!("{}/processes.json", snapshot_dir)
+                format!("{snapshot_dir}/processes.json")
             }
         };
 
@@ -719,9 +719,9 @@ impl ProcessManager {
             Some(p) => p,
             None => {
                 let snapshot_dir = std::env::var("HOME")
-                    .map(|home| format!("{}/.ichimi", home))
+                    .map(|home| format!("{home}/.ichimi"))
                     .unwrap_or_else(|_| ".ichimi".to_string());
-                format!("{}/snapshot.yaml", snapshot_dir)
+                format!("{snapshot_dir}/snapshot.yaml")
             }
         };
 
@@ -777,9 +777,9 @@ impl ProcessManager {
     /// Restore from YAML snapshot on startup
     pub async fn restore_yaml_snapshot(&self) -> Result<(), String> {
         let snapshot_dir = std::env::var("HOME")
-            .map(|home| format!("{}/.ichimi", home))
+            .map(|home| format!("{home}/.ichimi"))
             .unwrap_or_else(|_| ".ichimi".to_string());
-        let snapshot_path = format!("{}/snapshot.yaml", snapshot_dir);
+        let snapshot_path = format!("{snapshot_dir}/snapshot.yaml");
 
         if !std::path::Path::new(&snapshot_path).exists() {
             tracing::debug!("No YAML snapshot found at {}", snapshot_path);

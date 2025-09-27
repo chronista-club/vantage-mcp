@@ -89,10 +89,10 @@ impl IchimiError {
     /// エラーをMCP用の文字列に変換
     pub fn to_mcp_error(&self) -> String {
         match self {
-            IchimiError::ProcessNotFound(id) => format!("Process '{}' not found", id),
-            IchimiError::ProcessAlreadyExists(id) => format!("Process '{}' already exists", id),
-            IchimiError::SecurityValidation(msg) => format!("Security validation failed: {}", msg),
-            IchimiError::CommandInjection(msg) => format!("Command injection detected: {}", msg),
+            IchimiError::ProcessNotFound(id) => format!("Process '{id}' not found"),
+            IchimiError::ProcessAlreadyExists(id) => format!("Process '{id}' already exists"),
+            IchimiError::SecurityValidation(msg) => format!("Security validation failed: {msg}"),
+            IchimiError::CommandInjection(msg) => format!("Command injection detected: {msg}"),
             _ => self.to_string(),
         }
     }

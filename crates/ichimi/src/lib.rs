@@ -445,8 +445,7 @@ impl IchimiServer {
         })?;
 
         Ok(CallToolResult::success(vec![Content::text(format!(
-            "Snapshot created successfully at {path} (format: {:?})",
-            format
+            "Snapshot created successfully at {path} (format: {format:?})"
         ))]))
     }
 
@@ -523,7 +522,7 @@ impl IchimiServer {
         }
 
         let message = if updates.is_empty() {
-            format!("Process '{}' - no attributes updated", id)
+            format!("Process '{id}' - no attributes updated")
         } else {
             format!("Process '{}' updated: {}", id, updates.join(", "))
         };
@@ -595,7 +594,7 @@ impl IchimiServer {
                             branch: run.branch,
                             event: run.event,
                             status: format!("{:?}", run.status),
-                            conclusion: run.conclusion.map(|c| format!("{:?}", c)),
+                            conclusion: run.conclusion.map(|c| format!("{c:?}")),
                             created_at: run.created_at,
                             updated_at: run.updated_at,
                             duration: run.duration,
@@ -612,7 +611,7 @@ impl IchimiServer {
             Err(e) => {
                 tracing::error!("Failed to list CI runs: {}", e);
                 Err(McpError::internal_error(
-                    format!("Failed to list CI runs: {}", e),
+                    format!("Failed to list CI runs: {e}"),
                     None,
                 ))
             }
@@ -637,7 +636,7 @@ impl IchimiServer {
             Err(e) => {
                 tracing::error!("Failed to get CI run details: {}", e);
                 Err(McpError::internal_error(
-                    format!("Failed to get CI run details: {}", e),
+                    format!("Failed to get CI run details: {e}"),
                     None,
                 ))
             }
@@ -662,7 +661,7 @@ impl IchimiServer {
             Err(e) => {
                 tracing::error!("Failed to get CI failed logs: {}", e);
                 Err(McpError::internal_error(
-                    format!("Failed to get CI failed logs: {}", e),
+                    format!("Failed to get CI failed logs: {e}"),
                     None,
                 ))
             }
@@ -698,7 +697,7 @@ impl IchimiServer {
                     branch: run.branch,
                     event: run.event,
                     status: format!("{:?}", run.status),
-                    conclusion: run.conclusion.map(|c| format!("{:?}", c)),
+                    conclusion: run.conclusion.map(|c| format!("{c:?}")),
                     created_at: run.created_at,
                     updated_at: run.updated_at,
                     duration: run.duration,
@@ -713,7 +712,7 @@ impl IchimiServer {
             Err(e) => {
                 tracing::error!("Failed to wait for CI completion: {}", e);
                 Err(McpError::internal_error(
-                    format!("Failed to wait for CI completion: {}", e),
+                    format!("Failed to wait for CI completion: {e}"),
                     None,
                 ))
             }
@@ -839,24 +838,22 @@ impl IchimiServer {
         tracing::info!("Opening web console on port {}", port);
 
         // Check if web server is already running by trying to connect
-        let url = format!("http://localhost:{}", port);
+        let url = format!("http://localhost:{port}");
 
         // Try to check if the server is already running
-        match reqwest::get(&format!("{}/api/status", url)).await {
+        match reqwest::get(&format!("{url}/api/status")).await {
             Ok(response) if response.status().is_success() => {
                 // Server is already running
                 if auto_open {
                     if let Err(e) = open::that(&url) {
                         tracing::warn!("Failed to open browser: {}", e);
                         return Ok(CallToolResult::success(vec![Content::text(format!(
-                            "Web console is already running at {}. Please open it manually.",
-                            url
+                            "Web console is already running at {url}. Please open it manually."
                         ))]));
                     }
                 }
                 Ok(CallToolResult::success(vec![Content::text(format!(
-                    "Web console is already running at {}",
-                    url
+                    "Web console is already running at {url}"
                 ))]))
             }
             _ => {
@@ -866,13 +863,12 @@ impl IchimiServer {
                 Ok(CallToolResult::success(vec![Content::text(format!(
                     "Web console is not running. Please start Ichimi with web mode:\n\
                      \n\
-                     ichimi --web-only --web-port {}\n\
+                     ichimi --web-only --web-port {port}\n\
                      \n\
                      Or use the default port:\n\
                      ichimi --web-only\n\
                      \n\
-                     The web console will be available at {}",
-                    port, url
+                     The web console will be available at {url}"
                 ))]))
             }
         }

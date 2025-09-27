@@ -1,4 +1,4 @@
-use ichimi_persistence::{Database, PersistenceManager, ProcessInfo, ProcessState, ProcessStatus};
+use ichimi_persistence::{PersistenceManager, ProcessInfo, ProcessState, ProcessStatus};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -41,8 +41,7 @@ async fn test_export_and_import() {
 
     // 1. 最初のデータベースインスタンスを作成してデータを追加
     let processes_to_save = {
-        let database1 = Arc::new(Database::new().await.expect("Failed to create database"));
-        let persistence1 = PersistenceManager::with_database(database1.clone());
+        let persistence1 = PersistenceManager::new();
 
         // テストデータを追加
         println!("Phase 1: Adding test data...");
@@ -70,7 +69,7 @@ async fn test_export_and_import() {
 
         // エクスポート
         println!("\nPhase 2: Exporting to file...");
-        database1
+        persistence1
             .export_to_file(&export_path)
             .await
             .expect("Failed to export");
@@ -107,12 +106,7 @@ async fn test_export_and_import() {
 
     // 2. 新しいデータベースインスタンスを作成してインポート
     {
-        let database2 = Arc::new(
-            Database::new()
-                .await
-                .expect("Failed to create second database"),
-        );
-        let persistence2 = PersistenceManager::with_database(database2.clone());
+        let persistence2 = PersistenceManager::new();
 
         // インポート前の確認（空であるべき）
         println!("\nPhase 3: Checking new database before import...");
@@ -125,7 +119,7 @@ async fn test_export_and_import() {
 
         // インポート
         println!("\nPhase 4: Importing from file...");
-        database2
+        persistence2
             .import_from_file(&export_path)
             .await
             .expect("Failed to import");
@@ -163,8 +157,8 @@ async fn test_export_and_import() {
                 "Working directory should match"
             );
             assert_eq!(
-                imported.auto_start, original_process.auto_start,
-                "auto_start should match"
+                imported.auto_start_on_restore, original_process.auto_start_on_restore,
+                "auto_start_on_restore should match"
             );
         }
 
@@ -200,17 +194,16 @@ async fn test_export_and_import() {
 #[tokio::test]
 async fn test_import_nonexistent_file() {
     // 存在しないファイルからのインポートを試みる（エラーにならないことを確認）
-    let database = Arc::new(Database::new().await.expect("Failed to create database"));
+    let persistence = PersistenceManager::new();
     let nonexistent_path = PathBuf::from("/tmp/nonexistent_file.surql");
 
     // 存在しないファイルのインポートは成功するが、何もインポートされない
-    let result = database.import_from_file(&nonexistent_path).await;
+    let result = persistence.import_from_file(&nonexistent_path).await;
     assert!(
         result.is_ok(),
         "Import of nonexistent file should not error"
     );
 
-    let persistence = PersistenceManager::with_database(database);
     let processes = persistence
         .load_all_processes()
         .await

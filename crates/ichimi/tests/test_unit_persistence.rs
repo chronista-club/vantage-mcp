@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 #[tokio::test]
 async fn test_save_and_load_process() {
-    let persistence = PersistenceManager::new().await.unwrap();
+    let persistence = PersistenceManager::new();
 
     // Create test process
     let mut env = HashMap::new();
@@ -31,7 +31,7 @@ async fn test_save_and_load_process() {
         created_at: chrono::Utc::now(),
         updated_at: chrono::Utc::now(),
         tags: vec![],
-        auto_start: false,
+        auto_start_on_restore: false,
     };
 
     // Save process
@@ -51,7 +51,7 @@ async fn test_save_and_load_process() {
 
 #[tokio::test]
 async fn test_update_process() {
-    let persistence = PersistenceManager::new().await.unwrap();
+    let persistence = PersistenceManager::new();
 
     let mut process_info = ProcessInfo {
         id: None,
@@ -72,7 +72,7 @@ async fn test_update_process() {
         created_at: chrono::Utc::now(),
         updated_at: chrono::Utc::now(),
         tags: vec![],
-        auto_start: false,
+        auto_start_on_restore: false,
     };
 
     // Save initial process
@@ -93,7 +93,7 @@ async fn test_update_process() {
 
 #[tokio::test]
 async fn test_delete_process() {
-    let persistence = PersistenceManager::new().await.unwrap();
+    let persistence = PersistenceManager::new();
 
     let process_info = ProcessInfo {
         id: None,
@@ -114,7 +114,7 @@ async fn test_delete_process() {
         created_at: chrono::Utc::now(),
         updated_at: chrono::Utc::now(),
         tags: vec![],
-        auto_start: false,
+        auto_start_on_restore: false,
     };
 
     // Save and delete
@@ -128,7 +128,7 @@ async fn test_delete_process() {
 
 #[tokio::test]
 async fn test_process_state_reset() {
-    let persistence = PersistenceManager::new().await.unwrap();
+    let persistence = PersistenceManager::new();
 
     // Test that runtime state is not persisted (by design)
     let process_info = ProcessInfo {
@@ -150,7 +150,7 @@ async fn test_process_state_reset() {
         created_at: chrono::Utc::now(),
         updated_at: chrono::Utc::now(),
         tags: vec![],
-        auto_start: false,
+        auto_start_on_restore: false,
     };
 
     persistence.save_process(&process_info).await.unwrap();

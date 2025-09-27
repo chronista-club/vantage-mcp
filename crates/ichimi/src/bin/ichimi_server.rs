@@ -25,13 +25,13 @@ fn detect_default_browser() -> DefaultBrowser {
     {
         // Try to read macOS default browser preference
         let output = std::process::Command::new("plutil")
-            .args(&["-p", &format!("{}/Library/Preferences/com.apple.LaunchServices/com.apple.launchservices.secure.plist", env::var("HOME").unwrap_or_default())])
+            .args(["-p", &format!("{}/Library/Preferences/com.apple.LaunchServices/com.apple.launchservices.secure.plist", env::var("HOME").unwrap_or_default())])
             .output();
 
         if output.is_err() {
             // Try alternate location
             let output = std::process::Command::new("defaults")
-                .args(&[
+                .args([
                     "read",
                     "com.apple.LaunchServices/com.apple.launchservices.secure",
                 ])
@@ -298,7 +298,7 @@ async fn main() -> Result<()> {
     // Auto-import processes on startup if configured
     // First try YAML snapshot for auto-start processes
     let yaml_snapshot = std::env::var("HOME")
-        .map(|home| format!("{}/.ichimi/snapshot.yaml", home))
+        .map(|home| format!("{home}/.ichimi/snapshot.yaml"))
         .unwrap_or_else(|_| ".ichimi/snapshot.yaml".to_string());
 
     if std::path::Path::new(&yaml_snapshot).exists() {
@@ -522,7 +522,7 @@ async fn main() -> Result<()> {
         // Open browser with actual port (when web is enabled)
         if auto_open && (web_enabled || web_only) {
             // Open browser when web dashboard is available
-            let url = format!("http://localhost:{}", actual_port);
+            let url = format!("http://localhost:{actual_port}");
 
             #[cfg(feature = "webdriver")]
             if use_webdriver {
@@ -656,7 +656,7 @@ async fn main() -> Result<()> {
                             std::process::Command::new(
                                 "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
                             )
-                            .arg(format!("--app={}", url))
+                            .arg(format!("--app={url}"))
                             .arg("--new-window")
                             .spawn()
                             .or_else(|_| {
@@ -671,21 +671,21 @@ async fn main() -> Result<()> {
                         } else if cfg!(target_os = "windows") {
                             // Windows: Try Chrome, then Edge
                             std::process::Command::new("cmd")
-                                .args(&["/C", "start", "chrome", &format!("--app={}", url)])
+                                .args(["/C", "start", "chrome", &format!("--app={url}")])
                                 .spawn()
                                 .or_else(|_| {
                                     std::process::Command::new("cmd")
-                                        .args(&["/C", "start", "msedge", &format!("--app={}", url)])
+                                        .args(["/C", "start", "msedge", &format!("--app={url}")])
                                         .spawn()
                                 })
                         } else {
                             // Linux: Try chromium or google-chrome
                             std::process::Command::new("chromium")
-                                .arg(format!("--app={}", url))
+                                .arg(format!("--app={url}"))
                                 .spawn()
                                 .or_else(|_| {
                                     std::process::Command::new("google-chrome")
-                                        .arg(format!("--app={}", url))
+                                        .arg(format!("--app={url}"))
                                         .spawn()
                                 })
                         };

@@ -117,16 +117,14 @@ async fn static_handler(uri: axum::http::Uri) -> impl IntoResponse {
     // パスの正規化
     let path = if path.is_empty() || path == "/" {
         "index.html"
-    } else if path.starts_with('/') {
-        &path[1..]
     } else {
-        path
+        path.strip_prefix('/').unwrap_or(path)
     };
 
     tracing::debug!("Static file request: {} -> {}", uri.path(), path);
 
     // Webビルドファイルをチェック（ui/web/dist/ディレクトリ）
-    let dist_path = format!("ui/web/dist/{}", path);
+    let dist_path = format!("ui/web/dist/{path}");
     if let Some((data, mime)) = Asset::get_with_mime(&dist_path) {
         return Response::builder()
             .status(StatusCode::OK)

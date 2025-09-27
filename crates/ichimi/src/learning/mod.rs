@@ -76,6 +76,7 @@ impl LearningEngine {
 
     // live_query_loop removed - Database dependency eliminated
 
+    #[allow(dead_code)]
     async fn update_patterns(
         patterns: Arc<RwLock<HashMap<String, ProcessPattern>>>,
         process_id: &str,

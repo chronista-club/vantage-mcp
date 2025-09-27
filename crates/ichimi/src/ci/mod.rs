@@ -88,19 +88,19 @@ impl CiMonitor {
 
         let output = cmd.output().await.map_err(|e| {
             error!("Failed to execute gh command: {}", e);
-            format!("Failed to execute gh command: {}", e)
+            format!("Failed to execute gh command: {e}")
         })?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
             error!("gh command failed: {}", stderr);
-            return Err(format!("gh command failed: {}", stderr));
+            return Err(format!("gh command failed: {stderr}"));
         }
 
         let stdout = String::from_utf8_lossy(&output.stdout);
         let raw_runs: Vec<serde_json::Value> = serde_json::from_str(&stdout).map_err(|e| {
             error!("Failed to parse gh output: {}", e);
-            format!("Failed to parse gh output: {}", e)
+            format!("Failed to parse gh output: {e}")
         })?;
 
         let runs: Vec<CiRun> = raw_runs
@@ -170,13 +170,13 @@ impl CiMonitor {
 
         let output = cmd.output().await.map_err(|e| {
             error!("Failed to execute gh command: {}", e);
-            format!("Failed to execute gh command: {}", e)
+            format!("Failed to execute gh command: {e}")
         })?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
             error!("gh command failed: {}", stderr);
-            return Err(format!("gh command failed: {}", stderr));
+            return Err(format!("gh command failed: {stderr}"));
         }
 
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
@@ -198,7 +198,7 @@ impl CiMonitor {
 
         let output = cmd.output().await.map_err(|e| {
             error!("Failed to execute gh command: {}", e);
-            format!("Failed to execute gh command: {}", e)
+            format!("Failed to execute gh command: {e}")
         })?;
 
         if !output.status.success() {
@@ -212,7 +212,7 @@ impl CiMonitor {
                 );
             }
             error!("gh command failed: {}", stderr);
-            return Err(format!("gh command failed: {}", stderr));
+            return Err(format!("gh command failed: {stderr}"));
         }
 
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
@@ -235,7 +235,7 @@ impl CiMonitor {
 
             if start.elapsed() > timeout {
                 warn!("Timeout waiting for CI run {} to complete", run_id);
-                return Err(format!("Timeout waiting for CI run {} to complete", run_id));
+                return Err(format!("Timeout waiting for CI run {run_id} to complete"));
             }
 
             // 最新の状態を取得
