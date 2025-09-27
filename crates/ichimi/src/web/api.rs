@@ -36,11 +36,17 @@ pub fn create_api_routes() -> Router<AppState> {
         .route("/templates/:id", get(super::handlers::get_template))
         .route("/templates/:id", put(super::handlers::update_template))
         .route("/templates/:id", delete(super::handlers::delete_template))
-        .route("/templates/:id/instantiate", post(super::handlers::instantiate_template))
+        .route(
+            "/templates/:id/instantiate",
+            post(super::handlers::instantiate_template),
+        )
         // Clipboard endpoints
         .route("/clipboard", get(super::handlers::get_clipboard))
         .route("/clipboard", delete(super::handlers::clear_clipboard))
-        .route("/clipboard/history", get(super::handlers::get_clipboard_history))
+        .route(
+            "/clipboard/history",
+            get(super::handlers::get_clipboard_history),
+        )
         .route("/clipboard/text", post(super::handlers::set_clipboard_text))
         .route("/clipboard/file", post(super::handlers::set_clipboard_file))
         .route("/clipboard/search", get(super::handlers::search_clipboard))

@@ -16,8 +16,7 @@ pub fn validate_command(command: &str) -> Result<(), String> {
     for pattern in &dangerous_patterns {
         if command.contains(pattern) {
             return Err(format!(
-                "Command contains potentially dangerous pattern: '{}'",
-                pattern
+                "Command contains potentially dangerous pattern: '{pattern}'"
             ));
         }
     }
@@ -60,10 +59,8 @@ pub fn validate_args(args: &[String]) -> Result<(), String> {
         }
 
         // シェル展開文字をチェック（ただし、オプション引数は許可）
-        if !arg.starts_with('-') {
-            if arg.contains('$') || arg.contains('`') || arg.contains("$(") {
-                return Err(format!("Argument contains shell expansion: '{}'", arg));
-            }
+        if !arg.starts_with('-') && (arg.contains('$') || arg.contains('`') || arg.contains("$(")) {
+            return Err(format!("Argument contains shell expansion: '{arg}'"));
         }
     }
 
@@ -92,8 +89,7 @@ pub fn validate_env_vars(env: &HashMap<String, String>) -> Result<(), String> {
             .any(|&var| key.eq_ignore_ascii_case(var))
         {
             return Err(format!(
-                "Setting '{}' environment variable is not allowed",
-                key
+                "Setting '{key}' environment variable is not allowed"
             ));
         }
 
@@ -103,8 +99,7 @@ pub fn validate_env_vars(env: &HashMap<String, String>) -> Result<(), String> {
             .any(|c| c.is_control() && c != '\t' && c != '\n')
         {
             return Err(format!(
-                "Environment variable '{}' contains control characters",
-                key
+                "Environment variable '{key}' contains control characters"
             ));
         }
     }
@@ -134,7 +129,7 @@ pub fn validate_working_directory(cwd: &Option<PathBuf>) -> Result<(), String> {
         // シンボリックリンクのトラバーサルを防ぐ
         let canonical = path
             .canonicalize()
-            .map_err(|e| format!("Failed to resolve working directory: {}", e))?;
+            .map_err(|e| format!("Failed to resolve working directory: {e}"))?;
 
         // システムディレクトリへのアクセスを制限
         let restricted_paths = [
@@ -162,8 +157,7 @@ pub fn validate_working_directory(cwd: &Option<PathBuf>) -> Result<(), String> {
                     && canonical.components().count() <= restricted_path.components().count() + 1
             {
                 return Err(format!(
-                    "Access to system directory '{}' is not allowed",
-                    restricted
+                    "Access to system directory '{restricted}' is not allowed"
                 ));
             }
         }
@@ -221,13 +215,13 @@ mod tests {
     #[test]
     fn test_validate_args() {
         // 正常な引数
-        assert!(validate_args(&vec!["test.txt".to_string()]).is_ok());
-        assert!(validate_args(&vec!["-l".to_string(), "/tmp".to_string()]).is_ok());
+        assert!(validate_args(&["test.txt".to_string()]).is_ok());
+        assert!(validate_args(&["-l".to_string(), "/tmp".to_string()]).is_ok());
 
         // 危険な引数
-        assert!(validate_args(&vec!["$(whoami)".to_string()]).is_err());
-        assert!(validate_args(&vec!["`cat /etc/passwd`".to_string()]).is_err());
-        assert!(validate_args(&vec!["".to_string()]).is_err());
+        assert!(validate_args(&["$(whoami)".to_string()]).is_err());
+        assert!(validate_args(&["`cat /etc/passwd`".to_string()]).is_err());
+        assert!(validate_args(&["".to_string()]).is_err());
     }
 
     #[test]

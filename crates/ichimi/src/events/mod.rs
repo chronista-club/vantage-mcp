@@ -1,11 +1,10 @@
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use tokio::sync::broadcast;
 use tracing::debug;
 
-use ichimi_persistence::Database;
+// Database removed - SurrealDB dependency eliminated
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -46,37 +45,25 @@ impl ProcessEvent {
 
 #[derive(Clone)]
 pub struct EventSystem {
-    db: Arc<Database>,
     sender: broadcast::Sender<ProcessEvent>,
 }
 
+impl Default for EventSystem {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EventSystem {
-    pub fn new(db: Arc<Database>) -> Self {
+    pub fn new() -> Self {
         let (sender, _) = broadcast::channel(100);
-        Self { db, sender }
+        Self { sender }
     }
 
     pub async fn emit(&self, event: ProcessEvent) -> Result<()> {
         debug!("Emitting event: {:?}", event.event_type);
 
-        // データベースに記録
-        let event_type_str = match &event.event_type {
-            EventType::ProcessStarted => "start",
-            EventType::ProcessStopped => "stop",
-            EventType::ProcessError => "error",
-            EventType::ProcessRecovered => "recover",
-            EventType::ProcessCreated => "create",
-            EventType::ProcessRemoved => "remove",
-        };
-
-        self.db
-            .record_event(
-                event_type_str,
-                &event.process_id,
-                event.context.clone(),
-                event.metadata.clone(),
-            )
-            .await?;
+        // メモリ内でのみイベントを保持（データベース記録は削除）
 
         // ブロードキャスト（リスナーがいなくてもエラーにしない）
         let _ = self.sender.send(event);

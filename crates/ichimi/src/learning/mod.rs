@@ -1,12 +1,11 @@
-use anyhow::{Context, Result};
-use chrono::{Datelike, Timelike};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, error, info};
 
-use ichimi_persistence::Database;
+// Database removed - SurrealDB dependency eliminated
 use crate::events::{EventSystem, EventType, ProcessEvent};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -42,35 +41,24 @@ pub enum SuggestedAction {
     CreateProcess { command: String, args: Vec<String> },
 }
 
+#[derive(Clone)]
 pub struct LearningEngine {
-    db: Arc<Database>,
     event_system: Arc<EventSystem>,
     patterns: Arc<RwLock<HashMap<String, ProcessPattern>>>,
 }
 
 impl LearningEngine {
-    pub fn new(db: Arc<Database>, event_system: Arc<EventSystem>) -> Self {
+    pub fn new(event_system: Arc<EventSystem>) -> Self {
         Self {
-            db,
             event_system,
             patterns: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
     pub async fn start_learning(&self) -> Result<()> {
-        info!("Starting learning engine with LIVE QUERY");
+        info!("Starting learning engine");
 
-        // LIVE QUERYを開始
-        let db = self.db.clone();
-        let patterns = self.patterns.clone();
-
-        tokio::spawn(async move {
-            if let Err(e) = Self::live_query_loop(db, patterns).await {
-                error!("LIVE QUERY loop failed: {}", e);
-            }
-        });
-
-        // イベントシステムからのイベントも監視
+        // イベントシステムからのイベントを監視
         let mut receiver = self.event_system.subscribe();
         let learning_self = self.clone();
 
@@ -86,41 +74,9 @@ impl LearningEngine {
         Ok(())
     }
 
-    async fn live_query_loop(
-        db: Arc<Database>,
-        patterns: Arc<RwLock<HashMap<String, ProcessPattern>>>,
-    ) -> Result<()> {
-        let client = db.client().await;
+    // live_query_loop removed - Database dependency eliminated
 
-        // LIVE QUERYを設定
-        let mut response = client
-            .query("LIVE SELECT * FROM process_event")
-            .await
-            .context("Failed to setup LIVE QUERY")?;
-
-        // ストリームから結果を取得
-        while let Ok(result) = response.take::<Vec<serde_json::Value>>(0usize) {
-            debug!("Received LIVE QUERY event: {:?}", result);
-
-            // パターンを更新
-            for item in result {
-                if let Some(event_obj) = item.as_object() {
-                    if let (Some(process_id), Some(event_type)) =
-                        (event_obj.get("process_id"), event_obj.get("type"))
-                    {
-                        let process_id = process_id.as_str().unwrap_or_default();
-                        let event_type = event_type.as_str().unwrap_or_default();
-
-                        // パターンを学習
-                        Self::update_patterns(patterns.clone(), process_id, event_type).await;
-                    }
-                }
-            }
-        }
-
-        Ok(())
-    }
-
+    #[allow(dead_code)]
     async fn update_patterns(
         patterns: Arc<RwLock<HashMap<String, ProcessPattern>>>,
         process_id: &str,
@@ -183,39 +139,29 @@ impl LearningEngine {
     }
 
     async fn learn_process_start(&self, process_id: &str) -> Result<()> {
-        // プロセス開始パターンを記録
-        let client = self.db.client().await;
+        // プロセス開始パターンを記録（メモリ内で管理）
+        let mut patterns = self.patterns.write().await;
 
-        let query = r#"
-            UPDATE process_pattern:$id SET
-                confidence = math::min(confidence + 0.05, 1.0)
-            WHERE process_id = $process_id
-        "#;
+        let pattern = patterns
+            .entry(process_id.to_string())
+            .or_insert_with(|| ProcessPattern {
+                process_id: process_id.to_string(),
+                next_processes: Vec::new(),
+                confidence: 0.5,
+                context: HashMap::new(),
+            });
 
-        client
-            .query(query)
-            .bind(("id", format!("pattern_{process_id}")))
-            .bind(("process_id", process_id.to_string()))
-            .await?;
-
+        pattern.confidence = (pattern.confidence + 0.05).min(1.0);
         Ok(())
     }
 
     async fn learn_process_stop(&self, process_id: &str) -> Result<()> {
-        // プロセス停止パターンを記録
-        let client = self.db.client().await;
+        // プロセス停止パターンを記録（メモリ内で管理）
+        let mut patterns = self.patterns.write().await;
 
-        let query = r#"
-            UPDATE process_pattern:$id SET
-                confidence = math::max(confidence - 0.02, 0.0)
-            WHERE process_id = $process_id
-        "#;
-
-        client
-            .query(query)
-            .bind(("id", format!("pattern_{process_id}")))
-            .bind(("process_id", process_id.to_string()))
-            .await?;
+        if let Some(pattern) = patterns.get_mut(process_id) {
+            pattern.confidence = (pattern.confidence - 0.02).max(0.0);
+        }
 
         Ok(())
     }
@@ -225,48 +171,28 @@ impl LearningEngine {
         process_id: &str,
         context: Option<serde_json::Value>,
     ) -> Result<()> {
-        // エラーパターンを記録
-        let client = self.db.client().await;
+        // エラーパターンを記録（メモリ内で管理）
+        let mut patterns = self.patterns.write().await;
 
-        let query = r#"
-            UPDATE process_pattern:$id SET
-                confidence = math::max(confidence - 0.1, 0.0),
-                context.last_error = $error_context
-            WHERE process_id = $process_id
-        "#;
-
-        client
-            .query(query)
-            .bind(("id", format!("pattern_{process_id}")))
-            .bind(("process_id", process_id.to_string()))
-            .bind(("error_context", context))
-            .await?;
+        if let Some(pattern) = patterns.get_mut(process_id) {
+            pattern.confidence = (pattern.confidence - 0.1).max(0.0);
+            if let Some(ctx) = context {
+                pattern.context.insert("last_error".to_string(), ctx);
+            }
+        }
 
         Ok(())
     }
 
     pub async fn get_suggestions(&self, current_process: Option<&str>) -> Result<Vec<Suggestion>> {
         let mut suggestions = Vec::new();
-        let client = self.db.client().await;
 
-        // 現在のプロセスに基づいて次のプロセスを提案
+        // 現在のプロセスに基づいて次のプロセスを提案（メモリ内パターンから）
         if let Some(process_id) = current_process {
-            let query = r#"
-                SELECT *,
-                    ->depends_on->process AS dependencies
-                FROM process:$process_id
-                WHERE confidence > 0.6
-                ORDER BY confidence DESC
-                LIMIT 3
-            "#;
+            let patterns = self.patterns.read().await;
 
-            let mut response = client
-                .query(query)
-                .bind(("process_id", process_id.to_string()))
-                .await?;
-
-            if let Ok(patterns) = response.take::<Vec<ProcessPattern>>(0) {
-                for pattern in patterns {
+            if let Some(pattern) = patterns.get(process_id) {
+                if pattern.confidence > 0.6 {
                     for next_process in &pattern.next_processes {
                         suggestions.push(Suggestion {
                             message: format!(
@@ -286,49 +212,11 @@ impl LearningEngine {
             }
         }
 
-        // 時間帯に基づく提案
-        let current_hour = chrono::Local::now().hour();
-        let current_day = chrono::Local::now().weekday().num_days_from_monday();
-
-        let query = r#"
-            SELECT * FROM time_pattern
-            WHERE $hour >= hour_range[0] AND $hour <= hour_range[1]
-                AND $day IN day_of_week
-            ORDER BY frequency DESC
-            LIMIT 3
-        "#;
-
-        let mut response = client
-            .query(query)
-            .bind(("hour", current_hour))
-            .bind(("day", current_day))
-            .await?;
-
-        if let Ok(time_patterns) = response.take::<Vec<TimePattern>>(0) {
-            for pattern in time_patterns {
-                for process in &pattern.processes {
-                    suggestions.push(Suggestion {
-                        message: format!("この時間帯は通常「{process}」を起動しています。"),
-                        confidence: 0.7,
-                        action: SuggestedAction::StartProcess {
-                            process_id: process.clone(),
-                        },
-                        reason: format!("時間帯パターン（頻度: {}回）", pattern.frequency),
-                    });
-                }
-            }
-        }
+        // 時間帯に基づく提案（簡易実装）
+        // TODO: 実際の時間パターン学習を実装
 
         Ok(suggestions)
     }
 }
 
-impl Clone for LearningEngine {
-    fn clone(&self) -> Self {
-        Self {
-            db: self.db.clone(),
-            event_system: self.event_system.clone(),
-            patterns: self.patterns.clone(),
-        }
-    }
-}
+// Clone is now derived automatically with #[derive(Clone)]

@@ -1,7 +1,10 @@
 use super::buffer::CircularBuffer;
 use super::types::*;
-use ichimi_persistence::{Database, PersistenceManager, ProcessTemplate, Settings};
-use ichimi_persistence::{ProcessInfo as DbProcessInfo, ProcessState as DbProcessState, ProcessStatus as DbProcessStatus};
+use chrono::Utc;
+use ichimi_persistence::{PersistenceManager, ProcessTemplate, Settings};
+use ichimi_persistence::{
+    ProcessInfo as DbProcessInfo, ProcessState as DbProcessState, ProcessStatus as DbProcessStatus,
+};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process::Stdio;
@@ -11,7 +14,6 @@ use tokio::process::{Child, Command};
 use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
 use tracing::{debug, error, info, warn};
-use chrono::Utc;
 
 /// 管理されるプロセス
 pub struct ManagedProcess {
@@ -53,7 +55,6 @@ impl ManagedProcess {
 pub struct ProcessManager {
     processes: Arc<RwLock<HashMap<String, Arc<RwLock<ManagedProcess>>>>>,
     persistence: Arc<PersistenceManager>,
-    database: Arc<Database>,
 }
 
 // 型変換ヘルパー関数
@@ -99,7 +100,7 @@ impl ProcessManager {
             created_at: Utc::now(),
             updated_at: Utc::now(),
             tags: vec![],
-            auto_start: info.auto_start_on_restore,
+            auto_start_on_restore: info.auto_start_on_restore,
         }
     }
 
@@ -110,102 +111,56 @@ impl ProcessManager {
             args: db_info.args,
             env: db_info.env,
             cwd: db_info.cwd.map(PathBuf::from),
-            state: match (db_info.status.state, db_info.status.pid, db_info.status.started_at, db_info.status.stopped_at, db_info.status.exit_code, db_info.status.error.as_ref()) {
+            state: match (
+                db_info.status.state,
+                db_info.status.pid,
+                db_info.status.started_at,
+                db_info.status.stopped_at,
+                db_info.status.exit_code,
+                db_info.status.error.as_ref(),
+            ) {
                 (DbProcessState::NotStarted, _, _, _, _, _) => ProcessState::NotStarted,
-                (DbProcessState::Running, Some(pid), Some(started_at), _, _, _) => ProcessState::Running {
-                    pid,
-                    started_at,
-                },
-                (DbProcessState::Stopped, _, _, Some(stopped_at), exit_code, _) => ProcessState::Stopped {
-                    exit_code,
-                    stopped_at,
-                },
-                (DbProcessState::Failed, _, _, Some(failed_at), _, Some(error)) => ProcessState::Failed {
-                    error: error.clone(),
-                    failed_at,
-                },
+                (DbProcessState::Running, Some(pid), Some(started_at), _, _, _) => {
+                    ProcessState::Running { pid, started_at }
+                }
+                (DbProcessState::Stopped, _, _, Some(stopped_at), exit_code, _) => {
+                    ProcessState::Stopped {
+                        exit_code,
+                        stopped_at,
+                    }
+                }
+                (DbProcessState::Failed, _, _, Some(failed_at), _, Some(error)) => {
+                    ProcessState::Failed {
+                        error: error.clone(),
+                        failed_at,
+                    }
+                }
                 _ => ProcessState::NotStarted, // Default fallback
             },
-            auto_start_on_restore: db_info.auto_start,
+            auto_start_on_restore: db_info.auto_start_on_restore,
         }
     }
 }
 
 impl ProcessManager {
     pub async fn new() -> Self {
-        let database = match Database::new().await {
-            Ok(db) => Arc::new(db),
+        let persistence = match PersistenceManager::new().await {
+            Ok(pm) => Arc::new(pm),
             Err(e) => {
-                tracing::error!("Failed to initialize database: {}", e);
-                panic!("Cannot continue without database");
+                tracing::error!("Failed to initialize persistence manager: {}", e);
+                panic!("Cannot continue without persistence manager");
             }
         };
 
-        Self::with_database(database).await
-    }
-
-    /// Get the database instance
-    pub fn database(&self) -> Arc<Database> {
-        self.database.clone()
+        Self {
+            processes: Arc::new(RwLock::new(HashMap::new())),
+            persistence,
+        }
     }
 
     /// Get the persistence manager instance
     pub fn persistence_manager(&self) -> Arc<PersistenceManager> {
         self.persistence.clone()
-    }
-
-    pub async fn with_database(database: Arc<Database>) -> Self {
-        let persistence = Arc::new(PersistenceManager::with_database(database.clone()));
-
-        let manager = Self {
-            processes: Arc::new(RwLock::new(HashMap::new())),
-            persistence: persistence.clone(),
-            database,
-        };
-
-        // Load persisted processes on startup
-        let manager_clone = manager.clone();
-        tokio::spawn(async move {
-            if let Err(e) = manager_clone.load_persisted_processes().await {
-                tracing::warn!("Failed to load persisted processes: {}", e);
-            }
-        });
-
-        // Restore from snapshot on startup
-        let persistence_clone = persistence.clone();
-        tokio::spawn(async move {
-            // Check if snapshot exists and restore
-            if let Err(e) = persistence_clone.restore_snapshot().await {
-                tracing::debug!("No snapshot to restore or restore failed: {}", e);
-            } else {
-                tracing::info!("Successfully restored from snapshot");
-            }
-        });
-
-        // Start auto-export with default interval of 60 seconds if not specified
-        let interval_secs = std::env::var("ICHIMI_AUTO_EXPORT_INTERVAL")
-            .ok()
-            .and_then(|s| s.parse::<u64>().ok())
-            .unwrap_or(60); // Default to 60 seconds
-
-        if interval_secs > 0 {
-            let persistence_clone = persistence.clone();
-            tokio::spawn(async move {
-                let mut interval =
-                    tokio::time::interval(tokio::time::Duration::from_secs(interval_secs));
-                loop {
-                    interval.tick().await;
-                    if let Err(e) = persistence_clone.create_snapshot().await {
-                        tracing::warn!("Auto-snapshot failed: {}", e);
-                    } else {
-                        tracing::debug!("Auto-snapshot completed");
-                    }
-                }
-            });
-            tracing::info!("Auto-snapshot enabled with interval: {}s", interval_secs);
-        }
-
-        manager
     }
 
     async fn load_persisted_processes(&self) -> Result<(), String> {
@@ -215,7 +170,7 @@ impl ProcessManager {
 
         for (id, db_info) in loaded_processes {
             // Check if this process should be auto-started on restore
-            if db_info.auto_start {
+            if db_info.auto_start_on_restore {
                 auto_start_processes.push(id.clone());
             }
 
@@ -406,39 +361,42 @@ impl ProcessManager {
                 let mut process = process_arc_clone.write().await;
                 process.child.take()
             };
-            
+
             if let Some(mut child) = child_opt {
                 // プロセスの終了を待つ
                 match child.wait().await {
                     Ok(status) => {
                         let exit_code = status.code();
                         debug!("Process '{}' exited with code: {:?}", process_id, exit_code);
-                        
+
                         // プロセス状態を更新
                         let mut process = process_arc_clone.write().await;
                         process.info.state = ProcessState::Stopped {
                             exit_code,
                             stopped_at: chrono::Utc::now(),
                         };
-                        
+
                         // 永続化
                         let db_info = ProcessManager::to_db_process_info(&process.info);
                         if let Err(e) = persistence_clone.update_process(&db_info).await {
                             tracing::warn!("Failed to persist stopped process state: {}", e);
                         }
-                        
-                        info!("Process '{}' stopped with exit code: {:?}", process_id, exit_code);
+
+                        info!(
+                            "Process '{}' stopped with exit code: {:?}",
+                            process_id, exit_code
+                        );
                     }
                     Err(e) => {
                         error!("Failed to wait for process '{}': {}", process_id, e);
-                        
+
                         // エラー状態を設定
                         let mut process = process_arc_clone.write().await;
                         process.info.state = ProcessState::Failed {
-                            error: format!("Process wait failed: {}", e),
+                            error: format!("Process wait failed: {e}"),
                             failed_at: chrono::Utc::now(),
                         };
-                        
+
                         // 永続化
                         let db_info = ProcessManager::to_db_process_info(&process.info);
                         if let Err(e) = persistence_clone.update_process(&db_info).await {
@@ -475,23 +433,83 @@ impl ProcessManager {
         }
 
         if let Some(mut child) = process.child.take() {
-            // グレースフルシャットダウンを試みる
-            if let Some(grace_ms) = grace_period_ms {
-                child
-                    .kill()
-                    .await
-                    .map_err(|e| format!("Failed to kill process: {e}"))?;
+            // デフォルトのグレースピリオドは5秒
+            let grace_ms = grace_period_ms.unwrap_or(5000);
 
-                // 指定時間待機
-                let timeout = tokio::time::Duration::from_millis(grace_ms);
-                let _ = tokio::time::timeout(timeout, child.wait()).await;
-            } else {
-                // 即座に終了
-                child
-                    .kill()
-                    .await
-                    .map_err(|e| format!("Failed to kill process: {e}"))?;
+            // まずSIGTERMを送信してグレースフルシャットダウンを試みる
+            #[cfg(unix)]
+            {
+                use nix::sys::signal::{self, Signal};
+                use nix::unistd::Pid;
+
+                if let Some(pid) = child.id() {
+                    let pid = Pid::from_raw(pid as i32);
+
+                    // SIGTERMを送信
+                    if let Err(e) = signal::kill(pid, Signal::SIGTERM) {
+                        tracing::warn!("Failed to send SIGTERM to process {}: {}", id, e);
+                    } else {
+                        info!(
+                            "Sent SIGTERM to process '{}', waiting up to {}ms for graceful shutdown",
+                            id, grace_ms
+                        );
+
+                        // グレースピリオド内での終了を待つ
+                        let timeout = tokio::time::Duration::from_millis(grace_ms);
+                        match tokio::time::timeout(timeout, child.wait()).await {
+                            Ok(Ok(status)) => {
+                                // グレースフルに終了した
+                                info!(
+                                    "Process '{}' terminated gracefully with status: {:?}",
+                                    id, status
+                                );
+
+                                // 出力ハンドルをクリーンアップ
+                                if let Some((stdout_handle, stderr_handle)) =
+                                    process.output_handles.take()
+                                {
+                                    stdout_handle.abort();
+                                    stderr_handle.abort();
+                                }
+
+                                // 状態を更新
+                                process.info.state = ProcessState::Stopped {
+                                    exit_code: status.code(),
+                                    stopped_at: chrono::Utc::now(),
+                                };
+
+                                // Persist the updated state
+                                let db_info = Self::to_db_process_info(&process.info);
+                                if let Err(e) = self.persistence.update_process(&db_info).await {
+                                    tracing::warn!("Failed to persist process state: {}", e);
+                                }
+
+                                info!("Process '{}' stopped gracefully", id);
+                                return Ok(());
+                            }
+                            Ok(Err(e)) => {
+                                tracing::warn!("Error waiting for process {}: {}", id, e);
+                            }
+                            Err(_) => {
+                                // タイムアウト - SIGKILLで強制終了
+                                info!(
+                                    "Process '{}' did not terminate within grace period, sending SIGKILL",
+                                    id
+                                );
+                            }
+                        }
+                    }
+                }
             }
+
+            // Windows または SIGTERM失敗時、またはタイムアウト時はkill()を使用
+            child
+                .kill()
+                .await
+                .map_err(|e| format!("Failed to kill process: {e}"))?;
+
+            // プロセスの終了を待つ
+            let _ = child.wait().await;
 
             // 出力ハンドルをクリーンアップ
             if let Some((stdout_handle, stderr_handle)) = process.output_handles.take() {
@@ -541,7 +559,7 @@ impl ProcessManager {
                     }
                     Err(e) => {
                         error!("Failed to stop process '{}': {}", id_clone, e);
-                        errors.push(format!("{}: {}", id_clone, e));
+                        errors.push(format!("{id_clone}: {e}"));
                     }
                 }
             }
@@ -673,36 +691,118 @@ impl ProcessManager {
         Ok(())
     }
 
-    /// Export processes to surql file
+    /// Export processes to JSON file
     pub async fn export_processes(&self, file_path: Option<String>) -> Result<String, String> {
         let path = match file_path {
             Some(p) => p,
             None => {
                 let snapshot_dir = std::env::var("HOME")
-                    .map(|home| format!("{}/.ichimi", home))
+                    .map(|home| format!("{home}/.ichimi"))
                     .unwrap_or_else(|_| ".ichimi".to_string());
-                format!("{}/snapshot.surql", snapshot_dir)
+                format!("{snapshot_dir}/processes.json")
             }
         };
 
-        // Use PersistenceManager's export_to_surql to include all tables
-        self.persistence
-            .export_to_surql(&path)
-            .await
-            .map_err(|e| format!("Failed to export: {e}"))?;
+        // Export to JSON file
+        self.persistence.export_to_file(&path).await?;
 
         Ok(path)
     }
 
-    /// Import processes from surql file
-    pub async fn import_processes(&self, file_path: &str) -> Result<(), String> {
-        let path = std::path::Path::new(file_path);
+    /// Export processes to YAML file
+    pub async fn export_yaml(
+        &self,
+        file_path: Option<String>,
+        only_auto_start: bool,
+    ) -> Result<String, String> {
+        let path = match file_path {
+            Some(p) => p,
+            None => {
+                let snapshot_dir = std::env::var("HOME")
+                    .map(|home| format!("{home}/.ichimi"))
+                    .unwrap_or_else(|_| ".ichimi".to_string());
+                format!("{snapshot_dir}/snapshot.yaml")
+            }
+        };
 
-        // Import to database using Database's import method which handles .surql format
-        self.database
-            .import_from_file(path)
-            .await
-            .map_err(|e| format!("Failed to import processes: {e}"))?;
+        self.persistence
+            .export_to_yaml(&path, only_auto_start)
+            .await?;
+
+        Ok(path)
+    }
+
+    /// Import processes from YAML file
+    pub async fn import_yaml(&self, file_path: &str) -> Result<(), String> {
+        let imported = self.persistence.import_from_yaml(file_path).await?;
+
+        // Update local process cache
+        let mut processes = self.processes.write().await;
+        for (id, info) in imported {
+            let process_info = crate::process::types::ProcessInfo {
+                id: info.process_id.clone(),
+                command: info.command,
+                args: info.args,
+                env: info.env,
+                cwd: info.cwd.map(std::path::PathBuf::from),
+                state: crate::process::types::ProcessState::NotStarted,
+                auto_start_on_restore: info.auto_start_on_restore,
+            };
+
+            let process = ManagedProcess {
+                info: process_info,
+                stdout_buffer: CircularBuffer::new(1000),
+                stderr_buffer: CircularBuffer::new(1000),
+                child: None,
+                output_handles: None,
+            };
+
+            processes.insert(id, Arc::new(RwLock::new(process)));
+        }
+
+        Ok(())
+    }
+
+    /// Create auto-start snapshot on shutdown
+    pub async fn create_auto_start_snapshot(&self) -> Result<String, String> {
+        self.persistence.create_auto_start_snapshot(None).await
+    }
+
+    /// Create YAML snapshot on shutdown
+    pub async fn create_yaml_snapshot_on_shutdown(&self) -> Result<(), String> {
+        self.persistence.create_auto_start_snapshot(None).await?;
+        Ok(())
+    }
+
+    /// Restore from YAML snapshot on startup
+    pub async fn restore_yaml_snapshot(&self) -> Result<(), String> {
+        let snapshot_dir = std::env::var("HOME")
+            .map(|home| format!("{home}/.ichimi"))
+            .unwrap_or_else(|_| ".ichimi".to_string());
+        let snapshot_path = format!("{snapshot_dir}/snapshot.yaml");
+
+        if !std::path::Path::new(&snapshot_path).exists() {
+            tracing::debug!("No YAML snapshot found at {}", snapshot_path);
+            return Ok(());
+        }
+
+        match self.import_yaml(&snapshot_path).await {
+            Ok(_) => {
+                tracing::info!("Successfully restored from YAML snapshot");
+                Ok(())
+            }
+            Err(e) => {
+                tracing::warn!("Failed to restore YAML snapshot: {}", e);
+                // Don't fail startup if snapshot restore fails
+                Ok(())
+            }
+        }
+    }
+
+    /// Import processes from JSON file
+    pub async fn import_processes(&self, file_path: &str) -> Result<(), String> {
+        // Import from JSON file
+        self.persistence.import_from_file(file_path).await?;
 
         // Reload processes into memory
         self.load_persisted_processes().await?;
@@ -710,16 +810,28 @@ impl ProcessManager {
         Ok(())
     }
 
-    /// Create a snapshot of the entire database
+    /// Create a snapshot (YAML format)
     pub async fn create_snapshot(&self) -> Result<String, String> {
-        let persistence = PersistenceManager::with_database(self.database.clone());
-        persistence.create_snapshot().await
+        self.persistence.create_auto_start_snapshot(None).await
     }
 
     /// Restore from the latest snapshot
     pub async fn restore_snapshot(&self) -> Result<(), String> {
-        let persistence = PersistenceManager::with_database(self.database.clone());
-        persistence.restore_snapshot().await
+        let restored = self.persistence.restore_yaml_snapshot(None).await?;
+
+        // Reload processes into memory
+        self.load_persisted_processes().await?;
+
+        // Start auto-start processes
+        for (id, info) in restored {
+            if info.auto_start_on_restore {
+                if let Err(e) = self.start_process(id.clone()).await {
+                    tracing::warn!("Failed to auto-start process {}: {}", id, e);
+                }
+            }
+        }
+
+        Ok(())
     }
 
     /// Update process configuration (auto_start flags)
@@ -817,7 +929,7 @@ impl ProcessManager {
     }
 
     pub async fn save_settings(&self, settings: Settings) -> Result<(), String> {
-        self.persistence.save_settings(settings).await
+        self.persistence.save_settings(&settings).await
     }
 
     // Template management methods
@@ -834,7 +946,11 @@ impl ProcessManager {
     }
 
     pub async fn get_template(&self, template_id: &str) -> Result<Option<ProcessTemplate>, String> {
-        self.persistence.get_template(template_id).await
+        match self.persistence.get_template(template_id).await {
+            Ok(template) => Ok(Some(template)),
+            Err(e) if e.contains("not found") => Ok(None),
+            Err(e) => Err(e),
+        }
     }
 
     pub async fn search_templates(
@@ -842,6 +958,16 @@ impl ProcessManager {
         category: Option<String>,
         tags: Vec<String>,
     ) -> Result<Vec<ProcessTemplate>, String> {
-        self.persistence.search_templates(category, tags).await
+        // PersistenceManager's search_templates takes a query string
+        // Convert category and tags into a query
+        let query = if let Some(cat) = category {
+            cat
+        } else if !tags.is_empty() {
+            tags.join(" ")
+        } else {
+            String::new()
+        };
+
+        self.persistence.search_templates(&query).await
     }
 }

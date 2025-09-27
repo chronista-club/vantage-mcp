@@ -54,7 +54,7 @@ async fn test_update_process_attributes() {
     assert_eq!(updated_process.command, "ls");
     assert_eq!(updated_process.args, vec!["-la"]);
     assert_eq!(updated_process.cwd, Some(PathBuf::from("/tmp")));
-    assert_eq!(updated_process.auto_start_on_restore, true);
+    assert!(updated_process.auto_start_on_restore);
     assert_eq!(updated_process.env.get("TEST_VAR").unwrap(), "test_value");
 }
 
@@ -119,7 +119,7 @@ async fn test_update_process_persistence() {
         assert_eq!(restored_process.command, "cat");
         assert_eq!(restored_process.args, vec!["file.txt"]);
         assert_eq!(restored_process.cwd, Some(PathBuf::from("/home/user")));
-        assert_eq!(restored_process.auto_start_on_restore, true);
+        assert!(restored_process.auto_start_on_restore);
     }
 }
 
@@ -171,6 +171,6 @@ async fn test_partial_update() {
     // 更新されていない値が保持されているか検証
     assert_eq!(updated_process.args, vec!["test"]);
     assert_eq!(updated_process.cwd, Some(original_dir));
-    assert_eq!(updated_process.auto_start_on_restore, false); // 更新された値
+    assert!(!updated_process.auto_start_on_restore); // 更新された値
     assert_eq!(updated_process.env.get("INITIAL").unwrap(), "value");
 }

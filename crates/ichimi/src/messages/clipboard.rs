@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 /// Set clipboard content (text)
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]

@@ -1,67 +1,159 @@
-# Ichimi Server 開発コマンド集
+# Suggested Commands for Ichimi Server Development
 
-## ビルドコマンド
+## Build Commands
 ```bash
-cargo build           # デバッグビルド
-cargo build --release # リリースビルド（最適化済み）
+# Debug build
+cargo build
+
+# Release build (optimized)
+cargo build --release
+
+# Check compilation without building
+cargo check
 ```
 
-## テストコマンド
+## Test Commands
 ```bash
-cargo test                    # 全テストを実行
-cargo test [test_name]        # 特定のテストを実行
-cargo test test_persistence   # 永続化テストを実行
+# Run all tests
+cargo test
+
+# Run specific test
+cargo test test_name
+
+# Run tests with output
+cargo test -- --nocapture
 ```
 
-## コード品質
+## Code Quality
 ```bash
-cargo fmt            # コードをフォーマット
-cargo fmt -- --check # フォーマットをチェック（変更なし）
-cargo clippy         # リンターを実行
-cargo clippy -- -D warnings # 警告をエラーとして扱う
+# Format code
+cargo fmt
+
+# Check formatting without changes
+cargo fmt -- --check
+
+# Run linter
+cargo clippy
+
+# Strict linting (fail on warnings)
+cargo clippy -- -D warnings
 ```
 
-## サーバーの実行
+## Running the Server
 ```bash
-# 基本実行
+# Run debug build
 cargo run --bin ichimi
-./target/release/ichimi # リリースビルドを実行
 
-# Webダッシュボード付きで実行
+# Run with web dashboard
 cargo run --bin ichimi -- --web
-cargo run --bin ichimi -- --web --web-port 8080  # カスタムポート
-cargo run --bin ichimi -- --web-only  # MCPサーバーなし、Webのみ
 
-# 環境変数を設定して実行
+# Run with custom port
+cargo run --bin ichimi -- --web --web-port 8080
+
+# Run web-only mode (no MCP)
+cargo run --bin ichimi -- --web-only
+
+# Run release build
+./target/release/ichimi
+```
+
+## Environment Variables
+```bash
+# Run with debug logging
 RUST_LOG=debug cargo run
-RUST_LOG=info,ichimi_server::persistence=debug cargo run
-ICHIMI_AUTO_EXPORT_INTERVAL=300 cargo run  # 5分ごとに自動エクスポート
+
+# Run with info logging
+RUST_LOG=info cargo run
+
+# Run with auto-export
+ICHIMI_AUTO_EXPORT_INTERVAL=300 cargo run
 ```
 
-## Git関連
+## Frontend Development (Vue 3)
 ```bash
-git add .
-git commit -m "メッセージ"
-git push
+# Navigate to UI directory
+cd ui/web
+
+# Install dependencies
+bun install
+
+# Development server (port 5173)
+bun run dev
+
+# Production build
+bun run build
+
+# Preview production build
+bun run preview
+```
+
+## Git Commands
+```bash
+# Check status
 git status
-git diff
+
+# Stage changes
+git add -A
+
+# Commit with message
+git commit -m "type: description"
+
+# Push to remote
+git push origin main
+
+# Create and push tag
+git tag -a v0.1.0-betaXX -m "Release v0.1.0-betaXX"
+git push origin v0.1.0-betaXX
 ```
 
-## システムユーティリティ (Darwin/macOS)
+## GitHub CLI
 ```bash
-ls -la        # ファイル一覧（隠しファイル含む）
-pwd           # 現在のディレクトリ
-cd [path]     # ディレクトリ移動
-grep -r "pattern" .  # 再帰的に検索
-find . -name "*.rs"  # ファイル検索
-open .        # Finderで現在のディレクトリを開く（macOS特有）
+# Create release
+gh release create v0.1.0-betaXX --title "Title" --notes-file release-notes.md --prerelease
+
+# View CI runs
+gh run list
+
+# Watch CI run
+gh run watch
 ```
 
-## SurrealDB操作
+## Makefile Shortcuts
 ```bash
-# データベースに直接接続
-surreal sql --endpoint rocksdb://data/ichimi.db --pretty
+# Build debug
+make build
 
-# スキーマをインポート
-surreal import --namespace ichimi --database main --endpoint rocksdb://data/ichimi.db data/setup.surql
+# Build release
+make build-release
+
+# Run tests
+make test
+
+# Format code
+make fmt
+
+# Run linter
+make lint
+
+# Check formatting
+make fmt-check
+```
+
+## System Utilities (macOS/Darwin)
+```bash
+# List files with details
+ls -la
+
+# Find files
+find . -name "*.rs"
+
+# Search in files (ripgrep recommended)
+rg "pattern"
+
+# Process management
+ps aux | grep ichimi
+kill -TERM <pid>
+
+# Port checking
+lsof -i :12700
 ```

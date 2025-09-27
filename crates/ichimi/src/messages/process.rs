@@ -21,6 +21,12 @@ pub struct StartProcessRequest {
 
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
 pub struct StopProcessRequest {
+    pub grace_period_ms: Option<u64>,
+}
+
+// MCP tool用のリクエスト構造体（IDを含む）
+#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
+pub struct McpStopProcessRequest {
     pub id: String,
     pub grace_period_ms: Option<u64>,
 }

@@ -1,0 +1,39 @@
+{
+  "suites": [
+    {
+      "name": "Graceful Shutdown Tests",
+      "tests": [
+        {
+          "name": "Graceful Shutdown",
+          "passed": false,
+          "duration": 1024,
+          "error": "undefined is not an object (evaluating 'state.type')"
+        },
+        {
+          "name": "Force Kill",
+          "passed": false,
+          "duration": 1016,
+          "error": "undefined is not an object (evaluating 'state.type')"
+        },
+        {
+          "name": "Normal Completion",
+          "passed": false,
+          "duration": 1017,
+          "error": "undefined is not an object (evaluating 'state.type')"
+        }
+      ]
+    }
+  ],
+  "totalTests": 3,
+  "passedTests": 0,
+  "failedTests": 3,
+  "totalDuration": 2,
+  "startTime": "2025-09-20T15:35:47.559Z",
+  "endTime": "2025-09-20T15:35:47.561Z",
+  "timestamp": "2025-09-20T15:35:47.562Z",
+  "environment": {
+    "platform": "darwin",
+    "node_version": "v24.3.0",
+    "bun_version": "1.2.22"
+  }
+}

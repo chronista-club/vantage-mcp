@@ -20,7 +20,6 @@ pub mod web;
 pub use error::{IchimiError, IchimiResult};
 
 use ci::CiMonitor;
-use ichimi_persistence::{Database, PersistenceManager};
 use events::EventSystem;
 use learning::LearningEngine;
 use messages::*;
@@ -30,7 +29,6 @@ use process::ProcessManager;
 pub struct IchimiServer {
     start_time: Arc<Mutex<chrono::DateTime<chrono::Utc>>>,
     process_manager: ProcessManager,
-    database: Arc<Database>,
     #[allow(dead_code)]
     event_system: Arc<EventSystem>,
     learning_engine: Arc<LearningEngine>,
@@ -44,39 +42,17 @@ impl IchimiServer {
     pub async fn new() -> anyhow::Result<Self> {
         tracing::info!("Initializing IchimiServer");
 
-        // データベースを初期化
-        tracing::debug!("Initializing database");
-        let database = Arc::new(Database::new().await.map_err(|e| {
-            tracing::error!("Failed to initialize database: {}", e);
-            anyhow::anyhow!("Database initialization failed: {}", e)
-        })?);
-        tracing::debug!("Database initialized successfully");
+        // ProcessManagerを初期化
+        tracing::debug!("Initializing process manager");
+        let process_manager = ProcessManager::new().await;
 
-        // 起動時に既存データを復元
-        database.restore_on_startup().await.unwrap_or_else(|e| {
-            tracing::warn!("Failed to restore data on startup: {}", e);
-        });
-
-        // イベントシステムを初期化
+        // イベントシステムを初期化（Database依存を削除）
         tracing::debug!("Initializing event system");
-        let event_system = Arc::new(EventSystem::new(database.clone()));
+        let event_system = Arc::new(EventSystem::new());
 
-        // 学習エンジンを初期化
+        // 学習エンジンを初期化（Database依存を削除）
         tracing::debug!("Initializing learning engine");
-        let learning_engine = Arc::new(LearningEngine::new(database.clone(), event_system.clone()));
-
-        // 学習を開始
-        tracing::debug!("Starting learning engine");
-        if let Err(e) = learning_engine.start_learning().await {
-            tracing::warn!("Failed to start learning engine: {}", e);
-            // 学習エンジンの失敗は致命的ではないので、警告のみ
-        } else {
-            tracing::info!("Learning engine started successfully");
-        }
-
-        // ProcessManagerを共有Databaseインスタンスで初期化
-        tracing::debug!("Initializing process manager with shared database");
-        let process_manager = ProcessManager::with_database(database.clone()).await;
+        let learning_engine = Arc::new(LearningEngine::new(event_system.clone()));
 
         // CI監視を初期化
         tracing::debug!("Initializing CI monitor");
@@ -86,7 +62,6 @@ impl IchimiServer {
         Ok(Self {
             start_time: Arc::new(Mutex::new(chrono::Utc::now())),
             process_manager,
-            database,
             event_system,
             learning_engine,
             ci_monitor,
@@ -102,14 +77,11 @@ impl IchimiServer {
     pub async fn with_process_manager(process_manager: ProcessManager) -> anyhow::Result<Self> {
         tracing::info!("Initializing IchimiServer with existing ProcessManager");
 
-        // Get database from ProcessManager
-        let database = process_manager.database();
+        // Initialize event system
+        let event_system = Arc::new(EventSystem::new());
 
-        // Initialize event system with shared database
-        let event_system = Arc::new(EventSystem::new(database.clone()));
-
-        // Initialize learning engine with shared database
-        let learning_engine = Arc::new(LearningEngine::new(database.clone(), event_system.clone()));
+        // Initialize learning engine
+        let learning_engine = Arc::new(LearningEngine::new(event_system.clone()));
 
         // Start learning
         if let Err(e) = learning_engine.start_learning().await {
@@ -127,7 +99,6 @@ impl IchimiServer {
         Ok(Self {
             start_time: Arc::new(Mutex::new(chrono::Utc::now())),
             process_manager,
-            database,
             event_system,
             learning_engine,
             ci_monitor: ci_monitor_2,
@@ -139,11 +110,11 @@ impl IchimiServer {
     pub async fn shutdown(&self) -> std::result::Result<(), String> {
         tracing::info!("Shutting down IchimiServer");
 
-        // データベースをバックアップ
-        self.database
-            .backup_on_shutdown()
+        // シャットダウン時にプロセス状態を保存（YAMLスナップショット）
+        self.process_manager
+            .create_yaml_snapshot_on_shutdown()
             .await
-            .map_err(|e| format!("Failed to backup data on shutdown: {e}"))?;
+            .map_err(|e| format!("Failed to save process snapshot on shutdown: {e}"))?;
 
         tracing::info!("Shutdown complete");
         Ok(())
@@ -234,10 +205,10 @@ impl IchimiServer {
     #[tool(description = "Stop a running process")]
     async fn stop_process(
         &self,
-        Parameters(StopProcessRequest {
+        Parameters(McpStopProcessRequest {
             id,
             grace_period_ms,
-        }): Parameters<StopProcessRequest>,
+        }): Parameters<McpStopProcessRequest>,
     ) -> std::result::Result<CallToolResult, McpError> {
         self.process_manager
             .stop_process(id.clone(), grace_period_ms)
@@ -373,7 +344,9 @@ impl IchimiServer {
         ))]))
     }
 
-    #[tool(description = "Create a snapshot of the entire database (processes, templates, clipboard)")]
+    #[tool(
+        description = "Create a snapshot of the entire database (processes, templates, clipboard)"
+    )]
     async fn create_snapshot(&self) -> std::result::Result<CallToolResult, McpError> {
         let path = self
             .process_manager
@@ -404,6 +377,76 @@ impl IchimiServer {
         Ok(CallToolResult::success(vec![Content::text(
             "Snapshot restored successfully".to_string(),
         )]))
+    }
+
+    #[tool(description = "Export processes to YAML format")]
+    async fn export_yaml(
+        &self,
+        Parameters(ExportYamlRequest {
+            file_path,
+            only_auto_start,
+        }): Parameters<ExportYamlRequest>,
+    ) -> std::result::Result<CallToolResult, McpError> {
+        let path = self
+            .process_manager
+            .export_yaml(file_path, only_auto_start)
+            .await
+            .map_err(|e| McpError {
+                message: e.into(),
+                code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+                data: None,
+            })?;
+
+        let message = if only_auto_start {
+            format!("Auto-start processes exported to YAML at {path}")
+        } else {
+            format!("All processes exported to YAML at {path}")
+        };
+
+        Ok(CallToolResult::success(vec![Content::text(message)]))
+    }
+
+    #[tool(description = "Import processes from YAML format")]
+    async fn import_yaml(
+        &self,
+        Parameters(ImportYamlRequest { file_path }): Parameters<ImportYamlRequest>,
+    ) -> std::result::Result<CallToolResult, McpError> {
+        self.process_manager
+            .import_yaml(&file_path)
+            .await
+            .map_err(|e| McpError {
+                message: e.into(),
+                code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+                data: None,
+            })?;
+
+        Ok(CallToolResult::success(vec![Content::text(format!(
+            "Processes imported successfully from YAML file {file_path}"
+        ))]))
+    }
+
+    #[tool(description = "Create a snapshot in specified format (yaml or surql)")]
+    async fn create_formatted_snapshot(
+        &self,
+        Parameters(CreateSnapshotRequest { file_path, format }): Parameters<CreateSnapshotRequest>,
+    ) -> std::result::Result<CallToolResult, McpError> {
+        let path = match format {
+            SnapshotFormat::Yaml => {
+                self.process_manager
+                    .export_yaml(file_path, true) // Only auto-start for snapshots
+                    .await
+            }
+            SnapshotFormat::Surql => self.process_manager.export_processes(file_path).await,
+        }
+        .map_err(|e| McpError {
+            message: e.into(),
+            code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+            data: None,
+        })?;
+
+        Ok(CallToolResult::success(vec![Content::text(format!(
+            "Snapshot created successfully at {path} (format: {format:?})"
+        ))]))
     }
 
     #[tool(description = "Update process configuration (auto_start flags)")]
@@ -479,7 +522,7 @@ impl IchimiServer {
         }
 
         let message = if updates.is_empty() {
-            format!("Process '{}' - no attributes updated", id)
+            format!("Process '{id}' - no attributes updated")
         } else {
             format!("Process '{}' updated: {}", id, updates.join(", "))
         };
@@ -551,7 +594,7 @@ impl IchimiServer {
                             branch: run.branch,
                             event: run.event,
                             status: format!("{:?}", run.status),
-                            conclusion: run.conclusion.map(|c| format!("{:?}", c)),
+                            conclusion: run.conclusion.map(|c| format!("{c:?}")),
                             created_at: run.created_at,
                             updated_at: run.updated_at,
                             duration: run.duration,
@@ -568,7 +611,7 @@ impl IchimiServer {
             Err(e) => {
                 tracing::error!("Failed to list CI runs: {}", e);
                 Err(McpError::internal_error(
-                    format!("Failed to list CI runs: {}", e),
+                    format!("Failed to list CI runs: {e}"),
                     None,
                 ))
             }
@@ -593,7 +636,7 @@ impl IchimiServer {
             Err(e) => {
                 tracing::error!("Failed to get CI run details: {}", e);
                 Err(McpError::internal_error(
-                    format!("Failed to get CI run details: {}", e),
+                    format!("Failed to get CI run details: {e}"),
                     None,
                 ))
             }
@@ -618,7 +661,7 @@ impl IchimiServer {
             Err(e) => {
                 tracing::error!("Failed to get CI failed logs: {}", e);
                 Err(McpError::internal_error(
-                    format!("Failed to get CI failed logs: {}", e),
+                    format!("Failed to get CI failed logs: {e}"),
                     None,
                 ))
             }
@@ -654,7 +697,7 @@ impl IchimiServer {
                     branch: run.branch,
                     event: run.event,
                     status: format!("{:?}", run.status),
-                    conclusion: run.conclusion.map(|c| format!("{:?}", c)),
+                    conclusion: run.conclusion.map(|c| format!("{c:?}")),
                     created_at: run.created_at,
                     updated_at: run.updated_at,
                     duration: run.duration,
@@ -669,7 +712,7 @@ impl IchimiServer {
             Err(e) => {
                 tracing::error!("Failed to wait for CI completion: {}", e);
                 Err(McpError::internal_error(
-                    format!("Failed to wait for CI completion: {}", e),
+                    format!("Failed to wait for CI completion: {e}"),
                     None,
                 ))
             }
@@ -707,8 +750,8 @@ impl IchimiServer {
         &self,
         Parameters(SetClipboardTextRequest { content, tags }): Parameters<SetClipboardTextRequest>,
     ) -> std::result::Result<CallToolResult, McpError> {
-        let persistence = PersistenceManager::with_database(self.database.clone());
-        
+        let persistence = self.process_manager.persistence_manager();
+
         let mut item = persistence
             .set_clipboard_text(content)
             .await
@@ -754,8 +797,8 @@ impl IchimiServer {
         &self,
         Parameters(_request): Parameters<GetClipboardRequest>,
     ) -> std::result::Result<CallToolResult, McpError> {
-        let persistence = PersistenceManager::with_database(self.database.clone());
-        
+        let persistence = self.process_manager.persistence_manager();
+
         let item = persistence
             .get_latest_clipboard_item()
             .await
@@ -765,27 +808,23 @@ impl IchimiServer {
                 data: None,
             })?;
 
-        if let Some(item) = item {
-            let response = ClipboardResponse {
-                id: item.clipboard_id,
-                content: item.content,
-                filename: item.filename,
-                created_at: item.created_at.to_rfc3339(),
-                updated_at: item.updated_at.to_rfc3339(),
-                content_type: item.content_type.unwrap_or_else(|| "text".to_string()),
-                tags: item.tags,
-            };
+        let response = ClipboardResponse {
+            id: item.clipboard_id,
+            content: item.content,
+            filename: item.filename,
+            created_at: item.created_at.to_rfc3339(),
+            updated_at: item.updated_at.to_rfc3339(),
+            content_type: item.content_type.unwrap_or_else(|| "text".to_string()),
+            tags: item.tags,
+        };
 
-            let json = serde_json::to_string_pretty(&response).map_err(|e| McpError {
-                message: format!("Failed to serialize response: {e}").into(),
-                code: rmcp::model::ErrorCode::INTERNAL_ERROR,
-                data: None,
-            })?;
+        let json = serde_json::to_string_pretty(&response).map_err(|e| McpError {
+            message: format!("Failed to serialize response: {e}").into(),
+            code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+            data: None,
+        })?;
 
-            Ok(CallToolResult::success(vec![Content::text(json)]))
-        } else {
-            Ok(CallToolResult::success(vec![Content::text("No clipboard content available")]))
-        }
+        Ok(CallToolResult::success(vec![Content::text(json)]))
     }
 
     #[tool(description = "Open the Ichimi web console in your browser")]
@@ -795,28 +834,26 @@ impl IchimiServer {
     ) -> std::result::Result<CallToolResult, McpError> {
         let port = request.port.unwrap_or(12700);
         let auto_open = request.auto_open.unwrap_or(true);
-        
+
         tracing::info!("Opening web console on port {}", port);
-        
+
         // Check if web server is already running by trying to connect
-        let url = format!("http://localhost:{}", port);
-        
+        let url = format!("http://localhost:{port}");
+
         // Try to check if the server is already running
-        match reqwest::get(&format!("{}/api/status", url)).await {
+        match reqwest::get(&format!("{url}/api/status")).await {
             Ok(response) if response.status().is_success() => {
                 // Server is already running
                 if auto_open {
                     if let Err(e) = open::that(&url) {
                         tracing::warn!("Failed to open browser: {}", e);
                         return Ok(CallToolResult::success(vec![Content::text(format!(
-                            "Web console is already running at {}. Please open it manually.",
-                            url
+                            "Web console is already running at {url}. Please open it manually."
                         ))]));
                     }
                 }
                 Ok(CallToolResult::success(vec![Content::text(format!(
-                    "Web console is already running at {}",
-                    url
+                    "Web console is already running at {url}"
                 ))]))
             }
             _ => {
@@ -826,13 +863,12 @@ impl IchimiServer {
                 Ok(CallToolResult::success(vec![Content::text(format!(
                     "Web console is not running. Please start Ichimi with web mode:\n\
                      \n\
-                     ichimi --web-only --web-port {}\n\
+                     ichimi --web-only --web-port {port}\n\
                      \n\
                      Or use the default port:\n\
                      ichimi --web-only\n\
                      \n\
-                     The web console will be available at {}",
-                    port, url
+                     The web console will be available at {url}"
                 ))]))
             }
         }

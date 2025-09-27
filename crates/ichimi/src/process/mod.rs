@@ -1,7 +1,7 @@
 pub mod buffer;
 pub mod manager;
-pub mod shell;
 pub mod protocol;
+pub mod shell;
 pub mod types;
 
 pub use buffer::CircularBuffer;

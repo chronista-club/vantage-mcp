@@ -1,7 +1,6 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use surrealdb::sql::Thing;
-use chrono::{DateTime, Utc};
 
 /// Generate a unique ID for templates and clipboard items
 pub fn generate_id() -> String {
@@ -9,19 +8,14 @@ pub fn generate_id() -> String {
 }
 
 /// Process state in the lifecycle
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum ProcessState {
+    #[default]
     NotStarted,
     Running,
     Stopped,
     Failed,
-}
-
-impl Default for ProcessState {
-    fn default() -> Self {
-        ProcessState::NotStarted
-    }
 }
 
 /// Process status including state and additional information
@@ -51,50 +45,50 @@ impl Default for ProcessStatus {
 /// Process information stored in database
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProcessInfo {
-    /// SurrealDB record ID
+    /// Database record ID (removed SurrealDB dependency)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<Thing>,
-    
+    pub id: Option<String>,
+
     /// Process unique identifier
     pub process_id: String,
-    
+
     /// Display name for the process
     pub name: String,
-    
+
     /// Command to execute
     pub command: String,
-    
+
     /// Command arguments
     pub args: Vec<String>,
-    
+
     /// Environment variables
     pub env: HashMap<String, String>,
-    
+
     /// Working directory
     pub cwd: Option<String>,
-    
+
     /// Process status
     pub status: ProcessStatus,
-    
+
     /// Created timestamp
     pub created_at: DateTime<Utc>,
-    
+
     /// Updated timestamp
     pub updated_at: DateTime<Utc>,
-    
+
     /// Tags for categorization
     pub tags: Vec<String>,
-    
+
     /// Whether to auto-start on restore
-    pub auto_start: bool,
+    pub auto_start_on_restore: bool,
 }
 
 /// プロセステンプレート - よく使うプロセス設定を保存して再利用
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProcessTemplate {
-    /// SurrealDB record ID
+    /// Database record ID (removed SurrealDB dependency)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<Thing>,
+    pub id: Option<String>,
 
     /// テンプレートの一意識別子
     pub template_id: String,
@@ -147,32 +141,33 @@ impl ProcessTemplate {
         let mut command = self.command.clone();
         let mut args = self.args.clone();
         let mut env = self.env.clone();
-        
+
         // 変数置換処理
         for (key, value) in &values {
-            let placeholder = format!("{{{{{}}}}}", key);
-            
+            let placeholder = format!("{{{{{key}}}}}");
+
             // コマンドの置換
             command = command.replace(&placeholder, value);
-            
+
             // 引数の置換
-            args = args.iter()
+            args = args
+                .iter()
                 .map(|arg| arg.replace(&placeholder, value))
                 .collect();
-            
+
             // 環境変数の置換
             for env_value in env.values_mut() {
                 *env_value = env_value.replace(&placeholder, value);
             }
         }
-        
+
         // 必須変数のチェック
         for var in &self.variables {
             if var.required && !values.contains_key(&var.name) {
                 return Err(format!("Required variable '{}' is missing", var.name));
             }
         }
-        
+
         Ok(ProcessInfo {
             id: None,
             process_id,
@@ -192,7 +187,7 @@ impl ProcessTemplate {
             created_at: Utc::now(),
             updated_at: Utc::now(),
             tags: self.tags.clone(),
-            auto_start: self.default_auto_start,
+            auto_start_on_restore: self.default_auto_start,
         })
     }
 }
@@ -245,9 +240,9 @@ pub struct TemplateVariable {
 /// クリップボードアイテム - ファイルやテキストの共有
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClipboardItem {
-    /// SurrealDB record ID  
+    /// Database record ID (removed SurrealDB dependency)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<Thing>,
+    pub id: Option<String>,
 
     /// 一意のID
     pub clipboard_id: String,

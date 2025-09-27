@@ -83,7 +83,7 @@ impl ShellProcess {
         // Spawn the process
         let mut child = cmd
             .spawn()
-            .map_err(|e| format!("Failed to spawn process: {}", e))?;
+            .map_err(|e| format!("Failed to spawn process: {e}"))?;
 
         // Get the PID
         let pid = child
@@ -215,7 +215,7 @@ impl ShellProcess {
             child
                 .kill()
                 .await
-                .map_err(|e| format!("Failed to kill process: {}", e))?;
+                .map_err(|e| format!("Failed to kill process: {e}"))?;
 
             self.info.state = ProcessState::Stopped {
                 exit_code: None,
@@ -257,7 +257,7 @@ impl ShellProcess {
                 let mut combined = Vec::new();
                 combined.extend(stdout);
                 combined.extend(stderr);
-                
+
                 if let Some(n) = lines {
                     combined.into_iter().rev().take(n).rev().collect()
                 } else {
@@ -312,13 +312,18 @@ impl Process for ShellProcess {
         Box::pin(self.kill_impl())
     }
 
-    fn get_output(&self, stream: OutputStream, lines: Option<usize>) 
-        -> Pin<Box<dyn Future<Output = Vec<String>> + Send + '_>> {
+    fn get_output(
+        &self,
+        stream: OutputStream,
+        lines: Option<usize>,
+    ) -> Pin<Box<dyn Future<Output = Vec<String>> + Send + '_>> {
         Box::pin(self.get_output_impl(stream, lines))
     }
 
-    fn clear_output(&mut self, stream: OutputStream) 
-        -> Pin<Box<dyn Future<Output = ()> + Send + '_>> {
+    fn clear_output(
+        &mut self,
+        stream: OutputStream,
+    ) -> Pin<Box<dyn Future<Output = ()> + Send + '_>> {
         Box::pin(self.clear_output_impl(stream))
     }
 }
@@ -366,7 +371,9 @@ impl ShellProcessBuilder {
     }
 
     pub fn build(self) -> Result<ShellProcess, String> {
-        let id = self.id.ok_or_else(|| "Process ID is required".to_string())?;
+        let id = self
+            .id
+            .ok_or_else(|| "Process ID is required".to_string())?;
         let command = self
             .command
             .ok_or_else(|| "Command is required".to_string())?;
