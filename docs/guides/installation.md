@@ -1,0 +1,142 @@
+# インストールガイド
+
+## 必要条件
+
+- Rust 1.75以降
+- Git
+- Claude Code (MCP対応)
+
+## インストール方法
+
+### 方法1: Cargoを使用（推奨）
+
+最新リリースをインストール：
+```bash
+cargo install --git https://github.com/chronista-club/ichimi-server --tag v0.2.0
+```
+
+または最新の開発版：
+```bash
+cargo install --git https://github.com/chronista-club/ichimi-server
+```
+
+### 方法2: ソースからビルド
+
+```bash
+# リポジトリをクローン
+git clone https://github.com/chronista-club/ichimi-server.git
+cd ichimi-server
+
+# リリースビルド
+cargo build --release
+
+# インストール
+cargo install --path crates/ichimi
+```
+
+### 方法3: ローカルインストールスクリプト
+
+```bash
+# インストールスクリプトを使用
+./install-local.sh
+```
+
+## Claude Code との連携設定
+
+### 1. MCP設定ファイルを作成
+
+`~/.config/claude/mcp.json` を作成：
+
+```json
+{
+  "mcpServers": {
+    "ichimi": {
+      "command": "ichimi",
+      "args": [],
+      "env": {}
+    }
+  }
+}
+```
+
+### 2. 環境変数の設定（オプション）
+
+```bash
+# ログレベルの設定
+export RUST_LOG=info
+
+# 自動エクスポート間隔（秒）
+export ICHIMI_AUTO_EXPORT_INTERVAL=300
+
+# データディレクトリ
+export ICHIMI_DATA_DIR=~/.ichimi/data
+```
+
+## 初回起動
+
+```bash
+# サーバーを起動
+ichimi
+
+# Webダッシュボード付きで起動
+ichimi --web
+
+# カスタムポートで起動
+ichimi --web --web-port 8080
+```
+
+## 動作確認
+
+Claude Code で以下のコマンドを実行：
+
+1. サーバーステータスの確認：
+   - "Check Ichimi server status"
+
+2. テストプロセスの作成：
+   - "Create a test process that echoes hello world"
+
+3. プロセスの起動：
+   - "Start the test process"
+
+## トラブルシューティング
+
+### サーバーが起動しない
+
+1. Rustのバージョンを確認：
+```bash
+rustc --version
+```
+
+2. 依存関係を更新：
+```bash
+cargo update
+```
+
+### Claude Code が認識しない
+
+1. MCP設定ファイルのパスを確認
+2. `ichimi` コマンドがPATHに含まれているか確認：
+```bash
+which ichimi
+```
+
+3. Claude Code を再起動
+
+### ポートが使用中
+
+別のポートを指定：
+```bash
+ichimi --web --web-port 12701
+```
+
+## アンインストール
+
+```bash
+cargo uninstall ichimi-server
+```
+
+設定ファイルとデータを削除：
+```bash
+rm -rf ~/.ichimi
+rm ~/.config/claude/mcp.json  # 他のMCPサーバーがある場合は編集
+```
