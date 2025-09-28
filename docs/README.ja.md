@@ -299,7 +299,8 @@ ichimi-server/
 │       ├── src/
 │       │   ├── lib.rs          # 永続化インターフェース
 │       │   ├── kdl/            # KDL形式の永続化
-│       │   └── surrealdb/      # SurrealDB統合
+│       │   ├── persistence/    # インメモリストレージ実装
+│       │   └── yaml/           # YAMLスナップショット
 │       └── tests/
 ├── ui/
 │   └── web/                    # Vue 3 SPA
@@ -328,8 +329,8 @@ ichimi-server/
 |------|------|----------|
 | `RUST_LOG` | ログレベル (error, warn, info, debug, trace) | info |
 | `ICHIMI_DATA_DIR` | データファイル用ディレクトリ | ~/.ichimi/data |
-| `ICHIMI_IMPORT_FILE` | 起動時にインポートするファイル | ~/.ichimi/data/processes.surql |
-| `ICHIMI_EXPORT_FILE` | シャットダウン時のエクスポート先 | ~/.ichimi/data/processes.surql |
+| `ICHIMI_IMPORT_FILE` | 起動時にインポートするファイル | ~/.ichimi/data/processes.yaml |
+| `ICHIMI_EXPORT_FILE` | シャットダウン時のエクスポート先 | ~/.ichimi/data/processes.yaml |
 | `ICHIMI_STOP_ON_SHUTDOWN` | ichimi終了時にプロセスを停止するか（true/false） | false（継続） |
 | `ICHIMI_AUTO_EXPORT_INTERVAL` | 自動エクスポート間隔（秒） | なし |
 

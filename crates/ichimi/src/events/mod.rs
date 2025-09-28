@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast;
 use tracing::debug;
 
-// Database removed - SurrealDB dependency eliminated
+// Event system for process lifecycle management
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

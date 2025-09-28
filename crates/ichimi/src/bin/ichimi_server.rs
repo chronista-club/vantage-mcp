@@ -312,12 +312,12 @@ async fn main() -> Result<()> {
             }
         }
     } else {
-        // Fall back to SurrealDB import if no YAML snapshot
+        // Fall back to legacy import if no YAML snapshot
         let import_file = env::var("ICHIMI_IMPORT_FILE").unwrap_or_else(|_| {
             std::env::current_dir()
                 .unwrap_or_else(|_| std::path::PathBuf::from("."))
                 .join(".ichimi")
-                .join("snapshot.surql")
+                .join("snapshot.yaml")
                 .to_string_lossy()
                 .to_string()
         });
@@ -383,12 +383,12 @@ async fn main() -> Result<()> {
             }
         }
 
-        // Also export the full SurrealDB snapshot
+        // Also export the full YAML snapshot
         let export_file = env::var("ICHIMI_EXPORT_FILE").unwrap_or_else(|_| {
             std::env::current_dir()
                 .unwrap_or_else(|_| std::path::PathBuf::from("."))
                 .join(".ichimi")
-                .join("snapshot.surql")
+                .join("snapshot.yaml")
                 .to_string_lossy()
                 .to_string()
         });

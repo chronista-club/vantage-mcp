@@ -6,7 +6,7 @@ Process as a Resource - Manage processes as resources
 
 A powerful process management server for Claude Code via the Model Context Protocol (MCP).
 
-![Version](https://img.shields.io/badge/version-0.1.0--beta20-blue.svg)
+![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue)
 ![MCP Compatible](https://img.shields.io/badge/MCP-Compatible-green)
 
@@ -20,7 +20,7 @@ A powerful process management server for Claude Code via the Model Context Proto
 - 💾 **Persistence**: Configuration management in KDL format (`.ichimi/processes.kdl`)
 - 🔄 **Auto-start**: Automatic process startup with `auto_start` flag
 
-### Web Dashboard (v0.1.0-beta20+)
+### Web Dashboard
 - 🌐 **Modern UI**: Sophisticated SPA with Vue 3 + TypeScript + Tabler
 - 📈 **Real-time Updates**: Monitor process states with auto-refresh
 - 🔍 **Search Features**: Process search and filtering
@@ -40,8 +40,11 @@ A powerful process management server for Claude Code via the Model Context Proto
 ### Using Cargo (Recommended)
 
 ```bash
-cargo install ichimi-server
-# The command will be available as 'ichimi'
+# Install from GitHub repository
+cargo install --git https://github.com/chronista-club/ichimi-server --tag v0.2.0
+
+# Or install latest from main branch
+cargo install --git https://github.com/chronista-club/ichimi-server
 ```
 
 ### From Source
@@ -105,8 +108,8 @@ You should see "ichimi" server as "connected".
 - `get_process_output` - Retrieve process stdout/stderr logs
 - `list_processes` - List all managed processes with filters
 - `remove_process` - Remove a process from management
-- `export_processes` - Export all processes to a .surql file
-- `import_processes` - Import processes from a .surql file
+- `export_processes` - Export all processes to a YAML file
+- `import_processes` - Import processes from a YAML file
 
 ### Examples
 
@@ -223,18 +226,18 @@ process "worker" {
 | `cwd` | Working directory | ❌ |
 | `auto_start` | Auto-start on server launch | ❌ |
 
-### JSON Export/Import
+### YAML Export/Import
 
-Process configurations can also be exported/imported in JSON format:
+Process configurations can be exported/imported in YAML format for backup and migration:
 
 ```bash
-# Export processes to JSON file
-curl http://127.0.0.1:12700/api/export > ichimi_export.json
+# Export processes to YAML file
+curl http://127.0.0.1:12700/api/export > ichimi_export.yaml
 
-# Import processes from JSON file
+# Import processes from YAML file
 curl -X POST http://127.0.0.1:12700/api/import \
-  -H "Content-Type: application/json" \
-  -d @ichimi_export.json
+  -H "Content-Type: application/yaml" \
+  -d @ichimi_export.yaml
 ```
 
 ## 🌐 Web Dashboard
@@ -332,7 +335,8 @@ ichimi-server/
 │       ├── src/
 │       │   ├── lib.rs          # Persistence interface
 │       │   ├── kdl/            # KDL format persistence
-│       │   └── surrealdb/      # SurrealDB integration
+│       │   ├── persistence/    # In-memory storage implementation
+│       │   └── yaml/           # YAML snapshot export/import
 │       └── tests/
 ├── ui/
 │   └── web/                    # Vue 3 SPA
@@ -380,8 +384,8 @@ at your option.
 |----------|-------------|---------|  
 | `RUST_LOG` | Log level (error, warn, info, debug, trace) | info |
 | `ICHIMI_DATA_DIR` | Directory for data files | ~/.ichimi/data |
-| `ICHIMI_IMPORT_FILE` | File to import on startup | ~/.ichimi/data/processes.surql |
-| `ICHIMI_EXPORT_FILE` | Export destination on shutdown | ~/.ichimi/data/processes.surql |
+| `ICHIMI_IMPORT_FILE` | File to import on startup | ~/.ichimi/data/processes.yaml |
+| `ICHIMI_EXPORT_FILE` | Export destination on shutdown | ~/.ichimi/data/processes.yaml |
 | `ICHIMI_STOP_ON_SHUTDOWN` | Stop processes on ichimi exit (true/false) | false (continue) |
 | `ICHIMI_AUTO_EXPORT_INTERVAL` | Auto-export interval in seconds | - |
 

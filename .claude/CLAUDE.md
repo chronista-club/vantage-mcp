@@ -4,13 +4,12 @@
 
 ## プロジェクト概要
 
-Ichimi Server は Model Context Protocol (MCP) を介した Claude Code 用のプロセス管理サーバーです。Claude がプロセスの起動、停止、監視、および MCP ツールを通じた出力のキャプチャを可能にします。
+Ichimi (一味・いちみ) Server は Model Context Protocol (MCP) を介した Claude Code 用のプロセス管理サーバーです。Claude がプロセスの起動、停止、監視、および MCP ツールを通じた出力のキャプチャを可能にします。
 
 ### 主な機能
 - プロセスのライフサイクル管理（作成、起動、停止、削除）
 - リアルタイムログキャプチャ（stdout/stderr）
 - KDL形式での永続化と設定ファイル管理（.ichimi/processes.kdl）
-- SurrealDB統合による高度な永続化（別クレート）
 - Webダッシュボード（Vue 3 + TypeScript + Vite + Tabler UI）
 - 自動バックアップ機能
 
@@ -94,13 +93,15 @@ ICHIMI_AUTO_EXPORT_INTERVAL=300 cargo run  # 5分ごとに自動エクスポー�
 ### crates/ichimi-persistence - 永続化レイヤー
 
 - **`src/lib.rs`**: 永続化インターフェース定義
-- **`src/kdl/`**: KDL形式の永続化実装（メイン）
+- **`src/persistence/`**: インメモリストレージ実装
+  - `Arc<RwLock<HashMap>>`による高速メモリストレージ
+  - プロセス、クリップボード、設定の管理
+- **`src/kdl/`**: KDL形式の永続化実装
   - KDLファイル（.ichimi/processes.kdl）での設定管理
   - 人間が読み書きしやすい形式
-- **`src/surrealdb/`**: SurrealDB統合
-  - 高度なクエリ機能
-  - JSONエクスポート/インポート
-  - 内部型からDB型への変換ロジック
+- **`src/yaml/`**: YAMLスナップショット
+  - エクスポート/インポート機能
+  - バックアップとリストア
 
 ### ui/web - Vue 3 SPA
 
@@ -129,10 +130,10 @@ ICHIMI_AUTO_EXPORT_INTERVAL=300 cargo run  # 5分ごとに自動エクスポー�
 
 4. **ツールルーター**: `#[tool_router]` マクロが MCP ツールルーティングを生成。ツールは `CallToolResult` を返す非同期関数です。
 
-5. **永続化アーキテクチャ**: 
+5. **永続化アーキテクチャ**:
    - KDL形式（デフォルト）: 人間が読み書きしやすい設定ファイル形式
-   - SurrealDB統合: 高度なクエリと永続化が必要な場合に使用
-   - 内部型（ProcessInfo）とDB型（DbProcessInfo）の分離による柔軟な設計
+   - インメモリストレージ: `Arc<RwLock<HashMap>>`による高速アクセス
+   - YAMLスナップショット: エクスポート/インポート機能とバックアップ
 
 ## MCP 統合ポイント
 

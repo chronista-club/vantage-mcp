@@ -45,7 +45,7 @@ impl Default for ProcessStatus {
 /// Process information stored in database
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProcessInfo {
-    /// Database record ID (removed SurrealDB dependency)
+    /// Optional unique record identifier
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
 
@@ -86,7 +86,7 @@ pub struct ProcessInfo {
 /// プロセステンプレート - よく使うプロセス設定を保存して再利用
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProcessTemplate {
-    /// Database record ID (removed SurrealDB dependency)
+    /// Optional unique record identifier
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
 
@@ -240,7 +240,7 @@ pub struct TemplateVariable {
 /// クリップボードアイテム - ファイルやテキストの共有
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClipboardItem {
-    /// Database record ID (removed SurrealDB dependency)
+    /// Optional unique record identifier
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
 

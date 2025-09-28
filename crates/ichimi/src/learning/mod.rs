@@ -5,7 +5,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, error, info};
 
-// Database removed - SurrealDB dependency eliminated
+// Learning engine for process behavior patterns
 use crate::events::{EventSystem, EventType, ProcessEvent};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
