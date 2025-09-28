@@ -1,16 +1,19 @@
+use crate::snapshot::Snapshot;
 use crate::types::{ClipboardItem, ProcessInfo, ProcessTemplate, Settings};
-use crate::yaml::{ProcessSnapshot, Snapshot};
-use anyhow::Result;
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-/// Persistence manager for file-based storage
+// Type alias for simplified Result type
+type Result<T> = std::result::Result<T, String>;
+
+/// Persistence manager for in-memory storage with KDL snapshot support
 #[derive(Clone)]
 pub struct PersistenceManager {
     #[allow(dead_code)]
+    snapshot_path: PathBuf,
+    #[allow(dead_code)]
     snapshot_lock: Arc<tokio::sync::RwLock<()>>,
-    // In-memory storage for now, will be replaced with file-based persistence
     processes: Arc<tokio::sync::RwLock<HashMap<String, ProcessInfo>>>,
     templates: Arc<tokio::sync::RwLock<HashMap<String, ProcessTemplate>>>,
     clipboard: Arc<tokio::sync::RwLock<Vec<ClipboardItem>>>,
@@ -20,6 +23,7 @@ pub struct PersistenceManager {
 impl PersistenceManager {
     /// Create a new persistence manager
     pub async fn new() -> Result<Self> {
+        let snapshot_path = Self::default_snapshot_path();
         let snapshot_lock = Arc::new(tokio::sync::RwLock::new(()));
         let processes = Arc::new(tokio::sync::RwLock::new(HashMap::new()));
         let templates = Arc::new(tokio::sync::RwLock::new(HashMap::new()));
@@ -27,12 +31,19 @@ impl PersistenceManager {
         let settings = Arc::new(tokio::sync::RwLock::new(Settings::default()));
 
         Ok(Self {
+            snapshot_path,
             snapshot_lock,
             processes,
             templates,
             clipboard,
             settings,
         })
+    }
+
+    /// Get default snapshot path
+    fn default_snapshot_path() -> PathBuf {
+        let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+        PathBuf::from(home).join(".ichimi").join("snapshot.kdl")
     }
 
     /// Save or update a process
@@ -57,138 +68,150 @@ impl PersistenceManager {
     }
 
     /// Load all processes
-    pub async fn load_all_processes(&self) -> Result<HashMap<String, ProcessInfo>, String> {
+    pub async fn load_all_processes(&self) -> Result<HashMap<String, ProcessInfo>> {
         let processes = self.processes.read().await;
         Ok(processes.clone())
     }
 
-    /// Export processes to YAML format
-    pub async fn export_to_yaml(
+    /// Export processes to KDL snapshot
+    pub async fn export_snapshot(
         &self,
-        file_path: &str,
+        file_path: Option<&str>,
         only_auto_start: bool,
-    ) -> Result<(), String> {
-        let processes = self.load_all_processes().await?;
-
-        let snapshots: Vec<ProcessSnapshot> =
-            processes.values().map(ProcessSnapshot::from).collect();
-
-        let snapshot = if only_auto_start {
-            Snapshot::new_auto_start_only(snapshots)
-        } else {
-            Snapshot::new(snapshots)
+    ) -> Result<String> {
+        let path = match file_path {
+            Some(p) => PathBuf::from(p),
+            None => self.snapshot_path.clone(),
         };
 
+        let processes = self.load_all_processes().await?;
+        let process_list: Vec<ProcessInfo> = processes.into_values().collect();
+
+        let mut snapshot = Snapshot::new(process_list);
+        if only_auto_start {
+            snapshot = snapshot.filter_auto_start();
+        }
+
         snapshot
-            .save_to_file(Path::new(file_path))
+            .save(&path)
             .await
-            .map_err(|e| format!("Failed to save YAML snapshot: {e}"))?;
+            .map_err(|e| format!("Failed to save snapshot: {e}"))?;
 
         tracing::info!(
-            "Exported {} processes to YAML (auto_start_only: {})",
+            "Exported {} processes to KDL snapshot (auto_start_only: {})",
             snapshot.processes.len(),
             only_auto_start
         );
 
-        Ok(())
+        Ok(path.to_string_lossy().to_string())
     }
 
-    /// Import processes from YAML format
-    pub async fn import_from_yaml(
+    /// Import processes from KDL snapshot
+    pub async fn import_snapshot(
         &self,
-        file_path: &str,
-    ) -> Result<HashMap<String, ProcessInfo>, String> {
-        let path = Path::new(file_path);
+        file_path: Option<&str>,
+    ) -> Result<HashMap<String, ProcessInfo>> {
+        let path = match file_path {
+            Some(p) => Path::new(p),
+            None => &self.snapshot_path,
+        };
 
         if !path.exists() {
-            return Err(format!("YAML file not found: {file_path}"));
+            return Err(format!("Snapshot file not found: {}", path.display()));
         }
 
-        let snapshot = Snapshot::load_from_file(path)
+        let snapshot = Snapshot::load(path)
             .await
-            .map_err(|e| format!("Failed to load YAML snapshot: {e}"))?;
+            .map_err(|e| format!("Failed to load snapshot: {e}"))?;
 
-        if !snapshot.is_compatible() {
-            return Err(format!(
-                "Incompatible snapshot version: {} (expected: 1.0)",
-                snapshot.version
-            ));
-        }
-
-        let mut imported_processes = HashMap::new();
+        let mut imported = HashMap::new();
         let mut processes = self.processes.write().await;
 
         for process_snapshot in snapshot.processes {
             let process_info = process_snapshot.to_process_info();
             let process_id = process_info.process_id.clone();
             processes.insert(process_id.clone(), process_info.clone());
-            imported_processes.insert(process_id, process_info);
+            imported.insert(process_id, process_info);
         }
 
         tracing::info!(
-            "Imported {} processes from YAML (created at: {})",
-            imported_processes.len(),
+            "Imported {} processes from KDL snapshot (created at: {})",
+            imported.len(),
             snapshot.timestamp
         );
 
-        Ok(imported_processes)
+        Ok(imported)
     }
 
-    /// Create a YAML snapshot with only auto-start processes
+    /// Create an auto-start snapshot
     pub async fn create_auto_start_snapshot(
         &self,
         file_path: Option<&str>,
-    ) -> Result<String, String> {
-        let path = match file_path {
-            Some(p) => p.to_string(),
-            None => {
-                let snapshot_dir = std::env::var("HOME")
-                    .map(|home| format!("{home}/.ichimi"))
-                    .unwrap_or_else(|_| ".ichimi".to_string());
-                format!("{snapshot_dir}/snapshot.yaml")
-            }
-        };
-
-        self.export_to_yaml(&path, true).await?;
-        Ok(path)
+    ) -> Result<String> {
+        self.export_snapshot(file_path, true).await
     }
 
-    /// Restore processes from YAML snapshot
+    /// Restore from snapshot
+    pub async fn restore_snapshot(
+        &self,
+        file_path: Option<&str>,
+    ) -> Result<HashMap<String, ProcessInfo>> {
+        self.import_snapshot(file_path).await
+    }
+
+    // Legacy YAML compatibility methods (redirect to KDL)
+
+    /// Export to YAML (compatibility - actually exports KDL)
+    pub async fn export_to_yaml(
+        &self,
+        file_path: &str,
+        only_auto_start: bool,
+    ) -> Result<()> {
+        // Change extension to .kdl
+        let kdl_path = file_path.replace(".yaml", ".kdl").replace(".yml", ".kdl");
+        self.export_snapshot(Some(&kdl_path), only_auto_start).await?;
+        Ok(())
+    }
+
+    /// Import from YAML (compatibility - actually imports KDL)
+    pub async fn import_from_yaml(
+        &self,
+        file_path: &str,
+    ) -> Result<HashMap<String, ProcessInfo>> {
+        // Try KDL file first
+        let kdl_path = file_path.replace(".yaml", ".kdl").replace(".yml", ".kdl");
+        if Path::new(&kdl_path).exists() {
+            return self.import_snapshot(Some(&kdl_path)).await;
+        }
+        // Fall back to original path
+        self.import_snapshot(Some(file_path)).await
+    }
+
+    /// Restore YAML snapshot (compatibility - actually restores KDL)
     pub async fn restore_yaml_snapshot(
         &self,
         file_path: Option<&str>,
-    ) -> Result<HashMap<String, ProcessInfo>, String> {
-        let path = match file_path {
-            Some(p) => p.to_string(),
-            None => {
-                let snapshot_dir = std::env::var("HOME")
-                    .map(|home| format!("{home}/.ichimi"))
-                    .unwrap_or_else(|_| ".ichimi".to_string());
-                format!("{snapshot_dir}/snapshot.yaml")
-            }
-        };
-
-        if !std::path::Path::new(&path).exists() {
-            return Err(format!("YAML snapshot not found: {path}"));
-        }
-
-        self.import_from_yaml(&path).await
+    ) -> Result<HashMap<String, ProcessInfo>> {
+        self.restore_snapshot(file_path).await
     }
 
-    /// Export to JSON file (compatibility)
-    pub async fn export_to_file(&self, file_path: &str) -> Result<(), String> {
+    // JSON export/import for REST API
+
+    /// Export to JSON file
+    pub async fn export_to_file(&self, file_path: &str) -> Result<()> {
         let processes = self.load_all_processes().await?;
         let json = serde_json::to_string_pretty(&processes)
             .map_err(|e| format!("Failed to serialize processes: {e}"))?;
 
-        std::fs::write(file_path, json).map_err(|e| format!("Failed to write export file: {e}"))?;
+        std::fs::write(file_path, json)
+            .map_err(|e| format!("Failed to write export file: {e}"))?;
 
         tracing::info!("Exported {} processes to {}", processes.len(), file_path);
         Ok(())
     }
 
-    /// Import from JSON file (compatibility)
-    pub async fn import_from_file(&self, file_path: &str) -> Result<(), String> {
+    /// Import from JSON file
+    pub async fn import_from_file(&self, file_path: &str) -> Result<()> {
         let content = std::fs::read_to_string(file_path)
             .map_err(|e| format!("Failed to read import file: {e}"))?;
 
@@ -205,27 +228,29 @@ impl PersistenceManager {
     }
 
     // Template management
-    pub async fn save_template(&self, template: &ProcessTemplate) -> Result<(), String> {
+
+    /// Save a template
+    pub async fn save_template(&self, template: &ProcessTemplate) -> Result<()> {
         let mut templates = self.templates.write().await;
         templates.insert(template.template_id.clone(), template.clone());
         tracing::info!("Saved template {}", template.template_id);
         Ok(())
     }
 
-    pub async fn get_template(&self, template_id: &str) -> Result<ProcessTemplate, String> {
+    /// Get a template
+    pub async fn get_template(&self, template_id: &str) -> Result<Option<ProcessTemplate>> {
         let templates = self.templates.read().await;
-        templates
-            .get(template_id)
-            .cloned()
-            .ok_or_else(|| format!("Template {template_id} not found"))
+        Ok(templates.get(template_id).cloned())
     }
 
-    pub async fn list_templates(&self) -> Result<Vec<ProcessTemplate>, String> {
+    /// List all templates
+    pub async fn list_templates(&self) -> Result<Vec<ProcessTemplate>> {
         let templates = self.templates.read().await;
         Ok(templates.values().cloned().collect())
     }
 
-    pub async fn delete_template(&self, template_id: &str) -> Result<(), String> {
+    /// Delete a template
+    pub async fn delete_template(&self, template_id: &str) -> Result<()> {
         let mut templates = self.templates.write().await;
         templates.remove(template_id);
         tracing::info!("Deleted template {}", template_id);
@@ -233,179 +258,69 @@ impl PersistenceManager {
     }
 
     // Clipboard management
-    pub async fn save_clipboard_item(&self, item: &ClipboardItem) -> Result<(), String> {
-        let mut clipboard = self.clipboard.write().await;
-        clipboard.push(item.clone());
 
-        // Keep only the last 100 items
-        let len = clipboard.len();
-        if len > 100 {
-            clipboard.drain(0..len - 100);
+    /// Add to clipboard
+    pub async fn add_to_clipboard(&self, text: String) -> Result<()> {
+        let mut clipboard = self.clipboard.write().await;
+        clipboard.push(ClipboardItem::new(text, None, None));
+
+        // Keep only last 100 items
+        if clipboard.len() > 100 {
+            let drain_count = clipboard.len() - 100;
+            clipboard.drain(0..drain_count);
         }
 
-        tracing::debug!("Saved clipboard item");
         Ok(())
     }
 
-    pub async fn get_clipboard_history(&self, limit: usize) -> Result<Vec<ClipboardItem>, String> {
+    /// Get clipboard history
+    pub async fn get_clipboard_history(&self, limit: Option<usize>) -> Result<Vec<ClipboardItem>> {
         let clipboard = self.clipboard.read().await;
-        let items: Vec<ClipboardItem> = clipboard.iter().rev().take(limit).cloned().collect();
-        Ok(items)
+        let limit = limit.unwrap_or(10).min(clipboard.len());
+        Ok(clipboard.iter().rev().take(limit).cloned().collect())
     }
 
-    pub async fn clear_clipboard(&self) -> Result<(), String> {
+    /// Clear clipboard
+    pub async fn clear_clipboard(&self) -> Result<()> {
         let mut clipboard = self.clipboard.write().await;
         clipboard.clear();
-        tracing::info!("Cleared clipboard history");
         Ok(())
     }
 
-    /// Get the latest clipboard item
-    pub async fn get_latest_clipboard_item(&self) -> Result<ClipboardItem, String> {
+    /// Get latest clipboard item
+    pub async fn get_latest_clipboard_item(&self) -> Result<Option<ClipboardItem>> {
         let clipboard = self.clipboard.read().await;
-        clipboard
-            .last()
-            .cloned()
-            .ok_or_else(|| "No clipboard items available".to_string())
+        Ok(clipboard.last().cloned())
     }
 
-    /// Set clipboard with text content
-    pub async fn set_clipboard_text(&self, content: String) -> Result<ClipboardItem, String> {
-        let item = ClipboardItem {
-            id: None,
-            clipboard_id: crate::types::generate_id(),
-            content,
-            filename: None,
-            created_at: chrono::Utc::now(),
-            updated_at: chrono::Utc::now(),
-            content_type: Some("text/plain".to_string()),
-            tags: Vec::new(),
-        };
-        self.save_clipboard_item(&item).await?;
-        Ok(item)
+    /// Set clipboard text (for compatibility)
+    pub async fn set_clipboard_text(&self, text: String) -> Result<()> {
+        self.add_to_clipboard(text)
+            .await
+            .map_err(|e| format!("Failed to set clipboard: {e}"))
     }
 
-    /// Search clipboard items by content
-    pub async fn search_clipboard_items(
-        &self,
-        query: &str,
-        limit: usize,
-    ) -> Result<Vec<ClipboardItem>, String> {
-        let clipboard = self.clipboard.read().await;
-        let query_lower = query.to_lowercase();
-        let items: Vec<ClipboardItem> = clipboard
-            .iter()
-            .filter(|item| item.content.to_lowercase().contains(&query_lower))
-            .rev()
-            .take(limit)
-            .cloned()
-            .collect();
-        Ok(items)
+    /// Get clipboard text (for compatibility)
+    pub async fn get_clipboard_text(&self) -> Result<Option<String>> {
+        let item = self
+            .get_latest_clipboard_item()
+            .await
+            .map_err(|e| format!("Failed to get clipboard: {e}"))?;
+        Ok(item.map(|i| i.content))
     }
 
     // Settings management
-    pub async fn get_settings(&self) -> Result<Settings, String> {
+
+    /// Get settings
+    pub async fn get_settings(&self) -> Result<Settings> {
         let settings = self.settings.read().await;
         Ok(settings.clone())
     }
 
-    pub async fn update_settings(&self, new_settings: Settings) -> Result<(), String> {
-        let mut settings = self.settings.write().await;
-        *settings = new_settings;
-        tracing::info!("Updated settings");
+    /// Update settings
+    pub async fn update_settings(&self, settings: Settings) -> Result<()> {
+        let mut current = self.settings.write().await;
+        *current = settings;
         Ok(())
-    }
-
-    /// Query processes with simple filters
-    pub async fn query_processes(&self, filter: &str) -> Result<Vec<ProcessInfo>, String> {
-        let processes = self.processes.read().await;
-
-        if filter.is_empty() {
-            Ok(processes.values().cloned().collect())
-        } else {
-            let filtered: Vec<ProcessInfo> = processes
-                .values()
-                .filter(|p| p.command.contains(filter))
-                .cloned()
-                .collect();
-            Ok(filtered)
-        }
-    }
-
-    /// Get process statistics
-    pub async fn get_process_stats(&self) -> Result<serde_json::Value, String> {
-        let processes = self.processes.read().await;
-
-        let mut running_count = 0;
-        let mut stopped_count = 0;
-        let mut failed_count = 0;
-        let mut not_started_count = 0;
-
-        for process in processes.values() {
-            match process.status.state {
-                crate::types::ProcessState::Running => running_count += 1,
-                crate::types::ProcessState::Stopped => stopped_count += 1,
-                crate::types::ProcessState::Failed => failed_count += 1,
-                crate::types::ProcessState::NotStarted => not_started_count += 1,
-            }
-        }
-
-        Ok(serde_json::json!({
-            "total_processes": processes.len(),
-            "running_count": running_count,
-            "stopped_count": stopped_count,
-            "failed_count": failed_count,
-            "not_started_count": not_started_count,
-        }))
-    }
-
-    /// Search processes by command or args
-    /// Save settings
-    pub async fn save_settings(&self, settings: &Settings) -> Result<(), String> {
-        let mut settings_guard = self.settings.write().await;
-        *settings_guard = settings.clone();
-        tracing::info!("Saved settings");
-        Ok(())
-    }
-
-    /// Load all templates (alias for list_templates)
-    pub async fn load_all_templates(&self) -> Result<Vec<ProcessTemplate>, String> {
-        self.list_templates().await
-    }
-
-    /// Search templates by name or description
-    pub async fn search_templates(&self, query: &str) -> Result<Vec<ProcessTemplate>, String> {
-        let templates = self.templates.read().await;
-        let query_lower = query.to_lowercase();
-        let filtered: Vec<ProcessTemplate> = templates
-            .values()
-            .filter(|t| {
-                t.name.to_lowercase().contains(&query_lower)
-                    || t.description
-                        .as_ref()
-                        .map(|d| d.to_lowercase().contains(&query_lower))
-                        .unwrap_or(false)
-            })
-            .cloned()
-            .collect();
-        Ok(filtered)
-    }
-
-    pub async fn search_processes(&self, search_term: &str) -> Result<Vec<ProcessInfo>, String> {
-        let processes = self.processes.read().await;
-        let search_lower = search_term.to_lowercase();
-
-        let filtered: Vec<ProcessInfo> = processes
-            .values()
-            .filter(|p| {
-                p.command.to_lowercase().contains(&search_lower)
-                    || p.args
-                        .iter()
-                        .any(|arg| arg.to_lowercase().contains(&search_lower))
-            })
-            .cloned()
-            .collect();
-
-        Ok(filtered)
     }
 }
