@@ -669,7 +669,7 @@ pub async fn get_clipboard_history(
 ) -> Result<Json<ClipboardHistoryResponse>, (StatusCode, String)> {
     let items = state
         .persistence_manager
-        .get_clipboard_history(Some(query.limit.unwrap_or(100)))
+        .get_clipboard_history(query.limit.unwrap_or(100))
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
 
@@ -772,7 +772,7 @@ pub async fn search_clipboard(
     // Simple search implementation using get_clipboard_history
     let all_items = state
         .persistence_manager
-        .get_clipboard_history(Some(req.limit.unwrap_or(50)))
+        .get_clipboard_history(req.limit.unwrap_or(50))
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
 

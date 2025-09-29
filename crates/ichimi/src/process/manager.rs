@@ -1,6 +1,7 @@
 use super::buffer::CircularBuffer;
 use super::types::*;
 use chrono::Utc;
+use dirs;
 use ichimi_persistence::{PersistenceManager, ProcessTemplate, Settings};
 use ichimi_persistence::{
     ProcessInfo as DbProcessInfo, ProcessState as DbProcessState, ProcessStatus as DbProcessStatus,
@@ -144,7 +145,15 @@ impl ProcessManager {
 
 impl ProcessManager {
     pub async fn new() -> Self {
-        let persistence = match PersistenceManager::new().await {
+        // Set up database and config paths
+        let data_dir = dirs::data_dir()
+            .unwrap_or_else(|| std::path::PathBuf::from("."))
+            .join(".ichimi");
+
+        let db_path = data_dir.join("ichimi.db");
+        let config_path = data_dir.join("config.kdl");
+
+        let persistence = match PersistenceManager::new(db_path, Some(config_path)).await {
             Ok(pm) => Arc::new(pm),
             Err(e) => {
                 tracing::error!("Failed to initialize persistence manager: {}", e);
@@ -168,13 +177,13 @@ impl ProcessManager {
         let mut processes = self.processes.write().await;
         let mut auto_start_processes = Vec::new();
 
-        for (id, db_info) in loaded_processes {
+        for db_info in loaded_processes {
             // Check if this process should be auto-started on restore
             if db_info.auto_start_on_restore {
-                auto_start_processes.push(id.clone());
+                auto_start_processes.push(db_info.process_id.clone());
             }
 
-            let info = Self::from_db_process_info(db_info);
+            let info = Self::from_db_process_info(db_info.clone());
             let managed = ManagedProcess {
                 info,
                 stdout_buffer: CircularBuffer::new(1000),
@@ -182,7 +191,7 @@ impl ProcessManager {
                 child: None,
                 output_handles: None,
             };
-            processes.insert(id, Arc::new(RwLock::new(managed)));
+            processes.insert(db_info.process_id.clone(), Arc::new(RwLock::new(managed)));
         }
 
         let loaded_count = processes.len();
@@ -351,6 +360,11 @@ impl ProcessManager {
             tracing::warn!("Failed to persist process state: {}", e);
         }
 
+        // Record process start in database
+        if let Err(e) = self.persistence.record_process_start(&db_info).await {
+            tracing::warn!("Failed to record process start in database: {}", e);
+        }
+
         // プロセスの終了を監視するタスクを起動
         let process_id = id.clone();
         let process_arc_clone = process_arc.clone();
@@ -382,6 +396,11 @@ impl ProcessManager {
                             tracing::warn!("Failed to persist stopped process state: {}", e);
                         }
 
+                        // Record process stop in database
+                        if let Err(e) = persistence_clone.record_process_stop(&process_id, exit_code, None).await {
+                            tracing::warn!("Failed to record process stop in database: {}", e);
+                        }
+
                         info!(
                             "Process '{}' stopped with exit code: {:?}",
                             process_id, exit_code
@@ -401,6 +420,12 @@ impl ProcessManager {
                         let db_info = ProcessManager::to_db_process_info(&process.info);
                         if let Err(e) = persistence_clone.update_process(&db_info).await {
                             tracing::warn!("Failed to persist failed process state: {}", e);
+                        }
+
+                        // Record process failure in database
+                        let error_msg = format!("Process wait failed: {e}");
+                        if let Err(e) = persistence_clone.record_process_stop(&process_id, None, Some(&error_msg)).await {
+                            tracing::warn!("Failed to record process failure in database: {}", e);
                         }
                     }
                 }
@@ -704,7 +729,8 @@ impl ProcessManager {
         };
 
         // Export to JSON file
-        self.persistence.export_to_file(&path).await?;
+        use std::path::Path;
+        self.persistence.export_to_file(Path::new(&path), false).await?;
 
         Ok(path)
     }
@@ -713,7 +739,7 @@ impl ProcessManager {
     pub async fn export_yaml(
         &self,
         file_path: Option<String>,
-        only_auto_start: bool,
+        _only_auto_start: bool,
     ) -> Result<String, String> {
         let path = match file_path {
             Some(p) => p,
@@ -725,8 +751,9 @@ impl ProcessManager {
             }
         };
 
+        use std::path::Path;
         self.persistence
-            .export_to_yaml(&path, only_auto_start)
+            .export_to_yaml(Path::new(&path))
             .await?;
 
         Ok(path)
@@ -734,11 +761,14 @@ impl ProcessManager {
 
     /// Import processes from YAML file
     pub async fn import_yaml(&self, file_path: &str) -> Result<(), String> {
-        let imported = self.persistence.import_from_yaml(file_path).await?;
+        use std::path::Path;
+        self.persistence.import_from_yaml(Path::new(file_path)).await?;
 
-        // Update local process cache
+        // Reload all processes from persistence and update local process cache
+        let imported = self.persistence.load_all_processes().await?;
         let mut processes = self.processes.write().await;
-        for (id, info) in imported {
+        for info in imported {
+            let id = info.process_id.clone();
             let process_info = crate::process::types::ProcessInfo {
                 id: info.process_id.clone(),
                 command: info.command,
@@ -765,12 +795,13 @@ impl ProcessManager {
 
     /// Create auto-start snapshot on shutdown
     pub async fn create_auto_start_snapshot(&self) -> Result<String, String> {
-        self.persistence.create_auto_start_snapshot(None).await
+        self.persistence.create_auto_start_snapshot().await?;
+        Ok("Auto-start snapshot created".to_string())
     }
 
     /// Create YAML snapshot on shutdown
     pub async fn create_yaml_snapshot_on_shutdown(&self) -> Result<(), String> {
-        self.persistence.create_auto_start_snapshot(None).await?;
+        self.persistence.create_auto_start_snapshot().await?;
         Ok(())
     }
 
@@ -802,7 +833,8 @@ impl ProcessManager {
     /// Import processes from JSON file
     pub async fn import_processes(&self, file_path: &str) -> Result<(), String> {
         // Import from JSON file
-        self.persistence.import_from_file(file_path).await?;
+        use std::path::Path;
+        self.persistence.import_from_file(Path::new(file_path)).await?;
 
         // Reload processes into memory
         self.load_persisted_processes().await?;
@@ -812,21 +844,32 @@ impl ProcessManager {
 
     /// Create a snapshot (YAML format)
     pub async fn create_snapshot(&self) -> Result<String, String> {
-        self.persistence.create_auto_start_snapshot(None).await
+        self.persistence.create_auto_start_snapshot().await?;
+        Ok("Snapshot created".to_string())
     }
 
     /// Restore from the latest snapshot
     pub async fn restore_snapshot(&self) -> Result<(), String> {
-        let restored = self.persistence.restore_yaml_snapshot(None).await?;
+        // Find the default snapshot path
+        let snapshot_dir = dirs::data_local_dir()
+            .unwrap_or_else(|| std::path::PathBuf::from("."))
+            .join("ichimi")
+            .join("snapshots");
+        let snapshot_path = snapshot_dir.join("snapshot.yaml");
+
+        self.persistence.restore_yaml_snapshot(&snapshot_path).await?;
+
+        // Reload all processes from persistence
+        let restored = self.persistence.load_all_processes().await?;
 
         // Reload processes into memory
         self.load_persisted_processes().await?;
 
         // Start auto-start processes
-        for (id, info) in restored {
+        for info in restored {
             if info.auto_start_on_restore {
-                if let Err(e) = self.start_process(id.clone()).await {
-                    tracing::warn!("Failed to auto-start process {}: {}", id, e);
+                if let Err(e) = self.start_process(info.process_id.clone()).await {
+                    tracing::warn!("Failed to auto-start process {}: {}", info.process_id, e);
                 }
             }
         }

@@ -11,8 +11,7 @@ description = "Persistence layer for ichimi-server"
 # Serialization
 serde = { workspace = true }
 serde_json = { workspace = true }
-serde_yaml = "0.9"
-# KDL support
+# KDL support (for configuration files)
 kdl = "4.7"
 serde_kdl = "0.1"
 
@@ -35,3 +34,10 @@ uuid = { version = "1.18", features = ["v4", "serde"] }
 
 # System info
 hostname = "0.3"
+dirs = "5.0"
+
+# Database
+sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite", "chrono", "migrate", "uuid"] }
+
+[dev-dependencies]
+tempfile = "3.8"

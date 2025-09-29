@@ -1,332 +1,304 @@
-use crate::snapshot::Snapshot;
+use crate::database::{Database, models::*, queries::*};
+use crate::kdl_serde::KdlSnapshot;
 use crate::types::{ClipboardItem, ProcessInfo, ProcessTemplate, Settings};
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use tracing::{debug, info, warn};
 
 // Type alias for simplified Result type
 type Result<T> = std::result::Result<T, String>;
 
-/// Persistence manager for in-memory storage with KDL snapshot support
-#[derive(Clone)]
+/// Persistence manager that uses SQLite for data storage and KDL for configuration
 pub struct PersistenceManager {
-    #[allow(dead_code)]
-    snapshot_path: PathBuf,
-    #[allow(dead_code)]
-    snapshot_lock: Arc<tokio::sync::RwLock<()>>,
-    processes: Arc<tokio::sync::RwLock<HashMap<String, ProcessInfo>>>,
-    templates: Arc<tokio::sync::RwLock<HashMap<String, ProcessTemplate>>>,
-    clipboard: Arc<tokio::sync::RwLock<Vec<ClipboardItem>>>,
-    settings: Arc<tokio::sync::RwLock<Settings>>,
+    /// SQLite database connection
+    database: Arc<Database>,
+
+    /// KDL configuration file path
+    config_path: PathBuf,
 }
 
 impl PersistenceManager {
     /// Create a new persistence manager
-    pub async fn new() -> Result<Self> {
-        let snapshot_path = Self::default_snapshot_path();
-        let snapshot_lock = Arc::new(tokio::sync::RwLock::new(()));
-        let processes = Arc::new(tokio::sync::RwLock::new(HashMap::new()));
-        let templates = Arc::new(tokio::sync::RwLock::new(HashMap::new()));
-        let clipboard = Arc::new(tokio::sync::RwLock::new(Vec::new()));
-        let settings = Arc::new(tokio::sync::RwLock::new(Settings::default()));
+    pub async fn new(database_path: PathBuf, config_path: Option<PathBuf>) -> Result<Self> {
+        // Initialize database
+        let database = Database::new(&database_path)
+            .await
+            .map_err(|e| format!("Failed to initialize database: {}", e))?;
 
-        Ok(Self {
-            snapshot_path,
-            snapshot_lock,
-            processes,
-            templates,
-            clipboard,
-            settings,
-        })
+        let config_path = config_path.unwrap_or_else(Self::default_config_path);
+
+        let manager = Self {
+            database: Arc::new(database),
+            config_path,
+        };
+
+        // Load configuration from KDL if exists
+        if let Err(e) = manager.load_config().await {
+            debug!("No existing KDL config to load: {}", e);
+        }
+
+        Ok(manager)
     }
 
-    /// Get default snapshot path
-    fn default_snapshot_path() -> PathBuf {
-        let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-        PathBuf::from(home).join(".ichimi").join("snapshot.kdl")
+    /// Get default configuration path
+    fn default_config_path() -> PathBuf {
+        dirs::config_dir()
+            .unwrap_or_else(|| PathBuf::from("."))
+            .join(".ichimi")
+            .join("config.kdl")
     }
 
-    /// Save or update a process
-    pub async fn save_process(&self, process_info: &ProcessInfo) -> Result<()> {
-        let mut processes = self.processes.write().await;
-        processes.insert(process_info.process_id.clone(), process_info.clone());
-        tracing::info!("Saved process {}", process_info.process_id);
+    /// Load configuration from KDL file
+    async fn load_config(&self) -> Result<()> {
+        if !self.config_path.exists() {
+            return Ok(());
+        }
+
+        let content = tokio::fs::read_to_string(&self.config_path)
+            .await
+            .map_err(|e| format!("Failed to read config file: {}", e))?;
+
+        let snapshot = KdlSnapshot::from_kdl_string(&content)
+            .map_err(|e| format!("Failed to parse KDL config: {}", e))?;
+
+        // Import processes from config
+        for process in snapshot.processes {
+            let db_process = process.to_process_info();
+            self.save_process(&db_process).await?;
+        }
+
+        info!("Loaded configuration from {}", self.config_path.display());
         Ok(())
     }
 
-    /// Update a process (alias for save_process)
-    pub async fn update_process(&self, process_info: &ProcessInfo) -> Result<()> {
-        self.save_process(process_info).await
+    /// Save configuration to KDL file
+    pub async fn save_config(&self) -> Result<()> {
+        // Get all processes from database
+        let processes = self.load_all_processes().await?;
+
+        // Convert to KDL snapshot
+        let snapshot = KdlSnapshot::from_processes(processes);
+        let kdl_content = snapshot.to_kdl_string()
+            .map_err(|e| format!("Failed to generate KDL: {}", e))?;
+
+        // Ensure parent directory exists
+        if let Some(parent) = self.config_path.parent() {
+            tokio::fs::create_dir_all(parent)
+                .await
+                .map_err(|e| format!("Failed to create config directory: {}", e))?;
+        }
+
+        // Write to file
+        tokio::fs::write(&self.config_path, kdl_content)
+            .await
+            .map_err(|e| format!("Failed to write config file: {}", e))?;
+
+        info!("Saved configuration to {}", self.config_path.display());
+        Ok(())
+    }
+
+    // Process management
+
+    /// Save or update a process
+    pub async fn save_process(&self, process: &ProcessInfo) -> Result<()> {
+        ProcessQueries::upsert(self.database.pool(), process)
+            .await
+            .map_err(|e| format!("Failed to save process: {}", e))?;
+        Ok(())
+    }
+
+    /// Update process information
+    pub async fn update_process(&self, process: &ProcessInfo) -> Result<()> {
+        self.save_process(process).await
     }
 
     /// Delete a process
     pub async fn delete_process(&self, process_id: &str) -> Result<()> {
-        let mut processes = self.processes.write().await;
-        processes.remove(process_id);
-        tracing::info!("Deleted process {}", process_id);
+        ProcessQueries::delete(self.database.pool(), process_id)
+            .await
+            .map_err(|e| format!("Failed to delete process: {}", e))?;
         Ok(())
     }
 
     /// Load all processes
-    pub async fn load_all_processes(&self) -> Result<HashMap<String, ProcessInfo>> {
-        let processes = self.processes.read().await;
-        Ok(processes.clone())
-    }
-
-    /// Export processes to KDL snapshot
-    pub async fn export_snapshot(
-        &self,
-        file_path: Option<&str>,
-        only_auto_start: bool,
-    ) -> Result<String> {
-        let path = match file_path {
-            Some(p) => PathBuf::from(p),
-            None => self.snapshot_path.clone(),
-        };
-
-        let processes = self.load_all_processes().await?;
-        let process_list: Vec<ProcessInfo> = processes.into_values().collect();
-
-        let mut snapshot = Snapshot::new(process_list);
-        if only_auto_start {
-            snapshot = snapshot.filter_auto_start();
-        }
-
-        snapshot
-            .save(&path)
+    pub async fn load_all_processes(&self) -> Result<Vec<ProcessInfo>> {
+        let records = ProcessQueries::list(self.database.pool())
             .await
-            .map_err(|e| format!("Failed to save snapshot: {e}"))?;
+            .map_err(|e| format!("Failed to load processes: {}", e))?;
 
-        tracing::info!(
-            "Exported {} processes to KDL snapshot (auto_start_only: {})",
-            snapshot.processes.len(),
-            only_auto_start
-        );
+        let processes = records
+            .into_iter()
+            .map(|r| Self::record_to_process_info(r))
+            .collect::<Result<Vec<_>>>()?;
 
-        Ok(path.to_string_lossy().to_string())
+        Ok(processes)
     }
 
-    /// Import processes from KDL snapshot
-    pub async fn import_snapshot(
-        &self,
-        file_path: Option<&str>,
-    ) -> Result<HashMap<String, ProcessInfo>> {
-        let path = match file_path {
-            Some(p) => Path::new(p),
-            None => &self.snapshot_path,
-        };
-
-        if !path.exists() {
-            return Err(format!("Snapshot file not found: {}", path.display()));
-        }
-
-        let snapshot = Snapshot::load(path)
+    /// Get a specific process
+    pub async fn get_process(&self, process_id: &str) -> Result<Option<ProcessInfo>> {
+        let record = ProcessQueries::get(self.database.pool(), process_id)
             .await
-            .map_err(|e| format!("Failed to load snapshot: {e}"))?;
+            .map_err(|e| format!("Failed to get process: {}", e))?;
 
-        let mut imported = HashMap::new();
-        let mut processes = self.processes.write().await;
-
-        for process_snapshot in snapshot.processes {
-            let process_info = process_snapshot.to_process_info();
-            let process_id = process_info.process_id.clone();
-            processes.insert(process_id.clone(), process_info.clone());
-            imported.insert(process_id, process_info);
+        match record {
+            Some(r) => Ok(Some(Self::record_to_process_info(r)?)),
+            None => Ok(None),
         }
-
-        tracing::info!(
-            "Imported {} processes from KDL snapshot (created at: {})",
-            imported.len(),
-            snapshot.timestamp
-        );
-
-        Ok(imported)
-    }
-
-    /// Create an auto-start snapshot
-    pub async fn create_auto_start_snapshot(&self, file_path: Option<&str>) -> Result<String> {
-        self.export_snapshot(file_path, true).await
-    }
-
-    /// Restore from snapshot
-    pub async fn restore_snapshot(
-        &self,
-        file_path: Option<&str>,
-    ) -> Result<HashMap<String, ProcessInfo>> {
-        self.import_snapshot(file_path).await
-    }
-
-    // Legacy YAML compatibility methods (redirect to KDL)
-
-    /// Export to YAML (compatibility - actually exports KDL)
-    pub async fn export_to_yaml(&self, file_path: &str, only_auto_start: bool) -> Result<()> {
-        // Change extension to .kdl
-        let kdl_path = file_path.replace(".yaml", ".kdl").replace(".yml", ".kdl");
-        self.export_snapshot(Some(&kdl_path), only_auto_start)
-            .await?;
-        Ok(())
-    }
-
-    /// Import from YAML (compatibility - actually imports KDL)
-    pub async fn import_from_yaml(&self, file_path: &str) -> Result<HashMap<String, ProcessInfo>> {
-        // Try KDL file first
-        let kdl_path = file_path.replace(".yaml", ".kdl").replace(".yml", ".kdl");
-        if Path::new(&kdl_path).exists() {
-            return self.import_snapshot(Some(&kdl_path)).await;
-        }
-        // Fall back to original path
-        self.import_snapshot(Some(file_path)).await
-    }
-
-    /// Restore YAML snapshot (compatibility - actually restores KDL)
-    pub async fn restore_yaml_snapshot(
-        &self,
-        file_path: Option<&str>,
-    ) -> Result<HashMap<String, ProcessInfo>> {
-        self.restore_snapshot(file_path).await
-    }
-
-    // JSON export/import for REST API
-
-    /// Export to JSON file
-    pub async fn export_to_file(&self, file_path: &str) -> Result<()> {
-        let processes = self.load_all_processes().await?;
-        let json = serde_json::to_string_pretty(&processes)
-            .map_err(|e| format!("Failed to serialize processes: {e}"))?;
-
-        std::fs::write(file_path, json).map_err(|e| format!("Failed to write export file: {e}"))?;
-
-        tracing::info!("Exported {} processes to {}", processes.len(), file_path);
-        Ok(())
-    }
-
-    /// Import from JSON file
-    pub async fn import_from_file(&self, file_path: &str) -> Result<()> {
-        let content = std::fs::read_to_string(file_path)
-            .map_err(|e| format!("Failed to read import file: {e}"))?;
-
-        let imported: HashMap<String, ProcessInfo> = serde_json::from_str(&content)
-            .map_err(|e| format!("Failed to deserialize processes: {e}"))?;
-
-        let mut processes = self.processes.write().await;
-        for (id, info) in imported.iter() {
-            processes.insert(id.clone(), info.clone());
-        }
-
-        tracing::info!("Imported {} processes from {}", imported.len(), file_path);
-        Ok(())
     }
 
     // Template management
 
     /// Save a template
     pub async fn save_template(&self, template: &ProcessTemplate) -> Result<()> {
-        let mut templates = self.templates.write().await;
-        templates.insert(template.template_id.clone(), template.clone());
-        tracing::info!("Saved template {}", template.template_id);
+        ProcessTemplateQueries::upsert(self.database.pool(), template)
+            .await
+            .map_err(|e| format!("Failed to save template: {}", e))?;
         Ok(())
     }
 
     /// Get a template
     pub async fn get_template(&self, template_id: &str) -> Result<Option<ProcessTemplate>> {
-        let templates = self.templates.read().await;
-        Ok(templates.get(template_id).cloned())
+        let record = ProcessTemplateQueries::get(self.database.pool(), template_id)
+            .await
+            .map_err(|e| format!("Failed to get template: {}", e))?;
+
+        match record {
+            Some(r) => Ok(Some(Self::record_to_template(r)?)),
+            None => Ok(None),
+        }
     }
 
     /// List all templates
     pub async fn list_templates(&self) -> Result<Vec<ProcessTemplate>> {
-        let templates = self.templates.read().await;
-        Ok(templates.values().cloned().collect())
+        let records = ProcessTemplateQueries::list(self.database.pool())
+            .await
+            .map_err(|e| format!("Failed to list templates: {}", e))?;
+
+        let templates = records
+            .into_iter()
+            .map(|r| Self::record_to_template(r))
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(templates)
     }
 
     /// Delete a template
     pub async fn delete_template(&self, template_id: &str) -> Result<()> {
-        let mut templates = self.templates.write().await;
-        templates.remove(template_id);
-        tracing::info!("Deleted template {}", template_id);
+        ProcessTemplateQueries::delete(self.database.pool(), template_id)
+            .await
+            .map_err(|e| format!("Failed to delete template: {}", e))?;
         Ok(())
     }
 
     // Clipboard management
 
-    /// Add to clipboard
-    pub async fn add_to_clipboard(&self, text: String) -> Result<()> {
-        let mut clipboard = self.clipboard.write().await;
-        clipboard.push(ClipboardItem::new(text, None, None));
+    /// Add to clipboard (legacy compatibility)
+    pub async fn add_to_clipboard(&self, content: String, metadata: Option<serde_json::Value>) -> Result<ClipboardItem> {
+        let filename = metadata.as_ref()
+            .and_then(|m| m.get("filename"))
+            .and_then(|f| f.as_str())
+            .map(|s| s.to_string());
+        let item = ClipboardItem::new(content.clone(), filename, Some("text".to_string()));
+        let key = format!("clipboard_{}", chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0));
 
-        // Keep only last 100 items
-        if clipboard.len() > 100 {
-            let drain_count = clipboard.len() - 100;
-            clipboard.drain(0..drain_count);
-        }
+        let metadata_str = metadata.map(|m| m.to_string());
+        ClipboardQueries::store(
+            self.database.pool(),
+            &key,
+            &content,
+            "text",
+            metadata_str,
+            None,
+        )
+        .await
+        .map_err(|e| format!("Failed to add to clipboard: {}", e))?;
 
-        Ok(())
+        Ok(item)
     }
 
     /// Get clipboard history
-    pub async fn get_clipboard_history(&self, limit: Option<usize>) -> Result<Vec<ClipboardItem>> {
-        let clipboard = self.clipboard.read().await;
-        let limit = limit.unwrap_or(10).min(clipboard.len());
-        Ok(clipboard.iter().rev().take(limit).cloned().collect())
+    pub async fn get_clipboard_history(&self, limit: usize) -> Result<Vec<ClipboardItem>> {
+        let records = ClipboardQueries::list(self.database.pool())
+            .await
+            .map_err(|e| format!("Failed to get clipboard history: {}", e))?;
+
+        let items = records
+            .into_iter()
+            .take(limit)
+            .map(|r| {
+                // Convert metadata back to filename if present
+                let filename = r.metadata
+                    .and_then(|m| serde_json::from_str::<serde_json::Value>(&m).ok())
+                    .and_then(|v| v.get("filename").and_then(|f| f.as_str()).map(|s| s.to_string()));
+                ClipboardItem::new(r.content, filename, Some(r.content_type))
+            })
+            .collect();
+
+        Ok(items)
     }
 
     /// Clear clipboard
     pub async fn clear_clipboard(&self) -> Result<()> {
-        let mut clipboard = self.clipboard.write().await;
-        clipboard.clear();
+        // Get all clipboard entries and delete them
+        let records = ClipboardQueries::list(self.database.pool())
+            .await
+            .map_err(|e| format!("Failed to list clipboard entries: {}", e))?;
+
+        for record in records {
+            ClipboardQueries::delete(self.database.pool(), &record.key)
+                .await
+                .map_err(|e| format!("Failed to delete clipboard entry: {}", e))?;
+        }
+
         Ok(())
     }
 
     /// Get latest clipboard item
     pub async fn get_latest_clipboard_item(&self) -> Result<Option<ClipboardItem>> {
-        let clipboard = self.clipboard.read().await;
-        Ok(clipboard.last().cloned())
+        let records = ClipboardQueries::list(self.database.pool())
+            .await
+            .map_err(|e| format!("Failed to get clipboard: {}", e))?;
+
+        Ok(records.first().map(|r| {
+            let filename = r.metadata.as_ref()
+                .and_then(|m| serde_json::from_str::<serde_json::Value>(m).ok())
+                .and_then(|v| v.get("filename").and_then(|f| f.as_str()).map(|s| s.to_string()));
+            ClipboardItem::new(r.content.clone(), filename, Some(r.content_type.clone()))
+        }))
     }
 
-    /// Set clipboard text (for compatibility)
+    /// Set clipboard text
     pub async fn set_clipboard_text(&self, text: String) -> Result<ClipboardItem> {
-        let item = ClipboardItem::new(text, None, None);
-        let mut clipboard = self.clipboard.write().await;
-        clipboard.push(item.clone());
-
-        // Keep only last 100 items
-        if clipboard.len() > 100 {
-            let drain_count = clipboard.len() - 100;
-            clipboard.drain(0..drain_count);
-        }
-
-        Ok(item)
+        self.add_to_clipboard(text, None).await
     }
 
     /// Save clipboard item
-    pub async fn save_clipboard_item(&self, item: &ClipboardItem) -> Result<ClipboardItem> {
-        let mut clipboard = self.clipboard.write().await;
+    pub async fn save_clipboard_item(&self, item: &ClipboardItem) -> Result<()> {
+        let key = item.id.clone().unwrap_or_else(|| {
+            format!("clipboard_{}", chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0))
+        });
 
-        // Find and update existing item or add new one
-        if let Some(existing) = clipboard
-            .iter_mut()
-            .find(|i| i.clipboard_id == item.clipboard_id)
-        {
-            *existing = item.clone();
-        } else {
-            clipboard.push(item.clone());
-        }
+        let metadata = item.filename.as_ref().map(|f| {
+            serde_json::json!({ "filename": f }).to_string()
+        });
 
-        // Keep only last 100 items
-        if clipboard.len() > 100 {
-            let drain_count = clipboard.len() - 100;
-            clipboard.drain(0..drain_count);
-        }
+        ClipboardQueries::store(
+            self.database.pool(),
+            &key,
+            &item.content,
+            item.content_type.as_deref().unwrap_or("text"),
+            metadata,
+            None,
+        )
+        .await
+        .map_err(|e| format!("Failed to save clipboard item: {}", e))?;
 
-        Ok(item.clone())
+        Ok(())
     }
 
-    /// Get clipboard text (for compatibility)
+    /// Get clipboard text
     pub async fn get_clipboard_text(&self) -> Result<Option<String>> {
-        let item = self
-            .get_latest_clipboard_item()
-            .await
-            .map_err(|e| format!("Failed to get clipboard: {e}"))?;
+        let item = self.get_latest_clipboard_item().await?;
         Ok(item.map(|i| i.content))
     }
 
@@ -334,14 +306,367 @@ impl PersistenceManager {
 
     /// Get settings
     pub async fn get_settings(&self) -> Result<Settings> {
-        let settings = self.settings.read().await;
-        Ok(settings.clone())
+        let records = SettingsQueries::list(self.database.pool())
+            .await
+            .map_err(|e| format!("Failed to get settings: {}", e))?;
+
+        // Convert settings records to Settings struct
+        let mut settings = Settings::default();
+        for record in records {
+            match record.key.as_str() {
+                "theme" => {
+                    settings.theme = record.value;
+                }
+                "auto_save_interval" => {
+                    settings.auto_save_interval = record.value.parse().ok();
+                }
+                "max_log_lines" => {
+                    settings.max_log_lines = record.value.parse().ok();
+                }
+                "enable_auto_restart" => {
+                    settings.enable_auto_restart = record.value.parse().unwrap_or(false);
+                }
+                "default_shell" => {
+                    settings.default_shell = Some(record.value);
+                }
+                _ => {
+                    // Store as environment variable
+                    if record.key.starts_with("env_") {
+                        let env_key = record.key.strip_prefix("env_").unwrap_or(&record.key);
+                        settings.env_variables.insert(env_key.to_string(), record.value);
+                    }
+                }
+            }
+        }
+
+        Ok(settings)
     }
 
     /// Update settings
     pub async fn update_settings(&self, settings: Settings) -> Result<()> {
-        let mut current = self.settings.write().await;
-        *current = settings;
+        // Save each setting to database
+        SettingsQueries::set(
+            self.database.pool(),
+            "theme",
+            &settings.theme,
+        )
+        .await
+        .map_err(|e| format!("Failed to update settings: {}", e))?;
+
+        if let Some(interval) = settings.auto_save_interval {
+            SettingsQueries::set(
+                self.database.pool(),
+                "auto_save_interval",
+                &interval.to_string(),
+            )
+            .await
+            .map_err(|e| format!("Failed to update settings: {}", e))?;
+        }
+
+        if let Some(max_lines) = settings.max_log_lines {
+            SettingsQueries::set(
+                self.database.pool(),
+                "max_log_lines",
+                &max_lines.to_string(),
+            )
+            .await
+            .map_err(|e| format!("Failed to update settings: {}", e))?;
+        }
+
+        SettingsQueries::set(
+            self.database.pool(),
+            "enable_auto_restart",
+            &settings.enable_auto_restart.to_string(),
+        )
+        .await
+        .map_err(|e| format!("Failed to update settings: {}", e))?;
+
+        if let Some(shell) = settings.default_shell {
+            SettingsQueries::set(
+                self.database.pool(),
+                "default_shell",
+                &shell,
+            )
+            .await
+            .map_err(|e| format!("Failed to update settings: {}", e))?;
+        }
+
+        // Save environment variables
+        for (key, value) in settings.env_variables {
+            SettingsQueries::set(
+                self.database.pool(),
+                &format!("env_{}", key),
+                &value,
+            )
+            .await
+            .map_err(|e| format!("Failed to update settings: {}", e))?;
+        }
+
         Ok(())
+    }
+
+    // Database event recording
+
+    /// Record process start in database
+    pub async fn record_process_start(&self, process: &ProcessInfo) -> Result<()> {
+        let args_json = serde_json::to_string(&process.args)
+            .map_err(|e| format!("Failed to serialize args: {}", e))?;
+        let env_json = serde_json::to_string(&process.env)
+            .map_err(|e| format!("Failed to serialize env: {}", e))?;
+
+        ProcessHistoryQueries::record_start(
+            self.database.pool(),
+            &process.process_id,
+            &process.name,
+            &process.command,
+            Some(args_json),
+            Some(env_json),
+            process.cwd.as_deref(),
+        )
+        .await
+        .map_err(|e| format!("Failed to record process start: {}", e))?;
+
+        Ok(())
+    }
+
+    /// Record process stop in database
+    pub async fn record_process_stop(&self, process_id: &str, exit_code: Option<i32>, error: Option<&str>) -> Result<()> {
+        ProcessHistoryQueries::record_stop(
+            self.database.pool(),
+            process_id,
+            exit_code,
+            error,
+        )
+        .await
+        .map_err(|e| format!("Failed to record process stop: {}", e))?;
+
+        Ok(())
+    }
+
+    /// Record system event
+    pub async fn record_system_event(&self, event_type: &str, description: &str, details: Option<String>, severity: &str) -> Result<()> {
+        SystemEventQueries::record(
+            self.database.pool(),
+            event_type,
+            description,
+            details,
+            severity,
+        )
+        .await
+        .map_err(|e| format!("Failed to record system event: {}", e))?;
+
+        Ok(())
+    }
+
+    /// Get process history from database
+    pub async fn get_process_history(&self, process_id: Option<&str>, limit: Option<i64>) -> Result<Vec<ProcessHistoryRecord>> {
+        ProcessHistoryQueries::get_history(
+            self.database.pool(),
+            process_id,
+            limit,
+        )
+        .await
+        .map_err(|e| format!("Failed to get process history: {}", e))
+    }
+
+    // Conversion helpers
+
+    /// Convert database record to ProcessInfo
+    fn record_to_process_info(record: ProcessRecord) -> Result<ProcessInfo> {
+        let args: Vec<String> = record.args
+            .map(|a| serde_json::from_str(&a))
+            .transpose()
+            .map_err(|e| format!("Failed to parse args: {}", e))?
+            .unwrap_or_default();
+
+        let env: std::collections::HashMap<String, String> = record.env
+            .map(|e| serde_json::from_str(&e))
+            .transpose()
+            .map_err(|e| format!("Failed to parse env: {}", e))?
+            .unwrap_or_default();
+
+        let tags: Vec<String> = record.tags
+            .map(|t| serde_json::from_str(&t))
+            .transpose()
+            .map_err(|e| format!("Failed to parse tags: {}", e))?
+            .unwrap_or_default();
+
+        let state = match record.state.as_str() {
+            "running" => crate::types::ProcessState::Running,
+            "stopped" => crate::types::ProcessState::Stopped,
+            "failed" => crate::types::ProcessState::Failed,
+            _ => crate::types::ProcessState::NotStarted,
+        };
+
+        Ok(ProcessInfo {
+            id: Some(record.id.to_string()),
+            process_id: record.process_id,
+            name: record.name,
+            command: record.command,
+            args,
+            env,
+            cwd: record.cwd,
+            status: crate::types::ProcessStatus {
+                state,
+                pid: record.pid.map(|p| p as u32),
+                exit_code: record.exit_code,
+                started_at: record.started_at,
+                stopped_at: record.stopped_at,
+                error: record.error,
+            },
+            created_at: record.created_at,
+            updated_at: record.updated_at,
+            tags,
+            auto_start_on_restore: record.auto_start_on_restore,
+        })
+    }
+
+    /// Convert database record to ProcessTemplate
+    fn record_to_template(record: ProcessTemplateRecord) -> Result<ProcessTemplate> {
+        let args: Vec<String> = record.args
+            .map(|a| serde_json::from_str(&a))
+            .transpose()
+            .map_err(|e| format!("Failed to parse args: {}", e))?
+            .unwrap_or_default();
+
+        let env: std::collections::HashMap<String, String> = record.env
+            .map(|e| serde_json::from_str(&e))
+            .transpose()
+            .map_err(|e| format!("Failed to parse env: {}", e))?
+            .unwrap_or_default();
+
+        let variables: Vec<crate::types::TemplateVariable> = record.variables
+            .map(|v| serde_json::from_str(&v))
+            .transpose()
+            .map_err(|e| format!("Failed to parse variables: {}", e))?
+            .unwrap_or_default();
+
+        let tags: Vec<String> = record.tags
+            .map(|t| serde_json::from_str(&t))
+            .transpose()
+            .map_err(|e| format!("Failed to parse tags: {}", e))?
+            .unwrap_or_default();
+
+        Ok(ProcessTemplate {
+            id: Some(record.id.to_string()),
+            template_id: record.template_id,
+            name: record.name,
+            description: record.description,
+            category: record.category,
+            command: record.command,
+            args,
+            env,
+            default_cwd: record.default_cwd,
+            default_auto_start: record.default_auto_start,
+            variables,
+            created_at: record.created_at,
+            updated_at: record.updated_at,
+            tags,
+        })
+    }
+
+    // Legacy compatibility (these methods now do nothing as we don't use YAML)
+
+    /// Export to YAML (deprecated - does nothing)
+    pub async fn export_to_yaml(&self, _path: &Path) -> Result<()> {
+        warn!("YAML export is deprecated");
+        Ok(())
+    }
+
+    /// Import from YAML (deprecated - does nothing)
+    pub async fn import_from_yaml(&self, _path: &Path) -> Result<()> {
+        warn!("YAML import is deprecated");
+        Ok(())
+    }
+
+    /// Export snapshot (deprecated - saves config instead)
+    pub async fn export_snapshot(&self, _path: Option<&Path>, _filter_auto_start: bool) -> Result<()> {
+        self.save_config().await
+    }
+
+    /// Import snapshot (deprecated - loads config instead)
+    pub async fn import_snapshot(&self, _path: Option<&Path>) -> Result<()> {
+        self.load_config().await
+    }
+
+    /// Create auto-start snapshot (deprecated - does nothing)
+    pub async fn create_auto_start_snapshot(&self) -> Result<()> {
+        Ok(())
+    }
+
+    /// Restore snapshot (deprecated - loads config instead)
+    pub async fn restore_snapshot(&self, _file_path: Option<&str>) -> Result<()> {
+        self.load_config().await
+    }
+
+    /// Restore YAML snapshot (deprecated - does nothing)
+    pub async fn restore_yaml_snapshot(&self, _path: &Path) -> Result<()> {
+        warn!("YAML restore is deprecated");
+        Ok(())
+    }
+
+    /// Export to file (deprecated - saves config instead)
+    pub async fn export_to_file(&self, _path: &Path, _filter_auto_start: bool) -> Result<()> {
+        self.save_config().await
+    }
+
+    /// Import from file (deprecated - loads config instead)
+    pub async fn import_from_file(&self, _path: &Path) -> Result<()> {
+        self.load_config().await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    #[tokio::test]
+    async fn test_persistence_manager() {
+        let temp_dir = TempDir::new().unwrap();
+        let db_path = temp_dir.path().join("test.db");
+        let config_path = temp_dir.path().join("config.kdl");
+
+        let manager = PersistenceManager::new(db_path, Some(config_path))
+            .await
+            .unwrap();
+
+        // Test process operations
+        let mut process = ProcessInfo {
+            id: None,
+            process_id: "test-process".to_string(),
+            name: "Test Process".to_string(),
+            command: "echo".to_string(),
+            args: vec!["hello".to_string()],
+            env: std::collections::HashMap::new(),
+            cwd: None,
+            status: crate::types::ProcessStatus::default(),
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+            tags: vec!["test".to_string()],
+            auto_start_on_restore: false,
+        };
+
+        // Save process
+        manager.save_process(&process).await.unwrap();
+
+        // Get process
+        let loaded = manager.get_process("test-process").await.unwrap();
+        assert!(loaded.is_some());
+        assert_eq!(loaded.unwrap().name, "Test Process");
+
+        // Update process
+        process.name = "Updated Process".to_string();
+        manager.update_process(&process).await.unwrap();
+
+        // List processes
+        let processes = manager.load_all_processes().await.unwrap();
+        assert_eq!(processes.len(), 1);
+        assert_eq!(processes[0].name, "Updated Process");
+
+        // Delete process
+        manager.delete_process("test-process").await.unwrap();
+        let deleted = manager.get_process("test-process").await.unwrap();
+        assert!(deleted.is_none());
     }
 }
