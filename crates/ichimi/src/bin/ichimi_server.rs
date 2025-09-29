@@ -1,12 +1,13 @@
 use anyhow::Result;
-use ichimi_server::IchimiServer;
-use rmcp::{ServiceExt, transport::stdio};
+use ichimi_server::{IchimiServer, process::ProcessManager};
+use rmcp::{ServiceExt, model::ServerInfo};
 use std::env;
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::Mutex;
-use tracing_subscriber::{self, EnvFilter};
 
 // Constants for better maintainability
+const DEFAULT_WEB_PORT: u16 = 12700;
 const BROWSER_STARTUP_DELAY_MS: u64 = 500;
 const BROWSER_SHUTDOWN_GRACE_MS: u64 = 1000;
 const KEEPALIVE_INTERVAL_SECS: u64 = 3600;
@@ -98,248 +99,300 @@ fn detect_default_browser() -> DefaultBrowser {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Parse command line arguments
-    let args: Vec<String> = env::args().collect();
-    let mut web_enabled = false; // Web is disabled by default (MCP mode is default)
-    let mut web_only = false; // Flag to run only web server without MCP
-    let mut web_port = 12700u16;
-    let mut auto_open = true; // Default to auto-open browser
-    let mut app_mode = false; // Open browser in app mode
-    #[cfg(feature = "webdriver")]
-    let mut use_webdriver = false; // Use WebDriver for browser control
+    // Initialize tracing with environment-based log level
+    let rust_log = env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string());
+    tracing_subscriber::fmt()
+        .with_env_filter(rust_log)
+        .with_writer(std::io::stderr)
+        .with_ansi(true)
+        .init();
 
-    let mut i = 1;
-    while i < args.len() {
-        match args[i].as_str() {
+    tracing::info!("Starting Ichimi Server v{}", env!("CARGO_PKG_VERSION"));
+
+    // Parse command line arguments
+    let mut args = std::env::args();
+    let _ = args.next(); // Skip program name
+    let mut enable_web = false;
+    let mut web_port = DEFAULT_WEB_PORT;
+    let mut web_only = false;
+    let mut no_web = false;
+
+    while let Some(arg) = args.next() {
+        match arg.as_str() {
             "--help" | "-h" => {
-                println!("Ichimi Server - Process management server for Claude Code via MCP");
-                println!();
-                println!("Usage: ichimi [OPTIONS]");
-                println!();
-                println!("Default: Run as MCP server for Claude/Cline");
-                println!();
-                println!("Options:");
-                println!("  --help, -h       Show this help message");
-                println!("  --version, -v    Show version information");
-                println!("  --web            Enable web dashboard alongside MCP server");
-                println!("  --web-only       Run only web dashboard (no MCP server)");
-                println!("  --web-port PORT  Set web dashboard port (default: 12700)");
-                println!("  --no-open        Don't automatically open browser for web dashboard");
-                println!(
-                    "  --app-mode       Open browser in app mode (dedicated window that closes with server)"
-                );
-                #[cfg(feature = "webdriver")]
-                println!(
-                    "  --webdriver      Use WebDriver to control browser tabs (requires geckodriver/chromedriver)"
-                );
-                return Ok(());
-            }
-            "--version" | "-v" => {
-                println!("ichimi-server v{}", env!("CARGO_PKG_VERSION"));
+                println!("Ichimi Server v{}", env!("CARGO_PKG_VERSION"));
+                println!("\nUsage: ichimi [OPTIONS]");
+                println!("\nOptions:");
+                println!("  --web              Enable web interface");
+                println!("  --web-port <PORT>  Web interface port (default: {})", DEFAULT_WEB_PORT);
+                println!("  --web-only         Run only the web interface (no MCP server)");
+                println!("  --no-web           Disable web interface completely");
+                println!("  --help, -h         Show this help message");
+                println!("\nEnvironment variables:");
+                println!("  RUST_LOG                        Log level (error, warn, info, debug, trace)");
+                println!("  ICHIMI_AUTO_EXPORT_INTERVAL    Auto-export interval in seconds");
+                println!("  ICHIMI_IMPORT_FILE              File to import on startup");
+                println!("  ICHIMI_EXPORT_FILE              File to export on shutdown");
                 return Ok(());
             }
             "--web" => {
-                web_enabled = true;
-            }
-            "--web-only" => {
-                web_enabled = true;
-                web_only = true;
+                enable_web = true;
+                tracing::info!("Web interface enabled");
             }
             "--web-port" => {
-                if i + 1 < args.len() {
-                    match args[i + 1].parse::<u16>() {
-                        Ok(port) if port > 0 => web_port = port,
-                        Ok(_) => {
-                            eprintln!(
-                                "Warning: Port must be between 1 and 65535, using default {}",
-                                12700
-                            );
-                        }
-                        Err(_) => {
-                            eprintln!(
-                                "Warning: Invalid port '{}', using default {}",
-                                args[i + 1],
-                                12700
-                            );
-                        }
-                    }
-                    i += 1;
+                if let Some(port_str) = args.next() {
+                    web_port = port_str.parse().unwrap_or_else(|_| {
+                        tracing::warn!("Invalid port '{}', using default {}", port_str, DEFAULT_WEB_PORT);
+                        DEFAULT_WEB_PORT
+                    });
                 }
             }
-            "--no-open" => {
-                auto_open = false;
+            "--web-only" => {
+                web_only = true;
+                enable_web = true;
+                tracing::info!("Running in web-only mode (no MCP server)");
             }
-            "--app-mode" => {
-                app_mode = true;
+            "--no-web" => {
+                no_web = true;
+                tracing::info!("Web interface disabled");
             }
-            #[cfg(feature = "webdriver")]
-            "--webdriver" => {
-                use_webdriver = true;
-                app_mode = false; // WebDriver and app-mode are mutually exclusive
+            _ => {
+                tracing::warn!("Unknown argument: {}", arg);
             }
-            _ => {}
-        }
-        i += 1;
-    }
-
-    // Determine operation mode
-    let run_mcp = !web_only; // Run MCP server by default unless --web-only is specified
-
-    // Setup logging based on environment
-    let log_level = env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string());
-
-    // When running as MCP (default), log to file to avoid interfering with stdio
-    if run_mcp && !web_enabled {
-        // When running as MCP, log to file to avoid interfering with stdio
-        let log_dir = dirs::home_dir()
-            .unwrap_or_else(|| std::path::PathBuf::from("."))
-            .join(".ichimi")
-            .join("logs");
-
-        // Create log directory if it doesn't exist
-        std::fs::create_dir_all(&log_dir).ok();
-
-        // Generate log filename with timestamp
-        let log_file = log_dir.join(format!(
-            "ichimi-mcp-{}.log",
-            chrono::Local::now().format("%Y%m%d-%H%M%S")
-        ));
-
-        // Create file appender
-        let file = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&log_file)
-            .map_err(|e| anyhow::anyhow!("Failed to create log file: {}", e))?;
-
-        let filter = EnvFilter::from_default_env()
-            .add_directive(
-                format!("ichimi={log_level}")
-                    .parse()
-                    .map_err(|e| anyhow::anyhow!("Invalid log level: {}", e))?,
-            )
-            .add_directive(
-                format!("ichimi_server={log_level}")
-                    .parse()
-                    .map_err(|e| anyhow::anyhow!("Invalid log level: {}", e))?,
-            )
-            .add_directive(
-                "facet_kdl=warn"
-                    .parse()
-                    .map_err(|e| anyhow::anyhow!("Invalid log level: {}", e))?,
-            )
-            .add_directive(
-                "mcp_server=debug"
-                    .parse()
-                    .map_err(|e| anyhow::anyhow!("Invalid log level: {}", e))?,
-            );
-
-        tracing_subscriber::fmt()
-            .with_env_filter(filter)
-            .with_writer(file)
-            .with_ansi(false)
-            .with_target(true)
-            .with_thread_ids(true)
-            .with_file(true)
-            .with_line_number(true)
-            .init();
-
-        tracing::info!("=== Ichimi MCP Server Starting (silent mode) ===");
-        tracing::info!("Log file: {:?}", log_file);
-        tracing::info!("Arguments: {:?}", args);
-        tracing::info!("Working directory: {:?}", env::current_dir());
-    } else {
-        // Web mode or MCP with web - log to stderr
-        let filter = EnvFilter::from_default_env()
-            .add_directive(
-                format!("ichimi={log_level}")
-                    .parse()
-                    .map_err(|e| anyhow::anyhow!("Invalid log level: {}", e))?,
-            )
-            .add_directive(
-                format!("ichimi_server={log_level}")
-                    .parse()
-                    .map_err(|e| anyhow::anyhow!("Invalid log level: {}", e))?,
-            )
-            .add_directive(
-                "facet_kdl=warn"
-                    .parse()
-                    .map_err(|e| anyhow::anyhow!("Invalid log level: {}", e))?,
-            );
-
-        tracing_subscriber::fmt()
-            .with_env_filter(filter)
-            .with_writer(std::io::stderr)
-            .with_ansi(false)
-            .init();
-
-        if web_only {
-            tracing::info!("🚀 Starting Ichimi Development Server (web-only mode)");
-        } else if run_mcp && web_enabled {
-            tracing::info!("Starting Ichimi Server (MCP + web mode)");
-        } else {
-            tracing::info!("Starting Ichimi Server (MCP mode)");
         }
     }
 
-    // Create a shared process manager
-    let process_manager = ichimi_server::process::ProcessManager::new().await;
+    // Validate conflicting options
+    if web_only && no_web {
+        eprintln!("Error: Cannot use both --web-only and --no-web");
+        std::process::exit(1);
+    }
 
-    // Track browser process for cleanup
+    // Check for deprecated environment variable
+    if env::var("ICHIMI_ENABLE_WEB").is_ok() {
+        tracing::warn!("ICHIMI_ENABLE_WEB is deprecated. Use --web flag instead.");
+    }
+
+    let server_info = ServerInfo::default();
+
+    // Initialize shared process manager
+    let process_manager = ProcessManager::new().await;
+
+    // Create process for browser if --web-only is used (for shutdown handling)
     let browser_process: Arc<Mutex<Option<std::process::Child>>> = Arc::new(Mutex::new(None));
     let browser_process_for_shutdown = browser_process.clone();
 
-    // Track WebDriver client for cleanup
+    // Create WebDriver client holder
     #[cfg(feature = "webdriver")]
     let webdriver_client: Arc<Mutex<Option<fantoccini::Client>>> = Arc::new(Mutex::new(None));
     #[cfg(feature = "webdriver")]
     let webdriver_client_for_shutdown = webdriver_client.clone();
 
-    // Auto-import processes on startup if configured
-    // First try YAML snapshot for auto-start processes
-    let yaml_snapshot = std::env::var("HOME")
-        .map(|home| format!("{home}/.ichimi/snapshot.yaml"))
-        .unwrap_or_else(|_| ".ichimi/snapshot.yaml".to_string());
+    // Setup and run web interface if enabled (either through --web or --web-only)
+    let web_handle = if enable_web && !no_web {
+        let pm_clone = process_manager.clone();
+        let port = web_port;
 
-    if std::path::Path::new(&yaml_snapshot).exists() {
-        tracing::info!("Restoring from YAML snapshot: {}", yaml_snapshot);
-        match process_manager.restore_yaml_snapshot().await {
-            Ok(_) => {
-                tracing::info!("Successfully restored processes from YAML snapshot");
-            }
-            Err(e) => {
-                tracing::warn!("Failed to restore YAML snapshot: {}", e);
-            }
-        }
-    } else {
-        // Fall back to legacy import if no YAML snapshot
-        let import_file = env::var("ICHIMI_IMPORT_FILE").unwrap_or_else(|_| {
-            std::env::current_dir()
-                .unwrap_or_else(|_| std::path::PathBuf::from("."))
-                .join(".ichimi")
-                .join("snapshot.yaml")
-                .to_string_lossy()
-                .to_string()
-        });
+        Some(tokio::spawn(async move {
+            // Read web dist directory path from environment or use default
+            let dist_dir = env::var("ICHIMI_WEB_DIST").unwrap_or_else(|_| {
+                // Try to find the dist directory relative to the binary
+                let exe_path = std::env::current_exe().expect("Failed to get executable path");
+                
+                // Look for the dist directory in several possible locations
+                let possible_paths = vec![
+                    // For development: relative to cargo workspace root
+                    exe_path.parent().unwrap().parent().unwrap().parent().unwrap().join("ui/web/dist"),
+                    // For installed binary: in the same directory
+                    exe_path.parent().unwrap().join("ui/web/dist"),
+                    // Current directory fallback
+                    std::path::PathBuf::from("ui/web/dist"),
+                ];
+                
+                for path in &possible_paths {
+                    if path.exists() {
+                        tracing::info!("Found web dist directory at: {}", path.display());
+                        return path.to_string_lossy().to_string();
+                    }
+                }
+                
+                // Default fallback
+                let default = "ui/web/dist".to_string();
+                tracing::warn!("Web dist directory not found in expected locations, using: {}", default);
+                default
+            });
 
-        if std::path::Path::new(&import_file).exists() {
-            tracing::info!("Auto-importing processes from: {}", import_file);
-            match process_manager.import_processes(&import_file).await {
-                Ok(_) => {
-                    tracing::info!("Successfully imported processes from {}", import_file);
+            // Check if dist directory exists
+            if !std::path::Path::new(&dist_dir).exists() {
+                tracing::error!("Web dist directory not found at: {}. Please build the web UI with 'bun run build' in ui/web-vue/", dist_dir);
+                return;
+            }
+
+            // Start the web server with the process manager
+            let persistence_manager = pm_clone.persistence_manager();
+            match ichimi_server::web::start_web_server(pm_clone, persistence_manager, port).await {
+                Ok(actual_port) => {
+                    tracing::info!("Web server started on port {}", actual_port);
                 }
                 Err(e) => {
-                    tracing::warn!("Failed to auto-import processes: {}", e);
+                    tracing::error!("Failed to start web server: {}", e);
                 }
             }
-        } else {
-            tracing::debug!("No import file found at: {}", import_file);
+        }))
+    } else {
+        None
+    };
+
+    // Handle web-only mode
+    if web_only {
+        #[cfg(feature = "webdriver")]
+        {
+            // Import webdriver features
+            use ichimi::webdriver::{WebDriverManager, BrowserType};
+            
+            // Try to launch browser automatically after a short delay
+            let web_port_for_browser = web_port;
+            let browser_proc = browser_process.clone();
+            let webdriver_client_clone = webdriver_client.clone();
+            tokio::spawn(async move {
+                // Wait for the web server to be ready
+                tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+                
+                let url = format!("http://localhost:{}", web_port_for_browser);
+                
+                // Try to use WebDriver first for better control
+                match WebDriverManager::new().await {
+                    Ok(manager) => {
+                        // Try browsers in order of preference
+                        let browsers_to_try = vec![
+                            BrowserType::Chrome,
+                            BrowserType::Firefox,
+                            BrowserType::Safari,
+                            BrowserType::Edge,
+                        ];
+                        
+                        for browser_type in browsers_to_try {
+                            match manager.launch_browser(&url, browser_type).await {
+                                Ok(client) => {
+                                    tracing::info!("Successfully opened {} browser at {}", browser_type, url);
+                                    *webdriver_client_clone.lock().await = Some(client);
+                                    return;
+                                }
+                                Err(e) => {
+                                    tracing::debug!("Failed to open {} browser: {}", browser_type, e);
+                                }
+                            }
+                        }
+                        tracing::warn!("Could not open any browser via WebDriver, falling back to system command");
+                    }
+                    Err(e) => {
+                        tracing::debug!("WebDriver not available: {}, falling back to system command", e);
+                    }
+                }
+                
+                // Fallback to system command
+                let result = if cfg!(target_os = "macos") {
+                    std::process::Command::new("open")
+                        .arg(url.clone())
+                        .spawn()
+                } else if cfg!(target_os = "linux") {
+                    std::process::Command::new("xdg-open")
+                        .arg(url.clone())
+                        .spawn()
+                } else if cfg!(target_os = "windows") {
+                    std::process::Command::new("cmd")
+                        .args(&["/c", "start", "", &url])
+                        .spawn()
+                } else {
+                    Err(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        "Unsupported OS"
+                    ))
+                };
+                
+                match result {
+                    Ok(child) => {
+                        tracing::info!("Opened browser at {}", url);
+                        *browser_proc.lock().await = Some(child);
+                    }
+                    Err(e) => {
+                        tracing::warn!("Failed to open browser: {}", e);
+                        tracing::info!("Please open your browser and navigate to {}", url);
+                    }
+                }
+            });
         }
+        
+        #[cfg(not(feature = "webdriver"))]
+        {
+            // Simple browser launch without WebDriver
+            let web_port_for_browser = web_port;
+            let browser_proc = browser_process.clone();
+            tokio::spawn(async move {
+                // Wait for the web server to be ready
+                tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+                
+                let url = format!("http://localhost:{}", web_port_for_browser);
+                
+                // Try to open browser
+                let result = if cfg!(target_os = "macos") {
+                    std::process::Command::new("open")
+                        .arg(url.clone())
+                        .spawn()
+                } else if cfg!(target_os = "linux") {
+                    std::process::Command::new("xdg-open")
+                        .arg(url.clone())
+                        .spawn()
+                } else if cfg!(target_os = "windows") {
+                    std::process::Command::new("cmd")
+                        .args(&["/c", "start", "", &url])
+                        .spawn()
+                } else {
+                    Err(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        "Unsupported OS"
+                    ))
+                };
+                
+                match result {
+                    Ok(child) => {
+                        tracing::info!("Opened browser at {}", url);
+                        *browser_proc.lock().await = Some(child);
+                    }
+                    Err(e) => {
+                        tracing::warn!("Failed to open browser: {}", e);
+                        tracing::info!("Please open your browser and navigate to {}", url);
+                    }
+                }
+            });
+        }
+        
+        tracing::info!("Web interface is running at http://localhost:{}", web_port);
     }
 
-    // Note: We always stop all processes on shutdown to ensure clean state
-    // Processes will be restarted on next launch based on auto_start_on_restore flag
-    tracing::info!("All processes will be stopped on shutdown for clean state management");
+    // Import processes from file if specified
+    let import_file = env::var("ICHIMI_IMPORT_FILE").unwrap_or_else(|_| {
+        std::env::current_dir()
+            .unwrap_or_else(|_| std::path::PathBuf::from("."))
+            .join(".ichimi")
+            .join("auto_start.yaml")
+            .to_string_lossy()
+            .to_string()
+    });
+
+    if std::path::Path::new(&import_file).exists() {
+        tracing::info!("Importing processes from: {}", import_file);
+        match process_manager.import_processes(&import_file).await {
+            Ok(_) => tracing::info!("Successfully imported processes from {}", import_file),
+            Err(e) => tracing::error!("Failed to import processes from {}: {}", import_file, e),
+        }
+    } else {
+        tracing::debug!("No import file found at: {}", import_file);
+    }
+
+    // グレースフルシャットダウン: 全プロセスを適切に停止
+    // auto_start_on_restoreフラグに基づいて次回起動時に自動再開
+    tracing::info!("Graceful shutdown enabled: all processes will be stopped with 5s grace period");
 
     // Setup signal handler for graceful shutdown
     let pm_for_shutdown = process_manager.clone();
@@ -359,10 +412,10 @@ async fn main() -> Result<()> {
 
             tokio::select! {
                 _ = sigint.recv() => {
-                    tracing::info!("Received SIGINT (Ctrl+C), exporting processes and stopping all...");
+                    tracing::info!("Received SIGINT (Ctrl+C), performing graceful shutdown...");
                 }
                 _ = sigterm.recv() => {
-                    tracing::info!("Received SIGTERM, exporting processes and stopping all...");
+                    tracing::info!("Received SIGTERM, performing graceful shutdown...");
                 }
             }
         }
@@ -370,7 +423,7 @@ async fn main() -> Result<()> {
         #[cfg(not(unix))]
         {
             let _ = signal::ctrl_c().await;
-            tracing::info!("Received shutdown signal, exporting processes and stopping all...");
+            tracing::info!("Received shutdown signal, performing graceful shutdown...");
         }
 
         // First, create YAML snapshot of auto-start processes
@@ -406,12 +459,13 @@ async fn main() -> Result<()> {
             Err(e) => tracing::error!("Failed to export processes on shutdown: {}", e),
         }
 
-        // Then stop ALL processes for clean shutdown
+        // グレースフルシャットダウン: 全プロセスを5秒の猶予期間で停止
+        tracing::info!("Starting graceful shutdown of all managed processes...");
         match pm_for_shutdown.stop_all_processes().await {
             Ok(stopped) => {
                 if !stopped.is_empty() {
                     tracing::info!(
-                        "Stopped {} process(es) for clean shutdown: {:?}",
+                        "Successfully stopped {} process(es) with graceful shutdown: {:?}",
                         stopped.len(),
                         stopped
                     );
@@ -420,7 +474,7 @@ async fn main() -> Result<()> {
                 }
             }
             Err(e) => {
-                tracing::error!("Failed to stop processes: {}", e);
+                tracing::error!("Failed to stop processes gracefully: {}", e);
             }
         }
 
@@ -435,13 +489,14 @@ async fn main() -> Result<()> {
                 }
             }
         }
-
-        // Close browser if it was opened in app mode
+        
+        // Close browser process if it was opened
         let mut browser_guard = browser_proc.lock().await;
         if let Some(mut child) = browser_guard.take() {
+            tracing::info!("Closing browser process");
+            
+            // Get the process ID for platform-specific handling
             let pid = child.id();
-            tracing::info!("Closing browser window (PID: {})", pid);
-
             // Platform-specific graceful shutdown
             #[cfg(unix)]
             {
@@ -452,423 +507,126 @@ async fn main() -> Result<()> {
                 if let Err(e) = signal::kill(Pid::from_raw(pid as i32), Signal::SIGTERM) {
                     tracing::debug!("Failed to send SIGTERM to browser: {}", e);
                 } else {
-                    // Give the browser time to close gracefully
-                    tokio::time::sleep(tokio::time::Duration::from_millis(
-                        BROWSER_SHUTDOWN_GRACE_MS,
-                    ))
-                    .await;
-                }
-
-                // Check if process is still running
-                match child.try_wait() {
-                    Ok(Some(status)) => {
-                        tracing::debug!("Browser closed gracefully with status: {:?}", status);
-                    }
-                    Ok(None) => {
-                        // Process still running, force kill
-                        tracing::debug!("Browser didn't close gracefully, forcing shutdown");
-                        if let Err(e) = child.kill() {
-                            tracing::warn!("Failed to force kill browser: {}", e);
-                        } else {
-                            let _ = child.wait();
-                        }
-                    }
-                    Err(e) => {
-                        tracing::warn!("Failed to check browser status: {}", e);
-                    }
+                    // Give it a moment to close gracefully
+                    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
                 }
             }
 
-            #[cfg(not(unix))]
-            {
-                // On Windows, just use kill() which is more appropriate
-                if let Err(e) = child.kill() {
-                    tracing::warn!("Failed to close browser window: {}", e);
-                } else {
-                    let _ = child.wait();
+            // Check if still running and force kill if needed
+            match child.try_wait() {
+                Ok(Some(status)) => {
+                    tracing::debug!("Browser process exited with: {:?}", status);
+                }
+                Ok(None) => {
+                    // Still running, force kill
+                    if let Err(e) = child.kill() {
+                        tracing::warn!("Failed to kill browser process: {}", e);
+                    } else {
+                        tracing::debug!("Browser didn't close gracefully, forcing shutdown");
+                        let _ = child.wait();
+                    }
+                }
+                Err(e) => {
+                    tracing::warn!("Error checking browser process status: {}", e);
                 }
             }
         }
 
+        // Signal shutdown complete
         std::process::exit(0);
     });
 
-    // Start web server if enabled
-    #[cfg(feature = "web")]
-    if web_enabled {
-        tracing::info!("Web dashboard enabled on port {}", web_port);
+    // Skip MCP server if in web-only mode
+    if web_only {
+        tracing::info!("Running in web-only mode, MCP server is disabled");
+        
+        // Wait for the web server task
+        if let Some(handle) = web_handle {
+            let _ = handle.await;
+        }
+        
+        return Ok(());
+    }
 
-        let web_manager = process_manager.clone();
-        let web_persistence = process_manager.persistence_manager();
+    // Create the server
+    let server = IchimiServer::with_process_manager(process_manager.clone()).await?;
 
-        // Start web server and get actual port
-        let actual_port = match ichimi_server::web::start_web_server(
-            web_manager,
-            web_persistence,
-            web_port,
-        )
-        .await
-        {
-            Ok(port) => {
-                tracing::debug!("Web server started on actual port {}", port);
-                port
-            }
-            Err(e) => {
-                tracing::error!("Failed to start web server: {:?}", e);
-                web_port // Fall back to requested port
-            }
-        };
+    // Setup auto-export if interval is specified
+    let auto_export_interval = env::var("ICHIMI_AUTO_EXPORT_INTERVAL")
+        .ok()
+        .and_then(|s| s.parse::<u64>().ok());
 
-        // Open browser with actual port (when web is enabled)
-        if auto_open && (web_enabled || web_only) {
-            // Open browser when web dashboard is available
-            let url = format!("http://localhost:{actual_port}");
+    if let Some(interval_secs) = auto_export_interval {
+        if interval_secs > 0 {
+            let pm_clone = process_manager.clone();
+            tokio::spawn(async move {
+                let mut interval = tokio::time::interval(Duration::from_secs(interval_secs));
+                interval.tick().await; // Skip first immediate tick
 
-            #[cfg(feature = "webdriver")]
-            if use_webdriver {
-                // Use WebDriver to open browser
-                let webdriver_client_clone = webdriver_client.clone();
-                tokio::spawn(async move {
-                    tokio::time::sleep(tokio::time::Duration::from_millis(
-                        BROWSER_STARTUP_DELAY_MS,
-                    ))
-                    .await;
+                let export_dir = env::var("ICHIMI_DATA_DIR").unwrap_or_else(|_| {
+                    let home = env::var("HOME").unwrap_or_else(|_| ".".to_string());
+                    format!("{home}/.ichimi/data")
+                });
 
-                    // Detect default browser and try appropriate WebDriver
-                    let default_browser = detect_default_browser();
-                    tracing::info!("Detected default browser: {:?}", default_browser);
+                // Ensure the export directory exists
+                if let Err(e) = tokio::fs::create_dir_all(&export_dir).await {
+                    tracing::error!("Failed to create export directory {}: {}", export_dir, e);
+                    return;
+                }
 
-                    // Try to connect to WebDriver based on detected browser
-                    let webdriver_result = async {
-                        match default_browser {
-                            DefaultBrowser::Chrome => {
-                                // Try chromedriver first for Chrome
-                                match fantoccini::ClientBuilder::native()
-                                    .connect("http://localhost:9515")
-                                    .await
-                                {
-                                    Ok(client) => Ok(client),
-                                    Err(_) => {
-                                        // Fallback to geckodriver
-                                        fantoccini::ClientBuilder::native()
-                                            .connect("http://localhost:4444")
-                                            .await
-                                    }
-                                }
-                            }
-                            DefaultBrowser::Firefox => {
-                                // Try geckodriver first for Firefox
-                                match fantoccini::ClientBuilder::native()
-                                    .connect("http://localhost:4444")
-                                    .await
-                                {
-                                    Ok(client) => Ok(client),
-                                    Err(_) => {
-                                        // Fallback to chromedriver
-                                        fantoccini::ClientBuilder::native()
-                                            .connect("http://localhost:9515")
-                                            .await
-                                    }
-                                }
-                            }
-                            DefaultBrowser::Safari => {
-                                // Safari uses safaridriver on port 9515 by default
-                                match fantoccini::ClientBuilder::native()
-                                    .connect("http://localhost:9515")
-                                    .await
-                                {
-                                    Ok(client) => Ok(client),
-                                    Err(_) => {
-                                        // Fallback to geckodriver
-                                        fantoccini::ClientBuilder::native()
-                                            .connect("http://localhost:4444")
-                                            .await
-                                    }
-                                }
-                            }
-                            DefaultBrowser::Unknown => {
-                                // Try both in order
-                                match fantoccini::ClientBuilder::native()
-                                    .connect("http://localhost:9515")
-                                    .await
-                                {
-                                    Ok(client) => Ok(client),
-                                    Err(_) => {
-                                        fantoccini::ClientBuilder::native()
-                                            .connect("http://localhost:4444")
-                                            .await
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    .await;
+                let export_file = format!("{export_dir}/processes.surql");
 
-                    match webdriver_result {
-                        Ok(client) => {
-                            // Navigate to the URL
-                            if let Err(e) = client.goto(&url).await {
-                                tracing::warn!("Failed to navigate to {}: {}", url, e);
-                            } else {
-                                tracing::info!("Opened browser tab via WebDriver at {}", url);
+                loop {
+                    interval.tick().await;
+                    tracing::debug!("Auto-exporting processes to {}", export_file);
 
-                                // Store the client for later cleanup
-                                let mut client_guard = webdriver_client_clone.lock().await;
-                                *client_guard = Some(client);
-                            }
+                    match pm_clone.export_processes(Some(export_file.clone())).await {
+                        Ok(_) => {
+                            tracing::info!("Auto-exported processes to {}", export_file);
                         }
                         Err(e) => {
-                            let driver_hint = match default_browser {
-                                DefaultBrowser::Chrome => "chromedriver (port 9515)",
-                                DefaultBrowser::Firefox => "geckodriver (port 4444)",
-                                DefaultBrowser::Safari => "safaridriver (port 9515)",
-                                DefaultBrowser::Unknown => {
-                                    "geckodriver (port 4444) or chromedriver (port 9515)"
-                                }
-                            };
-                            tracing::warn!(
-                                "Failed to connect to WebDriver: {}. Make sure {} is running.",
-                                e,
-                                driver_hint
-                            );
-                            // Fallback to normal browser open
-                            if let Err(e) = open::that(&url) {
-                                tracing::warn!("Failed to open browser: {}", e);
-                            } else {
-                                tracing::info!("Opened browser at {} (fallback)", url);
-                            }
+                            tracing::error!("Auto-export failed: {}", e);
                         }
                     }
-                });
-            } else {
-                // Non-WebDriver browser opening
-                let browser_proc = browser_process.clone();
-                tokio::spawn(async move {
-                    tokio::time::sleep(tokio::time::Duration::from_millis(
-                        BROWSER_STARTUP_DELAY_MS,
-                    ))
-                    .await;
+                }
+            });
 
-                    if app_mode {
-                        // Try to open browser in app mode (dedicated window)
-                        let browser_result = if cfg!(target_os = "macos") {
-                            // macOS: Try Chrome first, then Safari
-                            std::process::Command::new(
-                                "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-                            )
-                            .arg(format!("--app={url}"))
-                            .arg("--new-window")
-                            .spawn()
-                            .or_else(|_| {
-                                // Fallback to open command with Safari
-                                std::process::Command::new("open")
-                                    .arg("-n") // New instance
-                                    .arg("-a")
-                                    .arg("Safari")
-                                    .arg(&url)
-                                    .spawn()
-                            })
-                        } else if cfg!(target_os = "windows") {
-                            // Windows: Try Chrome, then Edge
-                            std::process::Command::new("cmd")
-                                .args(["/C", "start", "chrome", &format!("--app={url}")])
-                                .spawn()
-                                .or_else(|_| {
-                                    std::process::Command::new("cmd")
-                                        .args(["/C", "start", "msedge", &format!("--app={url}")])
-                                        .spawn()
-                                })
-                        } else {
-                            // Linux: Try chromium or google-chrome
-                            std::process::Command::new("chromium")
-                                .arg(format!("--app={url}"))
-                                .spawn()
-                                .or_else(|_| {
-                                    std::process::Command::new("google-chrome")
-                                        .arg(format!("--app={url}"))
-                                        .spawn()
-                                })
-                        };
-
-                        match browser_result {
-                            Ok(child) => {
-                                tracing::info!(
-                                    "Opened browser in app mode at {} (PID: {:?})",
-                                    url,
-                                    child.id()
-                                );
-                                let mut browser_guard = browser_proc.lock().await;
-                                *browser_guard = Some(child);
-                            }
-                            Err(e) => {
-                                tracing::warn!(
-                                    "Failed to open browser in app mode: {}. Falling back to normal mode.",
-                                    e
-                                );
-                                // Fallback to normal browser open
-                                if let Err(e) = open::that(&url) {
-                                    tracing::warn!("Failed to open browser: {}", e);
-                                } else {
-                                    tracing::info!("Opening browser at {}", url);
-                                }
-                            }
-                        }
-                    } else {
-                        // Normal browser open (existing behavior)
-                        if let Err(e) = open::that(&url) {
-                            tracing::warn!("Failed to open browser: {}", e);
-                        } else {
-                            tracing::info!("Opening browser at {}", url);
-                        }
-                    }
-                });
-            }
-
-            #[cfg(not(feature = "webdriver"))]
-            {
-                let browser_proc = browser_process.clone();
-                tokio::spawn(async move {
-                    tokio::time::sleep(tokio::time::Duration::from_millis(
-                        BROWSER_STARTUP_DELAY_MS,
-                    ))
-                    .await;
-
-                    if app_mode {
-                        // Try to open browser in app mode (dedicated window)
-                        let browser_result = if cfg!(target_os = "macos") {
-                            // macOS: Try Chrome first, then Safari
-                            std::process::Command::new(
-                                "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-                            )
-                            .arg(format!("--app={}", url))
-                            .arg("--new-window")
-                            .spawn()
-                            .or_else(|_| {
-                                // Fallback to open command with Safari
-                                std::process::Command::new("open")
-                                    .arg("-n") // New instance
-                                    .arg("-a")
-                                    .arg("Safari")
-                                    .arg(&url)
-                                    .spawn()
-                            })
-                        } else if cfg!(target_os = "windows") {
-                            // Windows: Try Chrome, then Edge
-                            std::process::Command::new("cmd")
-                                .args(&["/C", "start", "chrome", &format!("--app={}", url)])
-                                .spawn()
-                                .or_else(|_| {
-                                    std::process::Command::new("cmd")
-                                        .args(&["/C", "start", "msedge", &format!("--app={}", url)])
-                                        .spawn()
-                                })
-                        } else {
-                            // Linux: Try chromium or google-chrome
-                            std::process::Command::new("chromium")
-                                .arg(format!("--app={}", url))
-                                .spawn()
-                                .or_else(|_| {
-                                    std::process::Command::new("google-chrome")
-                                        .arg(format!("--app={}", url))
-                                        .spawn()
-                                })
-                        };
-
-                        match browser_result {
-                            Ok(child) => {
-                                tracing::info!(
-                                    "Opened browser in app mode at {} (PID: {:?})",
-                                    url,
-                                    child.id()
-                                );
-                                let mut browser_guard = browser_proc.lock().await;
-                                *browser_guard = Some(child);
-                            }
-                            Err(e) => {
-                                tracing::warn!(
-                                    "Failed to open browser in app mode: {}. Falling back to normal mode.",
-                                    e
-                                );
-                                // Fallback to normal browser open
-                                if let Err(e) = open::that(&url) {
-                                    tracing::warn!("Failed to open browser: {}", e);
-                                } else {
-                                    tracing::info!("Opening browser at {}", url);
-                                }
-                            }
-                        }
-                    } else {
-                        // Normal browser open (existing behavior)
-                        if let Err(e) = open::that(&url) {
-                            tracing::warn!("Failed to open browser: {}", e);
-                        } else {
-                            tracing::info!("Opening browser at {}", url);
-                        }
-                    }
-                });
-            }
+            tracing::info!(
+                "Auto-export enabled: processes will be exported every {} seconds",
+                interval_secs
+            );
         }
     }
 
-    // Run MCP server unless --web-only is specified
-    if run_mcp {
-        tracing::info!("Starting MCP server");
-        let server = IchimiServer::with_process_manager(process_manager.clone())
-            .await
-            .map_err(|e| anyhow::anyhow!("Failed to initialize IchimiServer: {}", e))?;
-        let server_arc = std::sync::Arc::new(server);
+    // Create MCP transport
+    let transport = (
+        tokio::io::stdin(),
+        tokio::io::stdout(),
+    );
 
-        tracing::debug!("Serving MCP on stdio");
-        match (*server_arc).clone().serve(stdio()).await {
-            Ok(service) => {
-                tracing::info!("MCP server ready, waiting for requests");
-                service.waiting().await?;
-                tracing::info!("MCP server shutting down");
+    // Run the MCP server using serve method
+    tracing::info!("MCP server is ready, waiting for connections...");
+    let server_handle = server.serve(transport).await?;
+    
+    // Wait for server shutdown
+    let quit_reason = server_handle.waiting().await?;
+    tracing::info!("MCP server shutting down: {:?}", quit_reason);
 
-                // MCPサーバー終了時も全プロセスを停止
-                match process_manager.stop_all_processes().await {
-                    Ok(stopped) => {
-                        if !stopped.is_empty() {
-                            tracing::info!(
-                                "Stopped {} process(es) on MCP shutdown: {:?}",
-                                stopped.len(),
-                                stopped
-                            );
-                        }
-                    }
-                    Err(e) => {
-                        tracing::error!("Failed to stop processes on MCP shutdown: {}", e);
-                    }
-                }
-
-                (*server_arc).shutdown().await.ok();
-            }
-            Err(e) => {
-                tracing::warn!(
-                    "MCP Server not available: {:?}. Web server will continue running.",
-                    e
+    // Perform cleanup on MCP shutdown
+    match process_manager.stop_all_processes().await {
+        Ok(stopped) => {
+            if !stopped.is_empty() {
+                tracing::info!(
+                    "Stopped {} process(es) on MCP shutdown: {:?}",
+                    stopped.len(),
+                    stopped
                 );
-                // Keep the process alive for web server
-                // Signal handler already set up above, just wait forever
-                loop {
-                    tokio::time::sleep(tokio::time::Duration::from_secs(KEEPALIVE_INTERVAL_SECS))
-                        .await;
-                }
             }
         }
-    } else {
-        tracing::info!("Running in standalone mode (web server only)");
-        // Keep the process alive - the signal handler in the spawned task will handle shutdown
-        loop {
-            tokio::time::sleep(tokio::time::Duration::from_secs(KEEPALIVE_INTERVAL_SECS)).await;
+        Err(e) => {
+            tracing::error!("Failed to stop processes on MCP shutdown: {}", e);
         }
     }
 
-    #[cfg(not(feature = "web"))]
-    if web_enabled {
-        tracing::warn!("Web feature not enabled. Rebuild with --features web to enable dashboard.");
-    }
-
-    tracing::info!("Ichimi server shutdown complete");
     Ok(())
 }

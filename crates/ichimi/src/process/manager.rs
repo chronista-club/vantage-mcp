@@ -929,7 +929,7 @@ impl ProcessManager {
     }
 
     pub async fn save_settings(&self, settings: Settings) -> Result<(), String> {
-        self.persistence.save_settings(&settings).await
+        self.persistence.update_settings(settings).await
     }
 
     // Template management methods
@@ -942,15 +942,11 @@ impl ProcessManager {
     }
 
     pub async fn load_all_templates(&self) -> Result<Vec<ProcessTemplate>, String> {
-        self.persistence.load_all_templates().await
+        self.persistence.list_templates().await
     }
 
     pub async fn get_template(&self, template_id: &str) -> Result<Option<ProcessTemplate>, String> {
-        match self.persistence.get_template(template_id).await {
-            Ok(template) => Ok(Some(template)),
-            Err(e) if e.contains("not found") => Ok(None),
-            Err(e) => Err(e),
-        }
+        self.persistence.get_template(template_id).await
     }
 
     pub async fn search_templates(
@@ -958,16 +954,15 @@ impl ProcessManager {
         category: Option<String>,
         tags: Vec<String>,
     ) -> Result<Vec<ProcessTemplate>, String> {
-        // PersistenceManager's search_templates takes a query string
-        // Convert category and tags into a query
-        let query = if let Some(cat) = category {
-            cat
-        } else if !tags.is_empty() {
-            tags.join(" ")
-        } else {
-            String::new()
-        };
+        // Get all templates and filter them
+        let templates = self.persistence.list_templates().await?;
 
-        self.persistence.search_templates(&query).await
+        let filtered = templates.into_iter().filter(|t| {
+            let category_match = category.as_ref().map_or(true, |cat| t.category.as_ref() == Some(cat));
+            let tags_match = tags.is_empty() || tags.iter().any(|tag| t.tags.contains(tag));
+            category_match && tags_match
+        }).collect();
+
+        Ok(filtered)
     }
 }

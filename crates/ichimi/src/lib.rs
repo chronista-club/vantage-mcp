@@ -799,7 +799,7 @@ impl IchimiServer {
     ) -> std::result::Result<CallToolResult, McpError> {
         let persistence = self.process_manager.persistence_manager();
 
-        let item = persistence
+        let item_opt = persistence
             .get_latest_clipboard_item()
             .await
             .map_err(|e| McpError {
@@ -807,6 +807,12 @@ impl IchimiServer {
                 code: rmcp::model::ErrorCode::INTERNAL_ERROR,
                 data: None,
             })?;
+
+        let item = item_opt.ok_or_else(|| McpError {
+            message: "No clipboard items found".into(),
+            code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+            data: None,
+        })?;
 
         let response = ClipboardResponse {
             id: item.clipboard_id,

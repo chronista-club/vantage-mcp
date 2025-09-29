@@ -294,10 +294,38 @@ impl PersistenceManager {
     }
 
     /// Set clipboard text (for compatibility)
-    pub async fn set_clipboard_text(&self, text: String) -> Result<()> {
-        self.add_to_clipboard(text)
-            .await
-            .map_err(|e| format!("Failed to set clipboard: {e}"))
+    pub async fn set_clipboard_text(&self, text: String) -> Result<ClipboardItem> {
+        let item = ClipboardItem::new(text, None, None);
+        let mut clipboard = self.clipboard.write().await;
+        clipboard.push(item.clone());
+
+        // Keep only last 100 items
+        if clipboard.len() > 100 {
+            let drain_count = clipboard.len() - 100;
+            clipboard.drain(0..drain_count);
+        }
+
+        Ok(item)
+    }
+
+    /// Save clipboard item
+    pub async fn save_clipboard_item(&self, item: &ClipboardItem) -> Result<ClipboardItem> {
+        let mut clipboard = self.clipboard.write().await;
+        
+        // Find and update existing item or add new one
+        if let Some(existing) = clipboard.iter_mut().find(|i| i.clipboard_id == item.clipboard_id) {
+            *existing = item.clone();
+        } else {
+            clipboard.push(item.clone());
+        }
+
+        // Keep only last 100 items
+        if clipboard.len() > 100 {
+            let drain_count = clipboard.len() - 100;
+            clipboard.drain(0..drain_count);
+        }
+
+        Ok(item.clone())
     }
 
     /// Get clipboard text (for compatibility)
