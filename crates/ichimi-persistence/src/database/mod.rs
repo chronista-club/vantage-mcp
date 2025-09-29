@@ -44,10 +44,10 @@ impl Database {
         info!("Database connection established");
 
         let db = Self { pool };
-        
+
         // Run migrations
         db.run_migrations().await?;
-        
+
         Ok(db)
     }
 
@@ -84,7 +84,7 @@ impl Database {
             .fetch_one(&self.pool)
             .await
             .context("Failed to test database connection")?;
-        
+
         Ok(())
     }
 
@@ -104,10 +104,10 @@ mod tests {
     async fn test_database_creation() {
         let temp_dir = TempDir::new().unwrap();
         let db_path = temp_dir.path().join("test.db");
-        
+
         let db = Database::new(&db_path).await.unwrap();
         assert!(db.test_connection().await.is_ok());
-        
+
         db.close().await.unwrap();
     }
 }

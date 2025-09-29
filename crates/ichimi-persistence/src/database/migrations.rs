@@ -1,5 +1,5 @@
 /// Database migration module
-/// 
+///
 /// This module handles database schema migrations.
 /// Migrations are embedded in the binary and run automatically on startup.
 

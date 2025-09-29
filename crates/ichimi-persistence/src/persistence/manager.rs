@@ -42,10 +42,9 @@ impl PersistenceManager {
 
     /// Get default configuration path
     fn default_config_path() -> PathBuf {
-        dirs::config_dir()
-            .unwrap_or_else(|| PathBuf::from("."))
-            .join(".ichimi")
-            .join("config.kdl")
+        // Use .ichimi directory in current working directory
+        // for project-local configuration
+        PathBuf::from(".ichimi").join("config.kdl")
     }
 
     /// Load configuration from KDL file
@@ -78,7 +77,8 @@ impl PersistenceManager {
 
         // Convert to KDL snapshot
         let snapshot = KdlSnapshot::from_processes(processes);
-        let kdl_content = snapshot.to_kdl_string()
+        let kdl_content = snapshot
+            .to_kdl_string()
             .map_err(|e| format!("Failed to generate KDL: {}", e))?;
 
         // Ensure parent directory exists
@@ -193,13 +193,21 @@ impl PersistenceManager {
     // Clipboard management
 
     /// Add to clipboard (legacy compatibility)
-    pub async fn add_to_clipboard(&self, content: String, metadata: Option<serde_json::Value>) -> Result<ClipboardItem> {
-        let filename = metadata.as_ref()
+    pub async fn add_to_clipboard(
+        &self,
+        content: String,
+        metadata: Option<serde_json::Value>,
+    ) -> Result<ClipboardItem> {
+        let filename = metadata
+            .as_ref()
             .and_then(|m| m.get("filename"))
             .and_then(|f| f.as_str())
             .map(|s| s.to_string());
         let item = ClipboardItem::new(content.clone(), filename, Some("text".to_string()));
-        let key = format!("clipboard_{}", chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0));
+        let key = format!(
+            "clipboard_{}",
+            chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0)
+        );
 
         let metadata_str = metadata.map(|m| m.to_string());
         ClipboardQueries::store(
@@ -227,9 +235,14 @@ impl PersistenceManager {
             .take(limit)
             .map(|r| {
                 // Convert metadata back to filename if present
-                let filename = r.metadata
+                let filename = r
+                    .metadata
                     .and_then(|m| serde_json::from_str::<serde_json::Value>(&m).ok())
-                    .and_then(|v| v.get("filename").and_then(|f| f.as_str()).map(|s| s.to_string()));
+                    .and_then(|v| {
+                        v.get("filename")
+                            .and_then(|f| f.as_str())
+                            .map(|s| s.to_string())
+                    });
                 ClipboardItem::new(r.content, filename, Some(r.content_type))
             })
             .collect();
@@ -260,9 +273,15 @@ impl PersistenceManager {
             .map_err(|e| format!("Failed to get clipboard: {}", e))?;
 
         Ok(records.first().map(|r| {
-            let filename = r.metadata.as_ref()
+            let filename = r
+                .metadata
+                .as_ref()
                 .and_then(|m| serde_json::from_str::<serde_json::Value>(m).ok())
-                .and_then(|v| v.get("filename").and_then(|f| f.as_str()).map(|s| s.to_string()));
+                .and_then(|v| {
+                    v.get("filename")
+                        .and_then(|f| f.as_str())
+                        .map(|s| s.to_string())
+                });
             ClipboardItem::new(r.content.clone(), filename, Some(r.content_type.clone()))
         }))
     }
@@ -275,12 +294,16 @@ impl PersistenceManager {
     /// Save clipboard item
     pub async fn save_clipboard_item(&self, item: &ClipboardItem) -> Result<()> {
         let key = item.id.clone().unwrap_or_else(|| {
-            format!("clipboard_{}", chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0))
+            format!(
+                "clipboard_{}",
+                chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0)
+            )
         });
 
-        let metadata = item.filename.as_ref().map(|f| {
-            serde_json::json!({ "filename": f }).to_string()
-        });
+        let metadata = item
+            .filename
+            .as_ref()
+            .map(|f| serde_json::json!({ "filename": f }).to_string());
 
         ClipboardQueries::store(
             self.database.pool(),
@@ -333,7 +356,9 @@ impl PersistenceManager {
                     // Store as environment variable
                     if record.key.starts_with("env_") {
                         let env_key = record.key.strip_prefix("env_").unwrap_or(&record.key);
-                        settings.env_variables.insert(env_key.to_string(), record.value);
+                        settings
+                            .env_variables
+                            .insert(env_key.to_string(), record.value);
                     }
                 }
             }
@@ -345,13 +370,9 @@ impl PersistenceManager {
     /// Update settings
     pub async fn update_settings(&self, settings: Settings) -> Result<()> {
         // Save each setting to database
-        SettingsQueries::set(
-            self.database.pool(),
-            "theme",
-            &settings.theme,
-        )
-        .await
-        .map_err(|e| format!("Failed to update settings: {}", e))?;
+        SettingsQueries::set(self.database.pool(), "theme", &settings.theme)
+            .await
+            .map_err(|e| format!("Failed to update settings: {}", e))?;
 
         if let Some(interval) = settings.auto_save_interval {
             SettingsQueries::set(
@@ -382,24 +403,16 @@ impl PersistenceManager {
         .map_err(|e| format!("Failed to update settings: {}", e))?;
 
         if let Some(shell) = settings.default_shell {
-            SettingsQueries::set(
-                self.database.pool(),
-                "default_shell",
-                &shell,
-            )
-            .await
-            .map_err(|e| format!("Failed to update settings: {}", e))?;
+            SettingsQueries::set(self.database.pool(), "default_shell", &shell)
+                .await
+                .map_err(|e| format!("Failed to update settings: {}", e))?;
         }
 
         // Save environment variables
         for (key, value) in settings.env_variables {
-            SettingsQueries::set(
-                self.database.pool(),
-                &format!("env_{}", key),
-                &value,
-            )
-            .await
-            .map_err(|e| format!("Failed to update settings: {}", e))?;
+            SettingsQueries::set(self.database.pool(), &format!("env_{}", key), &value)
+                .await
+                .map_err(|e| format!("Failed to update settings: {}", e))?;
         }
 
         Ok(())
@@ -430,21 +443,27 @@ impl PersistenceManager {
     }
 
     /// Record process stop in database
-    pub async fn record_process_stop(&self, process_id: &str, exit_code: Option<i32>, error: Option<&str>) -> Result<()> {
-        ProcessHistoryQueries::record_stop(
-            self.database.pool(),
-            process_id,
-            exit_code,
-            error,
-        )
-        .await
-        .map_err(|e| format!("Failed to record process stop: {}", e))?;
+    pub async fn record_process_stop(
+        &self,
+        process_id: &str,
+        exit_code: Option<i32>,
+        error: Option<&str>,
+    ) -> Result<()> {
+        ProcessHistoryQueries::record_stop(self.database.pool(), process_id, exit_code, error)
+            .await
+            .map_err(|e| format!("Failed to record process stop: {}", e))?;
 
         Ok(())
     }
 
     /// Record system event
-    pub async fn record_system_event(&self, event_type: &str, description: &str, details: Option<String>, severity: &str) -> Result<()> {
+    pub async fn record_system_event(
+        &self,
+        event_type: &str,
+        description: &str,
+        details: Option<String>,
+        severity: &str,
+    ) -> Result<()> {
         SystemEventQueries::record(
             self.database.pool(),
             event_type,
@@ -459,33 +478,36 @@ impl PersistenceManager {
     }
 
     /// Get process history from database
-    pub async fn get_process_history(&self, process_id: Option<&str>, limit: Option<i64>) -> Result<Vec<ProcessHistoryRecord>> {
-        ProcessHistoryQueries::get_history(
-            self.database.pool(),
-            process_id,
-            limit,
-        )
-        .await
-        .map_err(|e| format!("Failed to get process history: {}", e))
+    pub async fn get_process_history(
+        &self,
+        process_id: Option<&str>,
+        limit: Option<i64>,
+    ) -> Result<Vec<ProcessHistoryRecord>> {
+        ProcessHistoryQueries::get_history(self.database.pool(), process_id, limit)
+            .await
+            .map_err(|e| format!("Failed to get process history: {}", e))
     }
 
     // Conversion helpers
 
     /// Convert database record to ProcessInfo
     fn record_to_process_info(record: ProcessRecord) -> Result<ProcessInfo> {
-        let args: Vec<String> = record.args
+        let args: Vec<String> = record
+            .args
             .map(|a| serde_json::from_str(&a))
             .transpose()
             .map_err(|e| format!("Failed to parse args: {}", e))?
             .unwrap_or_default();
 
-        let env: std::collections::HashMap<String, String> = record.env
+        let env: std::collections::HashMap<String, String> = record
+            .env
             .map(|e| serde_json::from_str(&e))
             .transpose()
             .map_err(|e| format!("Failed to parse env: {}", e))?
             .unwrap_or_default();
 
-        let tags: Vec<String> = record.tags
+        let tags: Vec<String> = record
+            .tags
             .map(|t| serde_json::from_str(&t))
             .transpose()
             .map_err(|e| format!("Failed to parse tags: {}", e))?
@@ -523,25 +545,29 @@ impl PersistenceManager {
 
     /// Convert database record to ProcessTemplate
     fn record_to_template(record: ProcessTemplateRecord) -> Result<ProcessTemplate> {
-        let args: Vec<String> = record.args
+        let args: Vec<String> = record
+            .args
             .map(|a| serde_json::from_str(&a))
             .transpose()
             .map_err(|e| format!("Failed to parse args: {}", e))?
             .unwrap_or_default();
 
-        let env: std::collections::HashMap<String, String> = record.env
+        let env: std::collections::HashMap<String, String> = record
+            .env
             .map(|e| serde_json::from_str(&e))
             .transpose()
             .map_err(|e| format!("Failed to parse env: {}", e))?
             .unwrap_or_default();
 
-        let variables: Vec<crate::types::TemplateVariable> = record.variables
+        let variables: Vec<crate::types::TemplateVariable> = record
+            .variables
             .map(|v| serde_json::from_str(&v))
             .transpose()
             .map_err(|e| format!("Failed to parse variables: {}", e))?
             .unwrap_or_default();
 
-        let tags: Vec<String> = record.tags
+        let tags: Vec<String> = record
+            .tags
             .map(|t| serde_json::from_str(&t))
             .transpose()
             .map_err(|e| format!("Failed to parse tags: {}", e))?
@@ -580,7 +606,11 @@ impl PersistenceManager {
     }
 
     /// Export snapshot (deprecated - saves config instead)
-    pub async fn export_snapshot(&self, _path: Option<&Path>, _filter_auto_start: bool) -> Result<()> {
+    pub async fn export_snapshot(
+        &self,
+        _path: Option<&Path>,
+        _filter_auto_start: bool,
+    ) -> Result<()> {
         self.save_config().await
     }
 

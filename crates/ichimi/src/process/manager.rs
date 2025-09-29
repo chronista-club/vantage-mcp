@@ -145,10 +145,10 @@ impl ProcessManager {
 
 impl ProcessManager {
     pub async fn new() -> Self {
-        // Set up database and config paths
-        let data_dir = dirs::data_dir()
-            .unwrap_or_else(|| std::path::PathBuf::from("."))
-            .join(".ichimi");
+        // Set up database and config paths in project directory
+        // Using .ichimi directory in the current working directory
+        // so each MCP server has its own isolated data
+        let data_dir = std::path::PathBuf::from(".ichimi");
 
         let db_path = data_dir.join("ichimi.db");
         let config_path = data_dir.join("config.kdl");
@@ -397,7 +397,10 @@ impl ProcessManager {
                         }
 
                         // Record process stop in database
-                        if let Err(e) = persistence_clone.record_process_stop(&process_id, exit_code, None).await {
+                        if let Err(e) = persistence_clone
+                            .record_process_stop(&process_id, exit_code, None)
+                            .await
+                        {
                             tracing::warn!("Failed to record process stop in database: {}", e);
                         }
 
@@ -424,7 +427,10 @@ impl ProcessManager {
 
                         // Record process failure in database
                         let error_msg = format!("Process wait failed: {e}");
-                        if let Err(e) = persistence_clone.record_process_stop(&process_id, None, Some(&error_msg)).await {
+                        if let Err(e) = persistence_clone
+                            .record_process_stop(&process_id, None, Some(&error_msg))
+                            .await
+                        {
                             tracing::warn!("Failed to record process failure in database: {}", e);
                         }
                     }
@@ -730,7 +736,9 @@ impl ProcessManager {
 
         // Export to JSON file
         use std::path::Path;
-        self.persistence.export_to_file(Path::new(&path), false).await?;
+        self.persistence
+            .export_to_file(Path::new(&path), false)
+            .await?;
 
         Ok(path)
     }
@@ -752,9 +760,7 @@ impl ProcessManager {
         };
 
         use std::path::Path;
-        self.persistence
-            .export_to_yaml(Path::new(&path))
-            .await?;
+        self.persistence.export_to_yaml(Path::new(&path)).await?;
 
         Ok(path)
     }
@@ -762,7 +768,9 @@ impl ProcessManager {
     /// Import processes from YAML file
     pub async fn import_yaml(&self, file_path: &str) -> Result<(), String> {
         use std::path::Path;
-        self.persistence.import_from_yaml(Path::new(file_path)).await?;
+        self.persistence
+            .import_from_yaml(Path::new(file_path))
+            .await?;
 
         // Reload all processes from persistence and update local process cache
         let imported = self.persistence.load_all_processes().await?;
@@ -834,7 +842,9 @@ impl ProcessManager {
     pub async fn import_processes(&self, file_path: &str) -> Result<(), String> {
         // Import from JSON file
         use std::path::Path;
-        self.persistence.import_from_file(Path::new(file_path)).await?;
+        self.persistence
+            .import_from_file(Path::new(file_path))
+            .await?;
 
         // Reload processes into memory
         self.load_persisted_processes().await?;
@@ -857,7 +867,9 @@ impl ProcessManager {
             .join("snapshots");
         let snapshot_path = snapshot_dir.join("snapshot.yaml");
 
-        self.persistence.restore_yaml_snapshot(&snapshot_path).await?;
+        self.persistence
+            .restore_yaml_snapshot(&snapshot_path)
+            .await?;
 
         // Reload all processes from persistence
         let restored = self.persistence.load_all_processes().await?;

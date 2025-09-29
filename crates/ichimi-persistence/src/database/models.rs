@@ -9,8 +9,8 @@ pub struct ProcessHistoryRecord {
     pub process_id: String,
     pub name: String,
     pub command: String,
-    pub args: Option<String>,  // JSON array
-    pub env: Option<String>,   // JSON object
+    pub args: Option<String>, // JSON array
+    pub env: Option<String>,  // JSON object
     pub cwd: Option<String>,
     pub started_at: DateTime<Utc>,
     pub stopped_at: Option<DateTime<Utc>>,
@@ -38,7 +38,7 @@ pub struct ProcessMetricsRecord {
 pub struct ProcessOutputRecord {
     pub id: i64,
     pub process_id: String,
-    pub stream_type: String,  // "stdout" or "stderr"
+    pub stream_type: String, // "stdout" or "stderr"
     pub content: String,
     pub timestamp: DateTime<Utc>,
 }
@@ -49,8 +49,8 @@ pub struct ClipboardRecord {
     pub id: i64,
     pub key: String,
     pub content: String,
-    pub content_type: String,  // "text", "json", "binary"
-    pub metadata: Option<String>,  // JSON object for additional metadata
+    pub content_type: String,     // "text", "json", "binary"
+    pub metadata: Option<String>, // JSON object for additional metadata
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub accessed_at: Option<DateTime<Utc>>,
@@ -61,10 +61,10 @@ pub struct ClipboardRecord {
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
 pub struct SystemEventRecord {
     pub id: i64,
-    pub event_type: String,  // "server_start", "server_stop", "process_crash", etc.
+    pub event_type: String, // "server_start", "server_stop", "process_crash", etc.
     pub description: String,
-    pub details: Option<String>,  // JSON object for additional details
-    pub severity: String,  // "info", "warning", "error"
+    pub details: Option<String>, // JSON object for additional details
+    pub severity: String,        // "info", "warning", "error"
     pub timestamp: DateTime<Utc>,
 }
 
@@ -75,8 +75,8 @@ pub struct ProcessRecord {
     pub process_id: String,
     pub name: String,
     pub command: String,
-    pub args: Option<String>,  // JSON array
-    pub env: Option<String>,   // JSON object
+    pub args: Option<String>, // JSON array
+    pub env: Option<String>,  // JSON object
     pub cwd: Option<String>,
     pub state: String,
     pub pid: Option<i32>,
@@ -84,7 +84,7 @@ pub struct ProcessRecord {
     pub started_at: Option<DateTime<Utc>>,
     pub stopped_at: Option<DateTime<Utc>>,
     pub error: Option<String>,
-    pub tags: Option<String>,  // JSON array
+    pub tags: Option<String>, // JSON array
     pub auto_start_on_restore: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -99,12 +99,12 @@ pub struct ProcessTemplateRecord {
     pub description: Option<String>,
     pub category: Option<String>,
     pub command: String,
-    pub args: Option<String>,  // JSON array
-    pub env: Option<String>,   // JSON object
+    pub args: Option<String>, // JSON array
+    pub env: Option<String>,  // JSON object
     pub default_cwd: Option<String>,
     pub default_auto_start: bool,
-    pub variables: Option<String>,  // JSON array
-    pub tags: Option<String>,  // JSON array
+    pub variables: Option<String>, // JSON array
+    pub tags: Option<String>,      // JSON array
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

@@ -19,7 +19,7 @@ impl ClipboardQueries {
         expires_at: Option<DateTime<Utc>>,
     ) -> Result<i64> {
         let now = Utc::now();
-        
+
         let result = sqlx::query_scalar::<_, i64>(
             r#"
             INSERT INTO clipboard (key, content, content_type, metadata, created_at, updated_at, expires_at)
@@ -46,7 +46,7 @@ impl ClipboardQueries {
 
         Ok(result)
     }
-    
+
     /// Get a clipboard entry by key
     pub async fn get(pool: &SqlitePool, key: &str) -> Result<Option<ClipboardRecord>> {
         let now = Utc::now();
@@ -59,7 +59,7 @@ impl ClipboardQueries {
             .await?;
 
         let record = sqlx::query_as::<_, ClipboardRecord>(
-            "SELECT * FROM clipboard WHERE key = ?1 AND (expires_at IS NULL OR expires_at > ?2)"
+            "SELECT * FROM clipboard WHERE key = ?1 AND (expires_at IS NULL OR expires_at > ?2)",
         )
         .bind(key)
         .bind(now)
@@ -69,7 +69,7 @@ impl ClipboardQueries {
 
         Ok(record)
     }
-    
+
     /// List all clipboard entries
     pub async fn list(pool: &SqlitePool) -> Result<Vec<ClipboardRecord>> {
         let now = Utc::now();
@@ -80,10 +80,10 @@ impl ClipboardQueries {
         .fetch_all(pool)
         .await
         .context("Failed to list clipboard entries")?;
-        
+
         Ok(records)
     }
-    
+
     /// Delete a clipboard entry
     pub async fn delete(pool: &SqlitePool, key: &str) -> Result<bool> {
         let result = sqlx::query("DELETE FROM clipboard WHERE key = ?1")
@@ -91,22 +91,24 @@ impl ClipboardQueries {
             .execute(pool)
             .await
             .context("Failed to delete clipboard entry")?;
-        
+
         Ok(result.rows_affected() > 0)
     }
-    
+
     /// Clean up expired entries
     pub async fn cleanup_expired(pool: &SqlitePool) -> Result<u64> {
         let now = Utc::now();
-        let result = sqlx::query(
-            "DELETE FROM clipboard WHERE expires_at IS NOT NULL AND expires_at < ?1"
-        )
-        .bind(now)
-        .execute(pool)
-        .await
-        .context("Failed to cleanup expired clipboard entries")?;
-        
-        debug!("Cleaned up {} expired clipboard entries", result.rows_affected());
+        let result =
+            sqlx::query("DELETE FROM clipboard WHERE expires_at IS NOT NULL AND expires_at < ?1")
+                .bind(now)
+                .execute(pool)
+                .await
+                .context("Failed to cleanup expired clipboard entries")?;
+
+        debug!(
+            "Cleaned up {} expired clipboard entries",
+            result.rows_affected()
+        );
         Ok(result.rows_affected())
     }
 }
@@ -126,7 +128,7 @@ impl ProcessHistoryQueries {
         cwd: Option<&str>,
     ) -> Result<i64> {
         let now = Utc::now();
-        
+
         let result = sqlx::query_scalar::<_, i64>(
             r#"
             INSERT INTO process_history (process_id, name, command, args, env, cwd, started_at, created_at)
@@ -148,7 +150,7 @@ impl ProcessHistoryQueries {
 
         Ok(result)
     }
-    
+
     /// Record process stop
     pub async fn record_stop(
         pool: &SqlitePool,
@@ -157,13 +159,13 @@ impl ProcessHistoryQueries {
         error: Option<&str>,
     ) -> Result<()> {
         let now = Utc::now();
-        
+
         sqlx::query(
             r#"
             UPDATE process_history
             SET stopped_at = ?1, exit_code = ?2, error = ?3
             WHERE process_id = ?4 AND stopped_at IS NULL
-            "#
+            "#,
         )
         .bind(now)
         .bind(exit_code)
@@ -172,10 +174,10 @@ impl ProcessHistoryQueries {
         .execute(pool)
         .await
         .context("Failed to record process stop")?;
-        
+
         Ok(())
     }
-    
+
     /// Get process history
     pub async fn get_history(
         pool: &SqlitePool,
@@ -183,17 +185,17 @@ impl ProcessHistoryQueries {
         limit: Option<i64>,
     ) -> Result<Vec<ProcessHistoryRecord>> {
         let mut query = "SELECT * FROM process_history".to_string();
-        
+
         if process_id.is_some() {
             query.push_str(" WHERE process_id = ?1");
         }
-        
+
         query.push_str(" ORDER BY started_at DESC");
-        
+
         if let Some(limit) = limit {
             query.push_str(&format!(" LIMIT {}", limit));
         }
-        
+
         let records = if let Some(pid) = process_id {
             sqlx::query_as::<_, ProcessHistoryRecord>(&query)
                 .bind(pid)
@@ -204,7 +206,7 @@ impl ProcessHistoryQueries {
                 .fetch_all(pool)
                 .await?
         };
-        
+
         Ok(records)
     }
 }
@@ -252,7 +254,7 @@ impl ProcessQueries {
                 auto_start_on_restore = excluded.auto_start_on_restore,
                 updated_at = excluded.updated_at
             RETURNING id
-            "#
+            "#,
         )
         .bind(&process.process_id)
         .bind(&process.name)
@@ -279,25 +281,23 @@ impl ProcessQueries {
 
     /// Get a process by ID
     pub async fn get(pool: &SqlitePool, process_id: &str) -> Result<Option<ProcessRecord>> {
-        let record = sqlx::query_as::<_, ProcessRecord>(
-            "SELECT * FROM processes WHERE process_id = ?1"
-        )
-        .bind(process_id)
-        .fetch_optional(pool)
-        .await
-        .context("Failed to get process")?;
+        let record =
+            sqlx::query_as::<_, ProcessRecord>("SELECT * FROM processes WHERE process_id = ?1")
+                .bind(process_id)
+                .fetch_optional(pool)
+                .await
+                .context("Failed to get process")?;
 
         Ok(record)
     }
 
     /// List all processes
     pub async fn list(pool: &SqlitePool) -> Result<Vec<ProcessRecord>> {
-        let records = sqlx::query_as::<_, ProcessRecord>(
-            "SELECT * FROM processes ORDER BY updated_at DESC"
-        )
-        .fetch_all(pool)
-        .await
-        .context("Failed to list processes")?;
+        let records =
+            sqlx::query_as::<_, ProcessRecord>("SELECT * FROM processes ORDER BY updated_at DESC")
+                .fetch_all(pool)
+                .await
+                .context("Failed to list processes")?;
 
         Ok(records)
     }
@@ -319,7 +319,10 @@ pub struct ProcessTemplateQueries;
 
 impl ProcessTemplateQueries {
     /// Create or update a template
-    pub async fn upsert(pool: &SqlitePool, template: &crate::types::ProcessTemplate) -> Result<i64> {
+    pub async fn upsert(
+        pool: &SqlitePool,
+        template: &crate::types::ProcessTemplate,
+    ) -> Result<i64> {
         let args_json = serde_json::to_string(&template.args)?;
         let env_json = serde_json::to_string(&template.env)?;
         let variables_json = serde_json::to_string(&template.variables)?;
@@ -347,7 +350,7 @@ impl ProcessTemplateQueries {
                 tags = excluded.tags,
                 updated_at = excluded.updated_at
             RETURNING id
-            "#
+            "#,
         )
         .bind(&template.template_id)
         .bind(&template.name)
@@ -370,9 +373,12 @@ impl ProcessTemplateQueries {
     }
 
     /// Get a template by ID
-    pub async fn get(pool: &SqlitePool, template_id: &str) -> Result<Option<ProcessTemplateRecord>> {
+    pub async fn get(
+        pool: &SqlitePool,
+        template_id: &str,
+    ) -> Result<Option<ProcessTemplateRecord>> {
         let record = sqlx::query_as::<_, ProcessTemplateRecord>(
-            "SELECT * FROM process_templates WHERE template_id = ?1"
+            "SELECT * FROM process_templates WHERE template_id = ?1",
         )
         .bind(template_id)
         .fetch_optional(pool)
@@ -385,7 +391,7 @@ impl ProcessTemplateQueries {
     /// List all templates
     pub async fn list(pool: &SqlitePool) -> Result<Vec<ProcessTemplateRecord>> {
         let records = sqlx::query_as::<_, ProcessTemplateRecord>(
-            "SELECT * FROM process_templates ORDER BY category, name"
+            "SELECT * FROM process_templates ORDER BY category, name",
         )
         .fetch_all(pool)
         .await
@@ -421,7 +427,7 @@ impl SettingsQueries {
             ON CONFLICT(key) DO UPDATE SET
                 value = excluded.value,
                 updated_at = excluded.updated_at
-            "#
+            "#,
         )
         .bind(key)
         .bind(value)
@@ -436,25 +442,21 @@ impl SettingsQueries {
 
     /// Get a setting value
     pub async fn get(pool: &SqlitePool, key: &str) -> Result<Option<String>> {
-        let record = sqlx::query_scalar::<_, String>(
-            "SELECT value FROM settings WHERE key = ?1"
-        )
-        .bind(key)
-        .fetch_optional(pool)
-        .await
-        .context("Failed to get setting")?;
+        let record = sqlx::query_scalar::<_, String>("SELECT value FROM settings WHERE key = ?1")
+            .bind(key)
+            .fetch_optional(pool)
+            .await
+            .context("Failed to get setting")?;
 
         Ok(record)
     }
 
     /// Get all settings
     pub async fn list(pool: &SqlitePool) -> Result<Vec<SettingsRecord>> {
-        let records = sqlx::query_as::<_, SettingsRecord>(
-            "SELECT * FROM settings ORDER BY key"
-        )
-        .fetch_all(pool)
-        .await
-        .context("Failed to list settings")?;
+        let records = sqlx::query_as::<_, SettingsRecord>("SELECT * FROM settings ORDER BY key")
+            .fetch_all(pool)
+            .await
+            .context("Failed to list settings")?;
 
         Ok(records)
     }
@@ -484,13 +486,13 @@ impl SystemEventQueries {
         severity: &str,
     ) -> Result<i64> {
         let now = Utc::now();
-        
+
         let result = sqlx::query_scalar::<_, i64>(
             r#"
             INSERT INTO system_events (event_type, description, details, severity, timestamp)
             VALUES (?1, ?2, ?3, ?4, ?5)
             RETURNING id
-            "#
+            "#,
         )
         .bind(event_type)
         .bind(description)
@@ -503,7 +505,7 @@ impl SystemEventQueries {
 
         Ok(result)
     }
-    
+
     /// Get system events
     pub async fn get_events(
         pool: &SqlitePool,
@@ -513,23 +515,23 @@ impl SystemEventQueries {
     ) -> Result<Vec<SystemEventRecord>> {
         let mut query = "SELECT * FROM system_events WHERE 1=1".to_string();
         let mut params = Vec::new();
-        
+
         if let Some(et) = event_type {
             query.push_str(" AND event_type = ?");
             params.push(et.to_string());
         }
-        
+
         if let Some(sev) = severity {
             query.push_str(" AND severity = ?");
             params.push(sev.to_string());
         }
-        
+
         query.push_str(" ORDER BY timestamp DESC");
-        
+
         if let Some(limit) = limit {
             query.push_str(&format!(" LIMIT {}", limit));
         }
-        
+
         // Build query dynamically based on parameters
         let records = match (event_type, severity) {
             (Some(et), Some(sev)) => {
@@ -557,7 +559,7 @@ impl SystemEventQueries {
                     .await?
             }
         };
-        
+
         Ok(records)
     }
 }
