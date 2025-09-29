@@ -8,10 +8,14 @@ use tokio::sync::Mutex;
 
 // Constants for better maintainability
 const DEFAULT_WEB_PORT: u16 = 12700;
+#[allow(dead_code)]
 const BROWSER_STARTUP_DELAY_MS: u64 = 500;
+#[allow(dead_code)]
 const BROWSER_SHUTDOWN_GRACE_MS: u64 = 1000;
+#[allow(dead_code)]
 const KEEPALIVE_INTERVAL_SECS: u64 = 3600;
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 enum DefaultBrowser {
     Chrome,
@@ -21,6 +25,7 @@ enum DefaultBrowser {
 }
 
 // Detect the default browser on the system
+#[allow(dead_code)]
 fn detect_default_browser() -> DefaultBrowser {
     #[cfg(target_os = "macos")]
     {
@@ -124,12 +129,17 @@ async fn main() -> Result<()> {
                 println!("\nUsage: ichimi [OPTIONS]");
                 println!("\nOptions:");
                 println!("  --web              Enable web interface");
-                println!("  --web-port <PORT>  Web interface port (default: {})", DEFAULT_WEB_PORT);
+                println!(
+                    "  --web-port <PORT>  Web interface port (default: {})",
+                    DEFAULT_WEB_PORT
+                );
                 println!("  --web-only         Run only the web interface (no MCP server)");
                 println!("  --no-web           Disable web interface completely");
                 println!("  --help, -h         Show this help message");
                 println!("\nEnvironment variables:");
-                println!("  RUST_LOG                        Log level (error, warn, info, debug, trace)");
+                println!(
+                    "  RUST_LOG                        Log level (error, warn, info, debug, trace)"
+                );
                 println!("  ICHIMI_AUTO_EXPORT_INTERVAL    Auto-export interval in seconds");
                 println!("  ICHIMI_IMPORT_FILE              File to import on startup");
                 println!("  ICHIMI_EXPORT_FILE              File to export on shutdown");
@@ -142,7 +152,11 @@ async fn main() -> Result<()> {
             "--web-port" => {
                 if let Some(port_str) = args.next() {
                     web_port = port_str.parse().unwrap_or_else(|_| {
-                        tracing::warn!("Invalid port '{}', using default {}", port_str, DEFAULT_WEB_PORT);
+                        tracing::warn!(
+                            "Invalid port '{}', using default {}",
+                            port_str,
+                            DEFAULT_WEB_PORT
+                        );
                         DEFAULT_WEB_PORT
                     });
                 }
@@ -173,7 +187,7 @@ async fn main() -> Result<()> {
         tracing::warn!("ICHIMI_ENABLE_WEB is deprecated. Use --web flag instead.");
     }
 
-    let server_info = ServerInfo::default();
+    let _server_info = ServerInfo::default();
 
     // Initialize shared process manager
     let process_manager = ProcessManager::new().await;
@@ -198,33 +212,46 @@ async fn main() -> Result<()> {
             let dist_dir = env::var("ICHIMI_WEB_DIST").unwrap_or_else(|_| {
                 // Try to find the dist directory relative to the binary
                 let exe_path = std::env::current_exe().expect("Failed to get executable path");
-                
+
                 // Look for the dist directory in several possible locations
                 let possible_paths = vec![
                     // For development: relative to cargo workspace root
-                    exe_path.parent().unwrap().parent().unwrap().parent().unwrap().join("ui/web/dist"),
+                    exe_path
+                        .parent()
+                        .unwrap()
+                        .parent()
+                        .unwrap()
+                        .parent()
+                        .unwrap()
+                        .join("ui/web/dist"),
                     // For installed binary: in the same directory
                     exe_path.parent().unwrap().join("ui/web/dist"),
                     // Current directory fallback
                     std::path::PathBuf::from("ui/web/dist"),
                 ];
-                
+
                 for path in &possible_paths {
                     if path.exists() {
                         tracing::info!("Found web dist directory at: {}", path.display());
                         return path.to_string_lossy().to_string();
                     }
                 }
-                
+
                 // Default fallback
                 let default = "ui/web/dist".to_string();
-                tracing::warn!("Web dist directory not found in expected locations, using: {}", default);
+                tracing::warn!(
+                    "Web dist directory not found in expected locations, using: {}",
+                    default
+                );
                 default
             });
 
             // Check if dist directory exists
             if !std::path::Path::new(&dist_dir).exists() {
-                tracing::error!("Web dist directory not found at: {}. Please build the web UI with 'bun run build' in ui/web-vue/", dist_dir);
+                tracing::error!(
+                    "Web dist directory not found at: {}. Please build the web UI with 'bun run build' in ui/web-vue/",
+                    dist_dir
+                );
                 return;
             }
 
@@ -248,8 +275,8 @@ async fn main() -> Result<()> {
         #[cfg(feature = "webdriver")]
         {
             // Import webdriver features
-            use ichimi::webdriver::{WebDriverManager, BrowserType};
-            
+            use ichimi::webdriver::{BrowserType, WebDriverManager};
+
             // Try to launch browser automatically after a short delay
             let web_port_for_browser = web_port;
             let browser_proc = browser_process.clone();
@@ -257,9 +284,9 @@ async fn main() -> Result<()> {
             tokio::spawn(async move {
                 // Wait for the web server to be ready
                 tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
-                
+
                 let url = format!("http://localhost:{}", web_port_for_browser);
-                
+
                 // Try to use WebDriver first for better control
                 match WebDriverManager::new().await {
                     Ok(manager) => {
@@ -270,31 +297,42 @@ async fn main() -> Result<()> {
                             BrowserType::Safari,
                             BrowserType::Edge,
                         ];
-                        
+
                         for browser_type in browsers_to_try {
                             match manager.launch_browser(&url, browser_type).await {
                                 Ok(client) => {
-                                    tracing::info!("Successfully opened {} browser at {}", browser_type, url);
+                                    tracing::info!(
+                                        "Successfully opened {} browser at {}",
+                                        browser_type,
+                                        url
+                                    );
                                     *webdriver_client_clone.lock().await = Some(client);
                                     return;
                                 }
                                 Err(e) => {
-                                    tracing::debug!("Failed to open {} browser: {}", browser_type, e);
+                                    tracing::debug!(
+                                        "Failed to open {} browser: {}",
+                                        browser_type,
+                                        e
+                                    );
                                 }
                             }
                         }
-                        tracing::warn!("Could not open any browser via WebDriver, falling back to system command");
+                        tracing::warn!(
+                            "Could not open any browser via WebDriver, falling back to system command"
+                        );
                     }
                     Err(e) => {
-                        tracing::debug!("WebDriver not available: {}, falling back to system command", e);
+                        tracing::debug!(
+                            "WebDriver not available: {}, falling back to system command",
+                            e
+                        );
                     }
                 }
-                
+
                 // Fallback to system command
                 let result = if cfg!(target_os = "macos") {
-                    std::process::Command::new("open")
-                        .arg(url.clone())
-                        .spawn()
+                    std::process::Command::new("open").arg(url.clone()).spawn()
                 } else if cfg!(target_os = "linux") {
                     std::process::Command::new("xdg-open")
                         .arg(url.clone())
@@ -306,10 +344,10 @@ async fn main() -> Result<()> {
                 } else {
                     Err(std::io::Error::new(
                         std::io::ErrorKind::Other,
-                        "Unsupported OS"
+                        "Unsupported OS",
                     ))
                 };
-                
+
                 match result {
                     Ok(child) => {
                         tracing::info!("Opened browser at {}", url);
@@ -322,7 +360,7 @@ async fn main() -> Result<()> {
                 }
             });
         }
-        
+
         #[cfg(not(feature = "webdriver"))]
         {
             // Simple browser launch without WebDriver
@@ -331,14 +369,12 @@ async fn main() -> Result<()> {
             tokio::spawn(async move {
                 // Wait for the web server to be ready
                 tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
-                
+
                 let url = format!("http://localhost:{}", web_port_for_browser);
-                
+
                 // Try to open browser
                 let result = if cfg!(target_os = "macos") {
-                    std::process::Command::new("open")
-                        .arg(url.clone())
-                        .spawn()
+                    std::process::Command::new("open").arg(url.clone()).spawn()
                 } else if cfg!(target_os = "linux") {
                     std::process::Command::new("xdg-open")
                         .arg(url.clone())
@@ -350,10 +386,10 @@ async fn main() -> Result<()> {
                 } else {
                     Err(std::io::Error::new(
                         std::io::ErrorKind::Other,
-                        "Unsupported OS"
+                        "Unsupported OS",
                     ))
                 };
-                
+
                 match result {
                     Ok(child) => {
                         tracing::info!("Opened browser at {}", url);
@@ -366,7 +402,7 @@ async fn main() -> Result<()> {
                 }
             });
         }
-        
+
         tracing::info!("Web interface is running at http://localhost:{}", web_port);
     }
 
@@ -489,12 +525,12 @@ async fn main() -> Result<()> {
                 }
             }
         }
-        
+
         // Close browser process if it was opened
         let mut browser_guard = browser_proc.lock().await;
         if let Some(mut child) = browser_guard.take() {
             tracing::info!("Closing browser process");
-            
+
             // Get the process ID for platform-specific handling
             let pid = child.id();
             // Platform-specific graceful shutdown
@@ -539,12 +575,12 @@ async fn main() -> Result<()> {
     // Skip MCP server if in web-only mode
     if web_only {
         tracing::info!("Running in web-only mode, MCP server is disabled");
-        
+
         // Wait for the web server task
         if let Some(handle) = web_handle {
             let _ = handle.await;
         }
-        
+
         return Ok(());
     }
 
@@ -599,15 +635,12 @@ async fn main() -> Result<()> {
     }
 
     // Create MCP transport
-    let transport = (
-        tokio::io::stdin(),
-        tokio::io::stdout(),
-    );
+    let transport = (tokio::io::stdin(), tokio::io::stdout());
 
     // Run the MCP server using serve method
     tracing::info!("MCP server is ready, waiting for connections...");
     let server_handle = server.serve(transport).await?;
-    
+
     // Wait for server shutdown
     let quit_reason = server_handle.waiting().await?;
     tracing::info!("MCP server shutting down: {:?}", quit_reason);

@@ -33,9 +33,18 @@ pub struct ProcessSnapshot {
 #[derive(Debug, Clone)]
 pub enum ProcessStateSnapshot {
     NotStarted,
-    Running { pid: u32, started_at: DateTime<Utc> },
-    Stopped { exit_code: Option<i32>, stopped_at: DateTime<Utc> },
-    Failed { error: String, failed_at: DateTime<Utc> },
+    Running {
+        pid: u32,
+        started_at: DateTime<Utc>,
+    },
+    Stopped {
+        exit_code: Option<i32>,
+        stopped_at: DateTime<Utc>,
+    },
+    Failed {
+        error: String,
+        failed_at: DateTime<Utc>,
+    },
 }
 
 impl Snapshot {
@@ -53,7 +62,8 @@ impl Snapshot {
 
     /// Export to KDL format
     pub fn to_kdl(&self) -> String {
-        let processes: Vec<ProcessInfo> = self.processes.iter().map(|p| p.to_process_info()).collect();
+        let processes: Vec<ProcessInfo> =
+            self.processes.iter().map(|p| p.to_process_info()).collect();
         let kdl_snapshot = KdlSnapshot::from_processes(processes);
         kdl_snapshot.to_kdl_string().unwrap_or_else(|e| {
             eprintln!("Error generating KDL: {}", e);
@@ -66,7 +76,8 @@ impl Snapshot {
         let kdl_snapshot = KdlSnapshot::from_kdl_string(content)
             .map_err(|e| anyhow::anyhow!("Failed to parse KDL snapshot: {}", e))?;
 
-        let processes: Vec<ProcessInfo> = kdl_snapshot.processes
+        let processes: Vec<ProcessInfo> = kdl_snapshot
+            .processes
             .iter()
             .map(|p| p.to_process_info())
             .collect();
@@ -198,7 +209,10 @@ impl ProcessStateSnapshot {
                 stopped_at: None,
                 error: None,
             },
-            ProcessStateSnapshot::Stopped { exit_code, stopped_at } => ProcessStatus {
+            ProcessStateSnapshot::Stopped {
+                exit_code,
+                stopped_at,
+            } => ProcessStatus {
                 state: ProcessState::Stopped,
                 pid: None,
                 exit_code: *exit_code,
@@ -245,11 +259,11 @@ mod tests {
         let snapshot = Snapshot::new(vec![process]);
         let kdl = snapshot.to_kdl();
 
-        // Check KDL content
+        // Check KDL content - note the KDL format uses key=value syntax
         assert!(kdl.contains("process \"test-server\""));
-        assert!(kdl.contains("name \"Test Server\""));
-        assert!(kdl.contains("command \"python\""));
-        assert!(kdl.contains("auto_start #true"));
+        assert!(kdl.contains("name=\"Test Server\""));
+        assert!(kdl.contains("command=\"python\""));
+        assert!(kdl.contains("auto_start=true"));
 
         // Parse back
         let parsed = Snapshot::from_kdl_str(&kdl).unwrap();

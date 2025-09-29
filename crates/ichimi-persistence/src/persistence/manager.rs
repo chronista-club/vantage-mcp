@@ -144,10 +144,7 @@ impl PersistenceManager {
     }
 
     /// Create an auto-start snapshot
-    pub async fn create_auto_start_snapshot(
-        &self,
-        file_path: Option<&str>,
-    ) -> Result<String> {
+    pub async fn create_auto_start_snapshot(&self, file_path: Option<&str>) -> Result<String> {
         self.export_snapshot(file_path, true).await
     }
 
@@ -162,22 +159,16 @@ impl PersistenceManager {
     // Legacy YAML compatibility methods (redirect to KDL)
 
     /// Export to YAML (compatibility - actually exports KDL)
-    pub async fn export_to_yaml(
-        &self,
-        file_path: &str,
-        only_auto_start: bool,
-    ) -> Result<()> {
+    pub async fn export_to_yaml(&self, file_path: &str, only_auto_start: bool) -> Result<()> {
         // Change extension to .kdl
         let kdl_path = file_path.replace(".yaml", ".kdl").replace(".yml", ".kdl");
-        self.export_snapshot(Some(&kdl_path), only_auto_start).await?;
+        self.export_snapshot(Some(&kdl_path), only_auto_start)
+            .await?;
         Ok(())
     }
 
     /// Import from YAML (compatibility - actually imports KDL)
-    pub async fn import_from_yaml(
-        &self,
-        file_path: &str,
-    ) -> Result<HashMap<String, ProcessInfo>> {
+    pub async fn import_from_yaml(&self, file_path: &str) -> Result<HashMap<String, ProcessInfo>> {
         // Try KDL file first
         let kdl_path = file_path.replace(".yaml", ".kdl").replace(".yml", ".kdl");
         if Path::new(&kdl_path).exists() {
@@ -203,8 +194,7 @@ impl PersistenceManager {
         let json = serde_json::to_string_pretty(&processes)
             .map_err(|e| format!("Failed to serialize processes: {e}"))?;
 
-        std::fs::write(file_path, json)
-            .map_err(|e| format!("Failed to write export file: {e}"))?;
+        std::fs::write(file_path, json).map_err(|e| format!("Failed to write export file: {e}"))?;
 
         tracing::info!("Exported {} processes to {}", processes.len(), file_path);
         Ok(())
@@ -311,9 +301,12 @@ impl PersistenceManager {
     /// Save clipboard item
     pub async fn save_clipboard_item(&self, item: &ClipboardItem) -> Result<ClipboardItem> {
         let mut clipboard = self.clipboard.write().await;
-        
+
         // Find and update existing item or add new one
-        if let Some(existing) = clipboard.iter_mut().find(|i| i.clipboard_id == item.clipboard_id) {
+        if let Some(existing) = clipboard
+            .iter_mut()
+            .find(|i| i.clipboard_id == item.clipboard_id)
+        {
             *existing = item.clone();
         } else {
             clipboard.push(item.clone());

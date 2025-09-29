@@ -639,8 +639,12 @@ pub async fn get_clipboard(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
 
-    let item = item_opt
-        .ok_or_else(|| (StatusCode::NOT_FOUND, "No clipboard items found".to_string()))?;
+    let item = item_opt.ok_or_else(|| {
+        (
+            StatusCode::NOT_FOUND,
+            "No clipboard items found".to_string(),
+        )
+    })?;
 
     Ok(Json(ClipboardResponse {
         id: item.clipboard_id,
@@ -776,9 +780,12 @@ pub async fn search_clipboard(
     let items: Vec<_> = all_items
         .into_iter()
         .filter(|item| {
-            item.content.contains(&req.query) ||
-            item.filename.as_ref().map_or(false, |f| f.contains(&req.query)) ||
-            item.tags.iter().any(|tag| tag.contains(&req.query))
+            item.content.contains(&req.query)
+                || item
+                    .filename
+                    .as_ref()
+                    .map_or(false, |f| f.contains(&req.query))
+                || item.tags.iter().any(|tag| tag.contains(&req.query))
         })
         .collect();
 

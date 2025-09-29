@@ -1,0 +1,4 @@
+{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{"tools":{}}},"id":1}
+{"jsonrpc":"2.0","method":"tools/call","params":{"name":"get_status","arguments":{}},"id":2}
+{"jsonrpc":"2.0","method":"tools/call","params":{"name":"create_process","arguments":{"name":"test-proc","command":"/Users/mito/repos/ichimi-server/.mcp_test/test_process.sh","args":[],"env":{},"cwd":"/Users/mito/repos/ichimi-server/.mcp_test"}},"id":3}
+{"jsonrpc":"2.0","method":"tools/call","params":{"name":"list_processes","arguments":{}},"id":4}

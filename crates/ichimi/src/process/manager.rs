@@ -957,11 +957,16 @@ impl ProcessManager {
         // Get all templates and filter them
         let templates = self.persistence.list_templates().await?;
 
-        let filtered = templates.into_iter().filter(|t| {
-            let category_match = category.as_ref().map_or(true, |cat| t.category.as_ref() == Some(cat));
-            let tags_match = tags.is_empty() || tags.iter().any(|tag| t.tags.contains(tag));
-            category_match && tags_match
-        }).collect();
+        let filtered = templates
+            .into_iter()
+            .filter(|t| {
+                let category_match = category
+                    .as_ref()
+                    .map_or(true, |cat| t.category.as_ref() == Some(cat));
+                let tags_match = tags.is_empty() || tags.iter().any(|tag| t.tags.contains(tag));
+                category_match && tags_match
+            })
+            .collect();
 
         Ok(filtered)
     }

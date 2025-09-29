@@ -1,7 +1,7 @@
-use ichimi_persistence::kdl::{KdlSnapshot, KdlProcess};
-use ichimi_persistence::types::{ProcessInfo, ProcessStatus, ProcessState};
-use std::collections::HashMap;
 use chrono::Utc;
+use ichimi_persistence::kdl_serde::KdlSnapshot;
+use ichimi_persistence::types::{ProcessInfo, ProcessState, ProcessStatus};
+use std::collections::HashMap;
 
 fn main() {
     println!("Testing KDL generation...\n");
@@ -35,20 +35,20 @@ fn main() {
 
     // Generate KDL
     let snapshot = KdlSnapshot::from_processes(vec![process]);
-    let kdl_string = snapshot.to_kdl_string();
+    let kdl_string = snapshot.to_kdl_string().unwrap();
 
     println!("{}", kdl_string);
 
     // Verify content
     assert!(kdl_string.contains("// Ichimi Process Snapshot"));
     assert!(kdl_string.contains("process \"test-server\""));
-    assert!(kdl_string.contains("name \"Test Server\""));
-    assert!(kdl_string.contains("command \"python\""));
-    assert!(kdl_string.contains("auto_start #true"));
-    assert!(kdl_string.contains("// 環境変数"));
+    assert!(kdl_string.contains("name=\"Test Server\""));
+    assert!(kdl_string.contains("command=\"python\""));
+    assert!(kdl_string.contains("auto_start=true"));
+    assert!(kdl_string.contains("env {"));
     assert!(kdl_string.contains("var \"PORT\" \"8000\""));
-    assert!(kdl_string.contains("// 実行中"));
-    assert!(kdl_string.contains("pid 12345"));
+    assert!(kdl_string.contains("state \"running\""));
+    assert!(kdl_string.contains("pid=12345"));
 
     println!("\n✅ All assertions passed!");
 }
