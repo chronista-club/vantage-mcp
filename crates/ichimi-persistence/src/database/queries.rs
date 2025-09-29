@@ -193,7 +193,7 @@ impl ProcessHistoryQueries {
         query.push_str(" ORDER BY started_at DESC");
 
         if let Some(limit) = limit {
-            query.push_str(&format!(" LIMIT {}", limit));
+            query.push_str(&format!(" LIMIT {limit}"));
         }
 
         let records = if let Some(pid) = process_id {
@@ -529,7 +529,7 @@ impl SystemEventQueries {
         query.push_str(" ORDER BY timestamp DESC");
 
         if let Some(limit) = limit {
-            query.push_str(&format!(" LIMIT {}", limit));
+            query.push_str(&format!(" LIMIT {limit}"));
         }
 
         // Build query dynamically based on parameters

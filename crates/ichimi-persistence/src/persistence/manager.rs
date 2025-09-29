@@ -23,7 +23,7 @@ impl PersistenceManager {
         // Initialize database
         let database = Database::new(&database_path)
             .await
-            .map_err(|e| format!("Failed to initialize database: {}", e))?;
+            .map_err(|e| format!("Failed to initialize database: {e}"))?;
 
         let config_path = config_path.unwrap_or_else(Self::default_config_path);
 
@@ -55,10 +55,10 @@ impl PersistenceManager {
 
         let content = tokio::fs::read_to_string(&self.config_path)
             .await
-            .map_err(|e| format!("Failed to read config file: {}", e))?;
+            .map_err(|e| format!("Failed to read config file: {e}"))?;
 
         let snapshot = KdlSnapshot::from_kdl_string(&content)
-            .map_err(|e| format!("Failed to parse KDL config: {}", e))?;
+            .map_err(|e| format!("Failed to parse KDL config: {e}"))?;
 
         // Import processes from config
         for process in snapshot.processes {
@@ -79,19 +79,19 @@ impl PersistenceManager {
         let snapshot = KdlSnapshot::from_processes(processes);
         let kdl_content = snapshot
             .to_kdl_string()
-            .map_err(|e| format!("Failed to generate KDL: {}", e))?;
+            .map_err(|e| format!("Failed to generate KDL: {e}"))?;
 
         // Ensure parent directory exists
         if let Some(parent) = self.config_path.parent() {
             tokio::fs::create_dir_all(parent)
                 .await
-                .map_err(|e| format!("Failed to create config directory: {}", e))?;
+                .map_err(|e| format!("Failed to create config directory: {e}"))?;
         }
 
         // Write to file
         tokio::fs::write(&self.config_path, kdl_content)
             .await
-            .map_err(|e| format!("Failed to write config file: {}", e))?;
+            .map_err(|e| format!("Failed to write config file: {e}"))?;
 
         info!("Saved configuration to {}", self.config_path.display());
         Ok(())
@@ -103,7 +103,7 @@ impl PersistenceManager {
     pub async fn save_process(&self, process: &ProcessInfo) -> Result<()> {
         ProcessQueries::upsert(self.database.pool(), process)
             .await
-            .map_err(|e| format!("Failed to save process: {}", e))?;
+            .map_err(|e| format!("Failed to save process: {e}"))?;
         Ok(())
     }
 
@@ -116,7 +116,7 @@ impl PersistenceManager {
     pub async fn delete_process(&self, process_id: &str) -> Result<()> {
         ProcessQueries::delete(self.database.pool(), process_id)
             .await
-            .map_err(|e| format!("Failed to delete process: {}", e))?;
+            .map_err(|e| format!("Failed to delete process: {e}"))?;
         Ok(())
     }
 
@@ -124,11 +124,11 @@ impl PersistenceManager {
     pub async fn load_all_processes(&self) -> Result<Vec<ProcessInfo>> {
         let records = ProcessQueries::list(self.database.pool())
             .await
-            .map_err(|e| format!("Failed to load processes: {}", e))?;
+            .map_err(|e| format!("Failed to load processes: {e}"))?;
 
         let processes = records
             .into_iter()
-            .map(|r| Self::record_to_process_info(r))
+            .map(Self::record_to_process_info)
             .collect::<Result<Vec<_>>>()?;
 
         Ok(processes)
@@ -138,7 +138,7 @@ impl PersistenceManager {
     pub async fn get_process(&self, process_id: &str) -> Result<Option<ProcessInfo>> {
         let record = ProcessQueries::get(self.database.pool(), process_id)
             .await
-            .map_err(|e| format!("Failed to get process: {}", e))?;
+            .map_err(|e| format!("Failed to get process: {e}"))?;
 
         match record {
             Some(r) => Ok(Some(Self::record_to_process_info(r)?)),
@@ -152,7 +152,7 @@ impl PersistenceManager {
     pub async fn save_template(&self, template: &ProcessTemplate) -> Result<()> {
         ProcessTemplateQueries::upsert(self.database.pool(), template)
             .await
-            .map_err(|e| format!("Failed to save template: {}", e))?;
+            .map_err(|e| format!("Failed to save template: {e}"))?;
         Ok(())
     }
 
@@ -160,7 +160,7 @@ impl PersistenceManager {
     pub async fn get_template(&self, template_id: &str) -> Result<Option<ProcessTemplate>> {
         let record = ProcessTemplateQueries::get(self.database.pool(), template_id)
             .await
-            .map_err(|e| format!("Failed to get template: {}", e))?;
+            .map_err(|e| format!("Failed to get template: {e}"))?;
 
         match record {
             Some(r) => Ok(Some(Self::record_to_template(r)?)),
@@ -172,11 +172,11 @@ impl PersistenceManager {
     pub async fn list_templates(&self) -> Result<Vec<ProcessTemplate>> {
         let records = ProcessTemplateQueries::list(self.database.pool())
             .await
-            .map_err(|e| format!("Failed to list templates: {}", e))?;
+            .map_err(|e| format!("Failed to list templates: {e}"))?;
 
         let templates = records
             .into_iter()
-            .map(|r| Self::record_to_template(r))
+            .map(Self::record_to_template)
             .collect::<Result<Vec<_>>>()?;
 
         Ok(templates)
@@ -186,7 +186,7 @@ impl PersistenceManager {
     pub async fn delete_template(&self, template_id: &str) -> Result<()> {
         ProcessTemplateQueries::delete(self.database.pool(), template_id)
             .await
-            .map_err(|e| format!("Failed to delete template: {}", e))?;
+            .map_err(|e| format!("Failed to delete template: {e}"))?;
         Ok(())
     }
 
@@ -219,7 +219,7 @@ impl PersistenceManager {
             None,
         )
         .await
-        .map_err(|e| format!("Failed to add to clipboard: {}", e))?;
+        .map_err(|e| format!("Failed to add to clipboard: {e}"))?;
 
         Ok(item)
     }
@@ -228,7 +228,7 @@ impl PersistenceManager {
     pub async fn get_clipboard_history(&self, limit: usize) -> Result<Vec<ClipboardItem>> {
         let records = ClipboardQueries::list(self.database.pool())
             .await
-            .map_err(|e| format!("Failed to get clipboard history: {}", e))?;
+            .map_err(|e| format!("Failed to get clipboard history: {e}"))?;
 
         let items = records
             .into_iter()
@@ -255,12 +255,12 @@ impl PersistenceManager {
         // Get all clipboard entries and delete them
         let records = ClipboardQueries::list(self.database.pool())
             .await
-            .map_err(|e| format!("Failed to list clipboard entries: {}", e))?;
+            .map_err(|e| format!("Failed to list clipboard entries: {e}"))?;
 
         for record in records {
             ClipboardQueries::delete(self.database.pool(), &record.key)
                 .await
-                .map_err(|e| format!("Failed to delete clipboard entry: {}", e))?;
+                .map_err(|e| format!("Failed to delete clipboard entry: {e}"))?;
         }
 
         Ok(())
@@ -270,7 +270,7 @@ impl PersistenceManager {
     pub async fn get_latest_clipboard_item(&self) -> Result<Option<ClipboardItem>> {
         let records = ClipboardQueries::list(self.database.pool())
             .await
-            .map_err(|e| format!("Failed to get clipboard: {}", e))?;
+            .map_err(|e| format!("Failed to get clipboard: {e}"))?;
 
         Ok(records.first().map(|r| {
             let filename = r
@@ -314,7 +314,7 @@ impl PersistenceManager {
             None,
         )
         .await
-        .map_err(|e| format!("Failed to save clipboard item: {}", e))?;
+        .map_err(|e| format!("Failed to save clipboard item: {e}"))?;
 
         Ok(())
     }
@@ -331,7 +331,7 @@ impl PersistenceManager {
     pub async fn get_settings(&self) -> Result<Settings> {
         let records = SettingsQueries::list(self.database.pool())
             .await
-            .map_err(|e| format!("Failed to get settings: {}", e))?;
+            .map_err(|e| format!("Failed to get settings: {e}"))?;
 
         // Convert settings records to Settings struct
         let mut settings = Settings::default();
@@ -372,7 +372,7 @@ impl PersistenceManager {
         // Save each setting to database
         SettingsQueries::set(self.database.pool(), "theme", &settings.theme)
             .await
-            .map_err(|e| format!("Failed to update settings: {}", e))?;
+            .map_err(|e| format!("Failed to update settings: {e}"))?;
 
         if let Some(interval) = settings.auto_save_interval {
             SettingsQueries::set(
@@ -381,7 +381,7 @@ impl PersistenceManager {
                 &interval.to_string(),
             )
             .await
-            .map_err(|e| format!("Failed to update settings: {}", e))?;
+            .map_err(|e| format!("Failed to update settings: {e}"))?;
         }
 
         if let Some(max_lines) = settings.max_log_lines {
@@ -391,7 +391,7 @@ impl PersistenceManager {
                 &max_lines.to_string(),
             )
             .await
-            .map_err(|e| format!("Failed to update settings: {}", e))?;
+            .map_err(|e| format!("Failed to update settings: {e}"))?;
         }
 
         SettingsQueries::set(
@@ -400,19 +400,19 @@ impl PersistenceManager {
             &settings.enable_auto_restart.to_string(),
         )
         .await
-        .map_err(|e| format!("Failed to update settings: {}", e))?;
+        .map_err(|e| format!("Failed to update settings: {e}"))?;
 
         if let Some(shell) = settings.default_shell {
             SettingsQueries::set(self.database.pool(), "default_shell", &shell)
                 .await
-                .map_err(|e| format!("Failed to update settings: {}", e))?;
+                .map_err(|e| format!("Failed to update settings: {e}"))?;
         }
 
         // Save environment variables
         for (key, value) in settings.env_variables {
-            SettingsQueries::set(self.database.pool(), &format!("env_{}", key), &value)
+            SettingsQueries::set(self.database.pool(), &format!("env_{key}"), &value)
                 .await
-                .map_err(|e| format!("Failed to update settings: {}", e))?;
+                .map_err(|e| format!("Failed to update settings: {e}"))?;
         }
 
         Ok(())
@@ -423,9 +423,9 @@ impl PersistenceManager {
     /// Record process start in database
     pub async fn record_process_start(&self, process: &ProcessInfo) -> Result<()> {
         let args_json = serde_json::to_string(&process.args)
-            .map_err(|e| format!("Failed to serialize args: {}", e))?;
+            .map_err(|e| format!("Failed to serialize args: {e}"))?;
         let env_json = serde_json::to_string(&process.env)
-            .map_err(|e| format!("Failed to serialize env: {}", e))?;
+            .map_err(|e| format!("Failed to serialize env: {e}"))?;
 
         ProcessHistoryQueries::record_start(
             self.database.pool(),
@@ -437,7 +437,7 @@ impl PersistenceManager {
             process.cwd.as_deref(),
         )
         .await
-        .map_err(|e| format!("Failed to record process start: {}", e))?;
+        .map_err(|e| format!("Failed to record process start: {e}"))?;
 
         Ok(())
     }
@@ -451,7 +451,7 @@ impl PersistenceManager {
     ) -> Result<()> {
         ProcessHistoryQueries::record_stop(self.database.pool(), process_id, exit_code, error)
             .await
-            .map_err(|e| format!("Failed to record process stop: {}", e))?;
+            .map_err(|e| format!("Failed to record process stop: {e}"))?;
 
         Ok(())
     }
@@ -472,7 +472,7 @@ impl PersistenceManager {
             severity,
         )
         .await
-        .map_err(|e| format!("Failed to record system event: {}", e))?;
+        .map_err(|e| format!("Failed to record system event: {e}"))?;
 
         Ok(())
     }
@@ -485,7 +485,7 @@ impl PersistenceManager {
     ) -> Result<Vec<ProcessHistoryRecord>> {
         ProcessHistoryQueries::get_history(self.database.pool(), process_id, limit)
             .await
-            .map_err(|e| format!("Failed to get process history: {}", e))
+            .map_err(|e| format!("Failed to get process history: {e}"))
     }
 
     // Conversion helpers
@@ -496,21 +496,21 @@ impl PersistenceManager {
             .args
             .map(|a| serde_json::from_str(&a))
             .transpose()
-            .map_err(|e| format!("Failed to parse args: {}", e))?
+            .map_err(|e| format!("Failed to parse args: {e}"))?
             .unwrap_or_default();
 
         let env: std::collections::HashMap<String, String> = record
             .env
             .map(|e| serde_json::from_str(&e))
             .transpose()
-            .map_err(|e| format!("Failed to parse env: {}", e))?
+            .map_err(|e| format!("Failed to parse env: {e}"))?
             .unwrap_or_default();
 
         let tags: Vec<String> = record
             .tags
             .map(|t| serde_json::from_str(&t))
             .transpose()
-            .map_err(|e| format!("Failed to parse tags: {}", e))?
+            .map_err(|e| format!("Failed to parse tags: {e}"))?
             .unwrap_or_default();
 
         let state = match record.state.as_str() {
@@ -549,28 +549,28 @@ impl PersistenceManager {
             .args
             .map(|a| serde_json::from_str(&a))
             .transpose()
-            .map_err(|e| format!("Failed to parse args: {}", e))?
+            .map_err(|e| format!("Failed to parse args: {e}"))?
             .unwrap_or_default();
 
         let env: std::collections::HashMap<String, String> = record
             .env
             .map(|e| serde_json::from_str(&e))
             .transpose()
-            .map_err(|e| format!("Failed to parse env: {}", e))?
+            .map_err(|e| format!("Failed to parse env: {e}"))?
             .unwrap_or_default();
 
         let variables: Vec<crate::types::TemplateVariable> = record
             .variables
             .map(|v| serde_json::from_str(&v))
             .transpose()
-            .map_err(|e| format!("Failed to parse variables: {}", e))?
+            .map_err(|e| format!("Failed to parse variables: {e}"))?
             .unwrap_or_default();
 
         let tags: Vec<String> = record
             .tags
             .map(|t| serde_json::from_str(&t))
             .transpose()
-            .map_err(|e| format!("Failed to parse tags: {}", e))?
+            .map_err(|e| format!("Failed to parse tags: {e}"))?
             .unwrap_or_default();
 
         Ok(ProcessTemplate {
