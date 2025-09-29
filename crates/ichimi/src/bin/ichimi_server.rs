@@ -124,6 +124,10 @@ async fn main() -> Result<()> {
 
     while let Some(arg) = args.next() {
         match arg.as_str() {
+            "--version" | "-v" => {
+                println!("Ichimi Server v{}", env!("CARGO_PKG_VERSION"));
+                return Ok(());
+            }
             "--help" | "-h" => {
                 println!("Ichimi Server v{}", env!("CARGO_PKG_VERSION"));
                 println!("\nUsage: ichimi [OPTIONS]");
@@ -132,6 +136,7 @@ async fn main() -> Result<()> {
                 println!("  --web-port <PORT>  Web interface port (default: {DEFAULT_WEB_PORT})");
                 println!("  --web-only         Run only the web interface (no MCP server)");
                 println!("  --no-web           Disable web interface completely");
+                println!("  --version, -v      Show version information");
                 println!("  --help, -h         Show this help message");
                 println!("\nEnvironment variables:");
                 println!(
