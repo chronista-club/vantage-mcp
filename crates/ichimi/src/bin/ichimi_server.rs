@@ -129,9 +129,7 @@ async fn main() -> Result<()> {
                 println!("\nUsage: ichimi [OPTIONS]");
                 println!("\nOptions:");
                 println!("  --web              Enable web interface");
-                println!(
-                    "  --web-port <PORT>  Web interface port (default: {DEFAULT_WEB_PORT})"
-                );
+                println!("  --web-port <PORT>  Web interface port (default: {DEFAULT_WEB_PORT})");
                 println!("  --web-only         Run only the web interface (no MCP server)");
                 println!("  --no-web           Disable web interface completely");
                 println!("  --help, -h         Show this help message");
