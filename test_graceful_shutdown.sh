@@ -33,7 +33,7 @@ ICHIMI_DIR="$TEST_DIR/.ichimi"
 mkdir -p "$ICHIMI_DIR"
 
 # Ichimiサーバーをバックグラウンドで起動
-cargo run --bin ichimi -- --web --web-port 12800 --no-web 2>&1 | tee ichimi.log &
+cargo run --bin ichimi -- --web --web-port 12800 2>&1 | tee ichimi.log &
 ICHIMI_PID=$!
 echo "Ichimi server started with PID $ICHIMI_PID"
 
