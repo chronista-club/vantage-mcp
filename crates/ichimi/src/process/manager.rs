@@ -962,7 +962,7 @@ impl ProcessManager {
             .filter(|t| {
                 let category_match = category
                     .as_ref()
-                    .map_or(true, |cat| t.category.as_ref() == Some(cat));
+                    .is_none_or(|cat| t.category.as_ref() == Some(cat));
                 let tags_match = tags.is_empty() || tags.iter().any(|tag| t.tags.contains(tag));
                 category_match && tags_match
             })

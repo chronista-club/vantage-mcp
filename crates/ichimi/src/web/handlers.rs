@@ -784,7 +784,7 @@ pub async fn search_clipboard(
                 || item
                     .filename
                     .as_ref()
-                    .map_or(false, |f| f.contains(&req.query))
+                    .is_some_and(|f| f.contains(&req.query))
                 || item.tags.iter().any(|tag| tag.contains(&req.query))
         })
         .collect();

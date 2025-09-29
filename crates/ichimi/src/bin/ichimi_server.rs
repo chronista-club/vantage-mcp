@@ -130,8 +130,7 @@ async fn main() -> Result<()> {
                 println!("\nOptions:");
                 println!("  --web              Enable web interface");
                 println!(
-                    "  --web-port <PORT>  Web interface port (default: {})",
-                    DEFAULT_WEB_PORT
+                    "  --web-port <PORT>  Web interface port (default: {DEFAULT_WEB_PORT})"
                 );
                 println!("  --web-only         Run only the web interface (no MCP server)");
                 println!("  --no-web           Disable web interface completely");
@@ -195,12 +194,6 @@ async fn main() -> Result<()> {
     // Create process for browser if --web-only is used (for shutdown handling)
     let browser_process: Arc<Mutex<Option<std::process::Child>>> = Arc::new(Mutex::new(None));
     let browser_process_for_shutdown = browser_process.clone();
-
-    // Create WebDriver client holder
-    #[cfg(feature = "webdriver")]
-    let webdriver_client: Arc<Mutex<Option<fantoccini::Client>>> = Arc::new(Mutex::new(None));
-    #[cfg(feature = "webdriver")]
-    let webdriver_client_for_shutdown = webdriver_client.clone();
 
     // Setup and run web interface if enabled (either through --web or --web-only)
     let web_handle = if enable_web && !no_web {
@@ -272,136 +265,41 @@ async fn main() -> Result<()> {
 
     // Handle web-only mode
     if web_only {
-        #[cfg(feature = "webdriver")]
-        {
-            // Import webdriver features
-            use ichimi::webdriver::{BrowserType, WebDriverManager};
+        // Simple browser launch
+        let web_port_for_browser = web_port;
+        let browser_proc = browser_process.clone();
+        tokio::spawn(async move {
+            // Wait for the web server to be ready
+            tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
 
-            // Try to launch browser automatically after a short delay
-            let web_port_for_browser = web_port;
-            let browser_proc = browser_process.clone();
-            let webdriver_client_clone = webdriver_client.clone();
-            tokio::spawn(async move {
-                // Wait for the web server to be ready
-                tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+            let url = format!("http://localhost:{web_port_for_browser}");
 
-                let url = format!("http://localhost:{}", web_port_for_browser);
+            // Try to open browser
+            let result = if cfg!(target_os = "macos") {
+                std::process::Command::new("open").arg(url.clone()).spawn()
+            } else if cfg!(target_os = "linux") {
+                std::process::Command::new("xdg-open")
+                    .arg(url.clone())
+                    .spawn()
+            } else if cfg!(target_os = "windows") {
+                std::process::Command::new("cmd")
+                    .args(["/c", "start", "", &url])
+                    .spawn()
+            } else {
+                Err(std::io::Error::other("Unsupported OS"))
+            };
 
-                // Try to use WebDriver first for better control
-                match WebDriverManager::new().await {
-                    Ok(manager) => {
-                        // Try browsers in order of preference
-                        let browsers_to_try = vec![
-                            BrowserType::Chrome,
-                            BrowserType::Firefox,
-                            BrowserType::Safari,
-                            BrowserType::Edge,
-                        ];
-
-                        for browser_type in browsers_to_try {
-                            match manager.launch_browser(&url, browser_type).await {
-                                Ok(client) => {
-                                    tracing::info!(
-                                        "Successfully opened {} browser at {}",
-                                        browser_type,
-                                        url
-                                    );
-                                    *webdriver_client_clone.lock().await = Some(client);
-                                    return;
-                                }
-                                Err(e) => {
-                                    tracing::debug!(
-                                        "Failed to open {} browser: {}",
-                                        browser_type,
-                                        e
-                                    );
-                                }
-                            }
-                        }
-                        tracing::warn!(
-                            "Could not open any browser via WebDriver, falling back to system command"
-                        );
-                    }
-                    Err(e) => {
-                        tracing::debug!(
-                            "WebDriver not available: {}, falling back to system command",
-                            e
-                        );
-                    }
+            match result {
+                Ok(child) => {
+                    tracing::info!("Opened browser at {}", url);
+                    *browser_proc.lock().await = Some(child);
                 }
-
-                // Fallback to system command
-                let result = if cfg!(target_os = "macos") {
-                    std::process::Command::new("open").arg(url.clone()).spawn()
-                } else if cfg!(target_os = "linux") {
-                    std::process::Command::new("xdg-open")
-                        .arg(url.clone())
-                        .spawn()
-                } else if cfg!(target_os = "windows") {
-                    std::process::Command::new("cmd")
-                        .args(&["/c", "start", "", &url])
-                        .spawn()
-                } else {
-                    Err(std::io::Error::new(
-                        std::io::ErrorKind::Other,
-                        "Unsupported OS",
-                    ))
-                };
-
-                match result {
-                    Ok(child) => {
-                        tracing::info!("Opened browser at {}", url);
-                        *browser_proc.lock().await = Some(child);
-                    }
-                    Err(e) => {
-                        tracing::warn!("Failed to open browser: {}", e);
-                        tracing::info!("Please open your browser and navigate to {}", url);
-                    }
+                Err(e) => {
+                    tracing::warn!("Failed to open browser: {}", e);
+                    tracing::info!("Please open your browser and navigate to {}", url);
                 }
-            });
-        }
-
-        #[cfg(not(feature = "webdriver"))]
-        {
-            // Simple browser launch without WebDriver
-            let web_port_for_browser = web_port;
-            let browser_proc = browser_process.clone();
-            tokio::spawn(async move {
-                // Wait for the web server to be ready
-                tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
-
-                let url = format!("http://localhost:{}", web_port_for_browser);
-
-                // Try to open browser
-                let result = if cfg!(target_os = "macos") {
-                    std::process::Command::new("open").arg(url.clone()).spawn()
-                } else if cfg!(target_os = "linux") {
-                    std::process::Command::new("xdg-open")
-                        .arg(url.clone())
-                        .spawn()
-                } else if cfg!(target_os = "windows") {
-                    std::process::Command::new("cmd")
-                        .args(&["/c", "start", "", &url])
-                        .spawn()
-                } else {
-                    Err(std::io::Error::new(
-                        std::io::ErrorKind::Other,
-                        "Unsupported OS",
-                    ))
-                };
-
-                match result {
-                    Ok(child) => {
-                        tracing::info!("Opened browser at {}", url);
-                        *browser_proc.lock().await = Some(child);
-                    }
-                    Err(e) => {
-                        tracing::warn!("Failed to open browser: {}", e);
-                        tracing::info!("Please open your browser and navigate to {}", url);
-                    }
-                }
-            });
-        }
+            }
+        });
 
         tracing::info!("Web interface is running at http://localhost:{}", web_port);
     }
@@ -434,8 +332,6 @@ async fn main() -> Result<()> {
     let pm_for_shutdown = process_manager.clone();
     tokio::spawn(async move {
         let browser_proc = browser_process_for_shutdown;
-        #[cfg(feature = "webdriver")]
-        let webdriver_client = webdriver_client_for_shutdown;
         // Handle both SIGINT (Ctrl+C) and SIGTERM
         #[cfg(unix)]
         {
@@ -511,18 +407,6 @@ async fn main() -> Result<()> {
             }
             Err(e) => {
                 tracing::error!("Failed to stop processes gracefully: {}", e);
-            }
-        }
-
-        // Close WebDriver browser if it was used
-        #[cfg(feature = "webdriver")]
-        {
-            let mut client_guard = webdriver_client.lock().await;
-            if let Some(client) = client_guard.take() {
-                tracing::info!("Closing WebDriver browser session");
-                if let Err(e) = client.close().await {
-                    tracing::warn!("Failed to close WebDriver browser: {}", e);
-                }
             }
         }
 

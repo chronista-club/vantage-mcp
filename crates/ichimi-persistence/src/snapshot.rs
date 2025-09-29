@@ -66,7 +66,7 @@ impl Snapshot {
             self.processes.iter().map(|p| p.to_process_info()).collect();
         let kdl_snapshot = KdlSnapshot::from_processes(processes);
         kdl_snapshot.to_kdl_string().unwrap_or_else(|e| {
-            eprintln!("Error generating KDL: {}", e);
+            eprintln!("Error generating KDL: {e}");
             String::new()
         })
     }

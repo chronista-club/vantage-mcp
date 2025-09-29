@@ -37,7 +37,7 @@ fn main() {
     let snapshot = KdlSnapshot::from_processes(vec![process]);
     let kdl_string = snapshot.to_kdl_string().unwrap();
 
-    println!("{}", kdl_string);
+    println!("{kdl_string}");
 
     // Verify content
     assert!(kdl_string.contains("// Ichimi Process Snapshot"));

@@ -112,7 +112,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .export_snapshot(Some(snapshot_path.to_str().unwrap()), false)
         .await?;
 
-    println!("✅ Snapshot exported to: {}", exported_path);
+    println!("✅ Snapshot exported to: {exported_path}");
 
     // Also export auto-start only snapshot
     let auto_start_path = snapshot_dir.join("auto_start.kdl");
@@ -120,12 +120,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .export_snapshot(Some(auto_start_path.to_str().unwrap()), true)
         .await?;
 
-    println!("✅ Auto-start snapshot exported to: {}", auto_exported);
+    println!("✅ Auto-start snapshot exported to: {auto_exported}");
 
     // Read and display the snapshot
     let content = std::fs::read_to_string(&snapshot_path)?;
     println!("\n📄 Snapshot content:\n");
-    println!("{}", content);
+    println!("{content}");
 
     Ok(())
 }
