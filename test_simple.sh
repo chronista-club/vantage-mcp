@@ -114,7 +114,7 @@ export ICHIMI_EXPORT_FILE="$ICHIMI_DIR/snapshot.yaml"
 export RUST_LOG=info
 
 # Ichimiサーバーをバックグラウンドで起動
-cargo run --bin ichimi -- --no-web 2>&1 > ichimi.log &
+cargo run --bin ichimi -- --no-web > ichimi.log 2>&1 &
 ICHIMI_PID=$!
 
 echo "Ichimi server started with PID $ICHIMI_PID"
