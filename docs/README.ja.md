@@ -6,7 +6,7 @@ Process as a Resource - プロセスをリソースとして管理
 
 Model Context Protocol (MCP) を介した Claude Code 用の強力なプロセス管理サーバー。
 
-![Version](https://img.shields.io/badge/version-0.1.0--beta20-blue.svg)
+![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue)
 ![MCP Compatible](https://img.shields.io/badge/MCP-Compatible-green)
 

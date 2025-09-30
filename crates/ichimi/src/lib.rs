@@ -91,17 +91,18 @@ impl IchimiServer {
             tracing::info!("Learning engine started successfully");
         }
 
-        tracing::info!("IchimiServer initialization complete");
+        // CI監視を初期化
+        tracing::debug!("Initializing CI monitor");
+        let ci_monitor = Arc::new(CiMonitor::new(None, Some(30)));
 
-        // CI監視を初期化（2回目の初期化）
-        let ci_monitor_2 = Arc::new(CiMonitor::new(None, Some(30)));
+        tracing::info!("IchimiServer initialization complete");
 
         Ok(Self {
             start_time: Arc::new(Mutex::new(chrono::Utc::now())),
             process_manager,
             event_system,
             learning_engine,
-            ci_monitor: ci_monitor_2,
+            ci_monitor,
             tool_router: Self::tool_router(),
         })
     }
