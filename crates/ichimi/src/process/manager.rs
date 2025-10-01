@@ -288,6 +288,14 @@ impl ProcessManager {
             .stderr(Stdio::piped())
             .stdin(Stdio::null());
 
+        // プロセスグループを設定（Unix系システムのみ）
+        // これにより、子プロセス（Dockerコンテナなど）も含めてシグナルを送信できる
+        #[cfg(unix)]
+        {
+            use std::os::unix::process::CommandExt;
+            cmd.process_group(0); // 新しいプロセスグループを作成
+        }
+
         // 環境変数を設定
         for (key, value) in &process.info.env {
             cmd.env(key, value);
