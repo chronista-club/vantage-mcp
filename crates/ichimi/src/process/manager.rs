@@ -292,6 +292,7 @@ impl ProcessManager {
         // これにより、子プロセス（Dockerコンテナなど）も含めてシグナルを送信できる
         #[cfg(unix)]
         {
+            #[allow(unused_imports)]
             use std::os::unix::process::CommandExt;
             cmd.process_group(0); // 新しいプロセスグループを作成
         }

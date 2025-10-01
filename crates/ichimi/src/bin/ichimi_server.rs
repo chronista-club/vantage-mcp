@@ -11,6 +11,7 @@ const BROWSER_STARTUP_DELAY_MS: u64 = 500;
 const BROWSER_SHUTDOWN_GRACE_MS: u64 = 1000;
 const KEEPALIVE_INTERVAL_SECS: u64 = 3600;
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 enum DefaultBrowser {
     Chrome,
@@ -20,6 +21,7 @@ enum DefaultBrowser {
 }
 
 // Detect the default browser on the system
+#[allow(dead_code)]
 fn detect_default_browser() -> DefaultBrowser {
     #[cfg(target_os = "macos")]
     {

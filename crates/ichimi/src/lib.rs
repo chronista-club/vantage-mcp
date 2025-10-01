@@ -1,6 +1,6 @@
 use rmcp::{
     ErrorData as McpError, ServerHandler,
-    handler::server::{router::tool::ToolRouter, tool::Parameters},
+    handler::server::{tool::ToolRouter, wrapper::Parameters},
     model::*,
     tool, tool_handler, tool_router,
 };
@@ -889,7 +889,10 @@ impl ServerHandler for IchimiServer {
             capabilities: ServerCapabilities::builder().enable_tools().build(),
             server_info: Implementation {
                 name: "ichimi-server".to_string(),
-                version: "0.1.0".to_string(),
+                version: env!("CARGO_PKG_VERSION").to_string(),
+                title: Some("Ichimi Server".to_string()),
+                website_url: Some("https://github.com/chronista-club/ichimi-server".to_string()),
+                icons: None,
             },
             instructions: Some(
                 "Ichimi Server - A powerful process management server for Claude Code via MCP."

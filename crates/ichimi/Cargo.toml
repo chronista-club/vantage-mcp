@@ -15,7 +15,7 @@ path = "src/bin/ichimi_server.rs"
 
 [dependencies]
 # MCP SDK
-rmcp = { git = "https://github.com/modelcontextprotocol/rust-sdk", rev = "7f20a87", features = ["server", "transport-io"] }
+rmcp = { version = "0.7.0", features = ["server", "transport-io"] }
 
 # Async runtime
 tokio = { version = "1", features = ["full"] }
