@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(chmod:*)",
+      "Bash(cargo test:*)",
+      "Bash(cargo build:*)",
+      "Bash(./target/release/ichimi:*)",
+      "Bash(/Users/makoto/repos/ichimi-server/verify_fix.sh:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: プロセス起動時にプロセスグループを設定\n\n- プロセス起動時にprocess_group(0)を設定\n- 新しいプロセスグループのリーダーとして起動\n- これによりDocker等の子プロセスも含めてシグナル送信が可能に\n\nUnix系システムでのみ有効（#[cfg(unix)]）\n\nこの変更と前回のプロセスグループへのシグナル送信により、\nDockerプロセスとコンテナが確実に停止するようになります。\nEOF\n)\")",
+      "Bash(git checkout:*)",
+      "Bash(git push:*)",
+      "Bash(gh pr create:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(gh pr view:*)",
+      "Bash(git pull:*)",
+      "Bash(cargo update:*)",
+      "Bash(git commit:*)",
+      "Bash(git tag:*)",
+      "Bash(gh release create:*)",
+      "Read(//Users/makoto/.cargo/registry/src/**)",
+      "Bash(xargs cat:*)",
+      "Bash(cat:*)",
+      "Bash(git reset:*)",
+      "mcp__serena__find_symbol",
+      "Bash(git mv:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)",
+      "Bash(cargo fmt:*)",
+      "Bash(cargo clippy:*)",
+      "mcp__serena__list_dir"
+    ],
+    "deny": [],
+    "ask": []
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "serena",
+    "SurrealDB",
+    "ichimi"
+  ]
+}

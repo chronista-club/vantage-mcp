@@ -107,8 +107,6 @@ async fn main() -> Result<()> {
     let mut web_port = 12700u16;
     let mut auto_open = true; // Default to auto-open browser
     let mut app_mode = false; // Open browser in app mode
-    #[cfg(feature = "webdriver")]
-    let mut use_webdriver = false; // Use WebDriver for browser control
 
     let mut i = 1;
     while i < args.len() {
@@ -129,10 +127,6 @@ async fn main() -> Result<()> {
                 println!("  --no-open        Don't automatically open browser for web dashboard");
                 println!(
                     "  --app-mode       Open browser in app mode (dedicated window that closes with server)"
-                );
-                #[cfg(feature = "webdriver")]
-                println!(
-                    "  --webdriver      Use WebDriver to control browser tabs (requires geckodriver/chromedriver)"
                 );
                 return Ok(());
             }
@@ -173,11 +167,6 @@ async fn main() -> Result<()> {
             }
             "--app-mode" => {
                 app_mode = true;
-            }
-            #[cfg(feature = "webdriver")]
-            "--webdriver" => {
-                use_webdriver = true;
-                app_mode = false; // WebDriver and app-mode are mutually exclusive
             }
             _ => {}
         }
@@ -291,12 +280,6 @@ async fn main() -> Result<()> {
     let browser_process: Arc<Mutex<Option<std::process::Child>>> = Arc::new(Mutex::new(None));
     let browser_process_for_shutdown = browser_process.clone();
 
-    // Track WebDriver client for cleanup
-    #[cfg(feature = "webdriver")]
-    let webdriver_client: Arc<Mutex<Option<fantoccini::Client>>> = Arc::new(Mutex::new(None));
-    #[cfg(feature = "webdriver")]
-    let webdriver_client_for_shutdown = webdriver_client.clone();
-
     // Auto-import processes on startup if configured
     // First try YAML snapshot for auto-start processes
     let yaml_snapshot = std::env::var("HOME")
@@ -366,8 +349,6 @@ async fn main() -> Result<()> {
     let pm_for_shutdown = process_manager.clone();
     tokio::spawn(async move {
         let browser_proc = browser_process_for_shutdown;
-        #[cfg(feature = "webdriver")]
-        let webdriver_client = webdriver_client_for_shutdown;
         // Handle both SIGINT (Ctrl+C) and SIGTERM
         #[cfg(unix)]
         {
@@ -442,18 +423,6 @@ async fn main() -> Result<()> {
             }
             Err(e) => {
                 tracing::error!("Failed to stop processes: {}", e);
-            }
-        }
-
-        // Close WebDriver browser if it was used
-        #[cfg(feature = "webdriver")]
-        {
-            let mut client_guard = webdriver_client.lock().await;
-            if let Some(client) = client_guard.take() {
-                tracing::info!("Closing WebDriver browser session");
-                if let Err(e) = client.close().await {
-                    tracing::warn!("Failed to close WebDriver browser: {}", e);
-                }
             }
         }
 
@@ -545,210 +514,8 @@ async fn main() -> Result<()> {
             // Open browser when web dashboard is available
             let url = format!("http://localhost:{actual_port}");
 
-            #[cfg(feature = "webdriver")]
-            if use_webdriver {
-                // Use WebDriver to open browser
-                let webdriver_client_clone = webdriver_client.clone();
-                tokio::spawn(async move {
-                    tokio::time::sleep(tokio::time::Duration::from_millis(
-                        BROWSER_STARTUP_DELAY_MS,
-                    ))
-                    .await;
-
-                    // Detect default browser and try appropriate WebDriver
-                    let default_browser = detect_default_browser();
-                    tracing::info!("Detected default browser: {:?}", default_browser);
-
-                    // Try to connect to WebDriver based on detected browser
-                    let webdriver_result = async {
-                        match default_browser {
-                            DefaultBrowser::Chrome => {
-                                // Try chromedriver first for Chrome
-                                match fantoccini::ClientBuilder::native()
-                                    .connect("http://localhost:9515")
-                                    .await
-                                {
-                                    Ok(client) => Ok(client),
-                                    Err(_) => {
-                                        // Fallback to geckodriver
-                                        fantoccini::ClientBuilder::native()
-                                            .connect("http://localhost:4444")
-                                            .await
-                                    }
-                                }
-                            }
-                            DefaultBrowser::Firefox => {
-                                // Try geckodriver first for Firefox
-                                match fantoccini::ClientBuilder::native()
-                                    .connect("http://localhost:4444")
-                                    .await
-                                {
-                                    Ok(client) => Ok(client),
-                                    Err(_) => {
-                                        // Fallback to chromedriver
-                                        fantoccini::ClientBuilder::native()
-                                            .connect("http://localhost:9515")
-                                            .await
-                                    }
-                                }
-                            }
-                            DefaultBrowser::Safari => {
-                                // Safari uses safaridriver on port 9515 by default
-                                match fantoccini::ClientBuilder::native()
-                                    .connect("http://localhost:9515")
-                                    .await
-                                {
-                                    Ok(client) => Ok(client),
-                                    Err(_) => {
-                                        // Fallback to geckodriver
-                                        fantoccini::ClientBuilder::native()
-                                            .connect("http://localhost:4444")
-                                            .await
-                                    }
-                                }
-                            }
-                            DefaultBrowser::Unknown => {
-                                // Try both in order
-                                match fantoccini::ClientBuilder::native()
-                                    .connect("http://localhost:9515")
-                                    .await
-                                {
-                                    Ok(client) => Ok(client),
-                                    Err(_) => {
-                                        fantoccini::ClientBuilder::native()
-                                            .connect("http://localhost:4444")
-                                            .await
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    .await;
-
-                    match webdriver_result {
-                        Ok(client) => {
-                            // Navigate to the URL
-                            if let Err(e) = client.goto(&url).await {
-                                tracing::warn!("Failed to navigate to {}: {}", url, e);
-                            } else {
-                                tracing::info!("Opened browser tab via WebDriver at {}", url);
-
-                                // Store the client for later cleanup
-                                let mut client_guard = webdriver_client_clone.lock().await;
-                                *client_guard = Some(client);
-                            }
-                        }
-                        Err(e) => {
-                            let driver_hint = match default_browser {
-                                DefaultBrowser::Chrome => "chromedriver (port 9515)",
-                                DefaultBrowser::Firefox => "geckodriver (port 4444)",
-                                DefaultBrowser::Safari => "safaridriver (port 9515)",
-                                DefaultBrowser::Unknown => {
-                                    "geckodriver (port 4444) or chromedriver (port 9515)"
-                                }
-                            };
-                            tracing::warn!(
-                                "Failed to connect to WebDriver: {}. Make sure {} is running.",
-                                e,
-                                driver_hint
-                            );
-                            // Fallback to normal browser open
-                            if let Err(e) = open::that(&url) {
-                                tracing::warn!("Failed to open browser: {}", e);
-                            } else {
-                                tracing::info!("Opened browser at {} (fallback)", url);
-                            }
-                        }
-                    }
-                });
-            } else {
-                // Non-WebDriver browser opening
-                let browser_proc = browser_process.clone();
-                tokio::spawn(async move {
-                    tokio::time::sleep(tokio::time::Duration::from_millis(
-                        BROWSER_STARTUP_DELAY_MS,
-                    ))
-                    .await;
-
-                    if app_mode {
-                        // Try to open browser in app mode (dedicated window)
-                        let browser_result = if cfg!(target_os = "macos") {
-                            // macOS: Try Chrome first, then Safari
-                            std::process::Command::new(
-                                "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-                            )
-                            .arg(format!("--app={url}"))
-                            .arg("--new-window")
-                            .spawn()
-                            .or_else(|_| {
-                                // Fallback to open command with Safari
-                                std::process::Command::new("open")
-                                    .arg("-n") // New instance
-                                    .arg("-a")
-                                    .arg("Safari")
-                                    .arg(&url)
-                                    .spawn()
-                            })
-                        } else if cfg!(target_os = "windows") {
-                            // Windows: Try Chrome, then Edge
-                            std::process::Command::new("cmd")
-                                .args(["/C", "start", "chrome", &format!("--app={url}")])
-                                .spawn()
-                                .or_else(|_| {
-                                    std::process::Command::new("cmd")
-                                        .args(["/C", "start", "msedge", &format!("--app={url}")])
-                                        .spawn()
-                                })
-                        } else {
-                            // Linux: Try chromium or google-chrome
-                            std::process::Command::new("chromium")
-                                .arg(format!("--app={url}"))
-                                .spawn()
-                                .or_else(|_| {
-                                    std::process::Command::new("google-chrome")
-                                        .arg(format!("--app={url}"))
-                                        .spawn()
-                                })
-                        };
-
-                        match browser_result {
-                            Ok(child) => {
-                                tracing::info!(
-                                    "Opened browser in app mode at {} (PID: {:?})",
-                                    url,
-                                    child.id()
-                                );
-                                let mut browser_guard = browser_proc.lock().await;
-                                *browser_guard = Some(child);
-                            }
-                            Err(e) => {
-                                tracing::warn!(
-                                    "Failed to open browser in app mode: {}. Falling back to normal mode.",
-                                    e
-                                );
-                                // Fallback to normal browser open
-                                if let Err(e) = open::that(&url) {
-                                    tracing::warn!("Failed to open browser: {}", e);
-                                } else {
-                                    tracing::info!("Opening browser at {}", url);
-                                }
-                            }
-                        }
-                    } else {
-                        // Normal browser open (existing behavior)
-                        if let Err(e) = open::that(&url) {
-                            tracing::warn!("Failed to open browser: {}", e);
-                        } else {
-                            tracing::info!("Opening browser at {}", url);
-                        }
-                    }
-                });
-            }
-
-            #[cfg(not(feature = "webdriver"))]
-            {
-                let browser_proc = browser_process.clone();
-                tokio::spawn(async move {
+            let browser_proc = browser_process.clone();
+            tokio::spawn(async move {
                     tokio::time::sleep(tokio::time::Duration::from_millis(
                         BROWSER_STARTUP_DELAY_MS,
                     ))
@@ -824,10 +591,9 @@ async fn main() -> Result<()> {
                             tracing::warn!("Failed to open browser: {}", e);
                         } else {
                             tracing::info!("Opening browser at {}", url);
-                        }
                     }
-                });
-            }
+                }
+            });
         }
     }
 

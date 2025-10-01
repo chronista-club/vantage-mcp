@@ -157,7 +157,8 @@ impl KdlSnapshot {
             .collect::<Vec<_>>()
             .join("\n");
 
-        let doc = clean_content.parse::<kdl::KdlDocument>()
+        let doc = clean_content
+            .parse::<kdl::KdlDocument>()
             .map_err(|e| format!("Failed to parse KDL: {}", e))?;
 
         let mut meta = KdlMeta {
@@ -174,46 +175,56 @@ impl KdlSnapshot {
                     if let Some(version) = node.get("version").and_then(|e| e.value().as_string()) {
                         meta.version = version.to_string();
                     }
-                    if let Some(timestamp) = node.get("timestamp").and_then(|e| e.value().as_string()) {
+                    if let Some(timestamp) =
+                        node.get("timestamp").and_then(|e| e.value().as_string())
+                    {
                         meta.timestamp = timestamp.to_string();
                     }
-                    if let Some(hostname) = node.get("hostname").and_then(|e| e.value().as_string()) {
+                    if let Some(hostname) = node.get("hostname").and_then(|e| e.value().as_string())
+                    {
                         meta.hostname = Some(hostname.to_string());
                     }
                 }
                 "process" => {
-                    let id = node.get(0)
+                    let id = node
+                        .get(0)
                         .and_then(|e| e.value().as_string())
                         .ok_or("Process ID not found")?
                         .to_string();
 
-                    let name = node.get("name")
+                    let name = node
+                        .get("name")
                         .and_then(|e| e.value().as_string())
                         .unwrap_or(&id)
                         .to_string();
 
-                    let command = node.get("command")
+                    let command = node
+                        .get("command")
                         .and_then(|e| e.value().as_string())
                         .unwrap_or("")
                         .to_string();
 
                     // Collect args
-                    let args: Vec<String> = node.entries()
+                    let args: Vec<String> = node
+                        .entries()
                         .iter()
                         .filter(|e| e.name().map(|n| n.value()) == Some("args"))
                         .filter_map(|e| e.value().as_string().map(String::from))
                         .collect();
 
-                    let cwd = node.get("cwd")
+                    let cwd = node
+                        .get("cwd")
                         .and_then(|e| e.value().as_string())
                         .map(String::from);
 
-                    let auto_start = node.get("auto_start")
+                    let auto_start = node
+                        .get("auto_start")
                         .and_then(|e| e.value().as_bool())
                         .unwrap_or(false);
 
                     // Collect tags
-                    let tags: Vec<String> = node.entries()
+                    let tags: Vec<String> = node
+                        .entries()
                         .iter()
                         .filter(|e| e.name().map(|n| n.value()) == Some("tag"))
                         .filter_map(|e| e.value().as_string().map(String::from))
@@ -223,17 +234,17 @@ impl KdlSnapshot {
                     let mut env = HashMap::new();
                     if let Some(children) = node.children() {
                         for child in children.nodes() {
-                            if child.name().value() == "env" {
-                                if let Some(env_children) = child.children() {
-                                    for var_node in env_children.nodes() {
-                                        if var_node.name().value() == "var" {
-                                            if let (Some(key), Some(value)) = (
-                                                var_node.get(0).and_then(|e| e.value().as_string()),
-                                                var_node.get(1).and_then(|e| e.value().as_string())
-                                            ) {
-                                                env.insert(key.to_string(), value.to_string());
-                                            }
-                                        }
+                            if child.name().value() == "env"
+                                && let Some(env_children) = child.children()
+                            {
+                                for var_node in env_children.nodes() {
+                                    if var_node.name().value() == "var"
+                                        && let (Some(key), Some(value)) = (
+                                            var_node.get(0).and_then(|e| e.value().as_string()),
+                                            var_node.get(1).and_then(|e| e.value().as_string()),
+                                        )
+                                    {
+                                        env.insert(key.to_string(), value.to_string());
                                     }
                                 }
                             }
@@ -245,18 +256,34 @@ impl KdlSnapshot {
                     if let Some(children) = node.children() {
                         for child in children.nodes() {
                             if child.name().value() == "state" {
-                                let state_type = child.get(0)
+                                let state_type = child
+                                    .get(0)
                                     .and_then(|e| e.value().as_string())
                                     .unwrap_or("unknown")
                                     .to_string();
 
                                 state = Some(KdlProcessState {
                                     state_type,
-                                    pid: child.get("pid").and_then(|e| e.value().as_i64()).map(|v| v as u32),
-                                    started_at: child.get("started_at").and_then(|e| e.value().as_string()).map(String::from),
-                                    stopped_at: child.get("stopped_at").and_then(|e| e.value().as_string()).map(String::from),
-                                    exit_code: child.get("exit_code").and_then(|e| e.value().as_i64()).map(|v| v as i32),
-                                    error: child.get("error").and_then(|e| e.value().as_string()).map(String::from),
+                                    pid: child
+                                        .get("pid")
+                                        .and_then(|e| e.value().as_i64())
+                                        .map(|v| v as u32),
+                                    started_at: child
+                                        .get("started_at")
+                                        .and_then(|e| e.value().as_string())
+                                        .map(String::from),
+                                    stopped_at: child
+                                        .get("stopped_at")
+                                        .and_then(|e| e.value().as_string())
+                                        .map(String::from),
+                                    exit_code: child
+                                        .get("exit_code")
+                                        .and_then(|e| e.value().as_i64())
+                                        .map(|v| v as i32),
+                                    error: child
+                                        .get("error")
+                                        .and_then(|e| e.value().as_string())
+                                        .map(String::from),
                                 });
                             }
                         }
@@ -345,20 +372,14 @@ impl KdlProcessState {
                     None
                 }
             }
-            ProcessState::Stopped => {
-                if let Some(stopped_at) = status.stopped_at {
-                    Some(Self {
-                        state_type: "stopped".to_string(),
-                        pid: None,
-                        started_at: status.started_at.map(|t| t.to_rfc3339()),
-                        stopped_at: Some(stopped_at.to_rfc3339()),
-                        exit_code: status.exit_code,
-                        error: None,
-                    })
-                } else {
-                    None
-                }
-            }
+            ProcessState::Stopped => status.stopped_at.map(|stopped_at| Self {
+                state_type: "stopped".to_string(),
+                pid: None,
+                started_at: status.started_at.map(|t| t.to_rfc3339()),
+                stopped_at: Some(stopped_at.to_rfc3339()),
+                exit_code: status.exit_code,
+                error: None,
+            }),
             ProcessState::Failed => {
                 if let (Some(error), Some(stopped_at)) = (&status.error, status.stopped_at) {
                     Some(Self {
@@ -463,6 +484,6 @@ mod tests {
         assert_eq!(parsed_process.id, "test-server");
         assert_eq!(parsed_process.name, "Test Server");
         assert_eq!(parsed_process.command, "python");
-        assert_eq!(parsed_process.auto_start, true);
+        assert!(parsed_process.auto_start);
     }
 }

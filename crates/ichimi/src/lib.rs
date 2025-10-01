@@ -849,13 +849,11 @@ impl IchimiServer {
         match reqwest::get(&format!("{url}/api/status")).await {
             Ok(response) if response.status().is_success() => {
                 // Server is already running
-                if auto_open {
-                    if let Err(e) = open::that(&url) {
-                        tracing::warn!("Failed to open browser: {}", e);
-                        return Ok(CallToolResult::success(vec![Content::text(format!(
-                            "Web console is already running at {url}. Please open it manually."
-                        ))]));
-                    }
+                if auto_open && let Err(e) = open::that(&url) {
+                    tracing::warn!("Failed to open browser: {}", e);
+                    return Ok(CallToolResult::success(vec![Content::text(format!(
+                        "Web console is already running at {url}. Please open it manually."
+                    ))]));
                 }
                 Ok(CallToolResult::success(vec![Content::text(format!(
                     "Web console is already running at {url}"

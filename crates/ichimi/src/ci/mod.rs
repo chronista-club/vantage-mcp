@@ -277,19 +277,19 @@ impl CiMonitor {
                             let existing = cache.get(&run.id);
 
                             // 状態が変わった場合にログ出力
-                            if let Some(existing_run) = existing {
-                                if existing_run.status != run.status {
-                                    info!(
-                                        "CI run {} status changed: {:?} -> {:?}",
-                                        run.id, existing_run.status, run.status
-                                    );
+                            if let Some(existing_run) = existing
+                                && existing_run.status != run.status
+                            {
+                                info!(
+                                    "CI run {} status changed: {:?} -> {:?}",
+                                    run.id, existing_run.status, run.status
+                                );
 
-                                    if run.status == CiRunStatus::Completed {
-                                        info!(
-                                            "CI run {} completed with conclusion: {:?}",
-                                            run.id, run.conclusion
-                                        );
-                                    }
+                                if run.status == CiRunStatus::Completed {
+                                    info!(
+                                        "CI run {} completed with conclusion: {:?}",
+                                        run.id, run.conclusion
+                                    );
                                 }
                             }
 

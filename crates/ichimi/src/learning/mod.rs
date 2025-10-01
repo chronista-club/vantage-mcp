@@ -191,23 +191,23 @@ impl LearningEngine {
         if let Some(process_id) = current_process {
             let patterns = self.patterns.read().await;
 
-            if let Some(pattern) = patterns.get(process_id) {
-                if pattern.confidence > 0.6 {
-                    for next_process in &pattern.next_processes {
-                        suggestions.push(Suggestion {
-                            message: format!(
-                                "「{process_id}」が起動しました。通常は「{next_process}」も必要です。"
-                            ),
-                            confidence: pattern.confidence,
-                            action: SuggestedAction::StartProcess {
-                                process_id: next_process.clone(),
-                            },
-                            reason: format!(
-                                "過去のパターンから学習（信頼度: {:.0}%）",
-                                pattern.confidence * 100.0
-                            ),
-                        });
-                    }
+            if let Some(pattern) = patterns.get(process_id)
+                && pattern.confidence > 0.6
+            {
+                for next_process in &pattern.next_processes {
+                    suggestions.push(Suggestion {
+                        message: format!(
+                            "「{process_id}」が起動しました。通常は「{next_process}」も必要です。"
+                        ),
+                        confidence: pattern.confidence,
+                        action: SuggestedAction::StartProcess {
+                            process_id: next_process.clone(),
+                        },
+                        reason: format!(
+                            "過去のパターンから学習（信頼度: {:.0}%）",
+                            pattern.confidence * 100.0
+                        ),
+                    });
                 }
             }
         }

@@ -1,6 +1,6 @@
+use chrono::Utc;
 use ichimi_persistence::{PersistenceManager, ProcessInfo, ProcessState, ProcessStatus};
 use std::collections::HashMap;
-use chrono::Utc;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -37,7 +37,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let mut env2 = HashMap::new();
-    env2.insert("DATABASE_URL".to_string(), "postgres://localhost/myapp".to_string());
+    env2.insert(
+        "DATABASE_URL".to_string(),
+        "postgres://localhost/myapp".to_string(),
+    );
     env2.insert("WORKERS".to_string(), "4".to_string());
 
     let background_worker = ProcessInfo {
@@ -45,7 +48,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         process_id: "worker-01".to_string(),
         name: "Background Job Worker".to_string(),
         command: "python".to_string(),
-        args: vec!["worker.py".to_string(), "--queue".to_string(), "default".to_string()],
+        args: vec![
+            "worker.py".to_string(),
+            "--queue".to_string(),
+            "default".to_string(),
+        ],
         env: env2,
         cwd: Some("/opt/workers".to_string()),
         status: ProcessStatus {
@@ -67,7 +74,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         process_id: "monitor-01".to_string(),
         name: "System Monitor".to_string(),
         command: "prometheus".to_string(),
-        args: vec!["--config.file".to_string(), "/etc/prometheus/prometheus.yml".to_string()],
+        args: vec![
+            "--config.file".to_string(),
+            "/etc/prometheus/prometheus.yml".to_string(),
+        ],
         env: HashMap::new(),
         cwd: Some("/opt/monitoring".to_string()),
         status: ProcessStatus {
@@ -98,13 +108,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Export snapshot to KDL
     let snapshot_path = snapshot_dir.join("processes.kdl");
-    let exported_path = manager.export_snapshot(Some(snapshot_path.to_str().unwrap()), false).await?;
+    let exported_path = manager
+        .export_snapshot(Some(snapshot_path.to_str().unwrap()), false)
+        .await?;
 
     println!("✅ Snapshot exported to: {}", exported_path);
 
     // Also export auto-start only snapshot
     let auto_start_path = snapshot_dir.join("auto_start.kdl");
-    let auto_exported = manager.export_snapshot(Some(auto_start_path.to_str().unwrap()), true).await?;
+    let auto_exported = manager
+        .export_snapshot(Some(auto_start_path.to_str().unwrap()), true)
+        .await?;
 
     println!("✅ Auto-start snapshot exported to: {}", auto_exported);
 

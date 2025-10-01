@@ -516,10 +516,18 @@ impl ProcessManager {
                                 // プロセスグループ全体にSIGKILLを送信
                                 let pgid = Pid::from_raw(-(pid.as_raw()));
                                 if let Err(e) = signal::kill(pgid, Signal::SIGKILL) {
-                                    tracing::debug!("Failed to send SIGKILL to process group {}: {}", id, e);
+                                    tracing::debug!(
+                                        "Failed to send SIGKILL to process group {}: {}",
+                                        id,
+                                        e
+                                    );
                                     // プロセスグループ送信が失敗した場合、個別のプロセスに送信
                                     if let Err(e) = signal::kill(pid, Signal::SIGKILL) {
-                                        tracing::warn!("Failed to send SIGKILL to process {}: {}", id, e);
+                                        tracing::warn!(
+                                            "Failed to send SIGKILL to process {}: {}",
+                                            id,
+                                            e
+                                        );
                                     }
                                 }
                             }
@@ -541,7 +549,10 @@ impl ProcessManager {
                     info!("Process '{}' terminated with status: {:?}", id, status);
                 }
                 Ok(Err(e)) => {
-                    return Err(format!("Error waiting for process '{}' to terminate: {}", id, e));
+                    return Err(format!(
+                        "Error waiting for process '{}' to terminate: {}",
+                        id, e
+                    ));
                 }
                 Err(_) => {
                     return Err(format!(
@@ -700,10 +711,11 @@ impl ProcessManager {
                 }
 
                 // 名前パターンフィルタ
-                if let Some(ref pattern) = f.name_pattern {
-                    if !info.id.contains(pattern) && !info.command.contains(pattern) {
-                        continue;
-                    }
+                if let Some(ref pattern) = f.name_pattern
+                    && !info.id.contains(pattern)
+                    && !info.command.contains(pattern)
+                {
+                    continue;
                 }
             }
 
@@ -844,13 +856,7 @@ impl ProcessManager {
     pub async fn start_auto_start_processes(&self) -> Result<Vec<String>, String> {
         // 1. auto_start_on_restore が true のプロセスIDを収集
         let processes = self.processes.read().await;
-        let auto_start_ids: Vec<String> = processes
-            .iter()
-            .filter_map(|(id, _)| {
-                // 後で詳細チェックするため、ここではIDのみ収集
-                Some(id.clone())
-            })
-            .collect();
+        let auto_start_ids: Vec<String> = processes.keys().cloned().collect();
         drop(processes); // 早めにロック解放
 
         let mut started = Vec::new();
@@ -917,10 +923,10 @@ impl ProcessManager {
 
         // Start auto-start processes
         for (id, info) in restored {
-            if info.auto_start_on_restore {
-                if let Err(e) = self.start_process(id.clone()).await {
-                    tracing::warn!("Failed to auto-start process {}: {}", id, e);
-                }
+            if info.auto_start_on_restore
+                && let Err(e) = self.start_process(id.clone()).await
+            {
+                tracing::warn!("Failed to auto-start process {}: {}", id, e);
             }
         }
 
@@ -1053,7 +1059,8 @@ impl ProcessManager {
         let filtered: Vec<ProcessTemplate> = all_templates
             .into_iter()
             .filter(|t| {
-                let category_match = category.as_ref()
+                let category_match = category
+                    .as_ref()
                     .map(|c| t.category.as_ref().map(|tc| tc == c).unwrap_or(false))
                     .unwrap_or(true);
 
