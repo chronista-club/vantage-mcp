@@ -308,6 +308,25 @@ async fn main() -> Result<()> {
         match process_manager.restore_yaml_snapshot().await {
             Ok(_) => {
                 tracing::info!("Successfully restored processes from YAML snapshot");
+
+                // Auto-start processes with auto_start_on_restore flag
+                match process_manager.start_auto_start_processes().await {
+                    Ok(started) => {
+                        if !started.is_empty() {
+                            tracing::info!(
+                                "Auto-started {} process(es): {:?}",
+                                started.len(),
+                                started
+                            );
+                        } else {
+                            tracing::debug!("No processes marked for auto-start");
+                        }
+                    }
+                    Err(e) => {
+                        tracing::warn!("Failed to auto-start processes: {}", e);
+                        // 自動起動失敗はワーニングのみ、サーバー起動は継続
+                    }
+                }
             }
             Err(e) => {
                 tracing::warn!("Failed to restore YAML snapshot: {}", e);

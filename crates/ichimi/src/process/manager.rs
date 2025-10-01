@@ -839,6 +839,59 @@ impl ProcessManager {
         }
     }
 
+    /// Auto-start processes marked with auto_start_on_restore flag
+    /// Returns a list of successfully started process IDs
+    pub async fn start_auto_start_processes(&self) -> Result<Vec<String>, String> {
+        // 1. auto_start_on_restore が true のプロセスIDを収集
+        let processes = self.processes.read().await;
+        let auto_start_ids: Vec<String> = processes
+            .iter()
+            .filter_map(|(id, _)| {
+                // 後で詳細チェックするため、ここではIDのみ収集
+                Some(id.clone())
+            })
+            .collect();
+        drop(processes); // 早めにロック解放
+
+        let mut started = Vec::new();
+        let mut errors = Vec::new();
+
+        // 2. 各プロセスをチェックして起動
+        for id in auto_start_ids {
+            let processes = self.processes.read().await;
+            if let Some(process_arc) = processes.get(&id) {
+                let process = process_arc.read().await;
+                let should_start = process.info.auto_start_on_restore;
+                let state_is_not_started = matches!(process.info.state, ProcessState::NotStarted);
+                drop(process);
+                drop(processes);
+
+                if should_start && state_is_not_started {
+                    match self.start_process(id.clone()).await {
+                        Ok(pid) => {
+                            tracing::info!("Auto-started process '{}' with PID {}", id, pid);
+                            started.push(id);
+                        }
+                        Err(e) => {
+                            tracing::warn!("Failed to auto-start process '{}': {}", id, e);
+                            errors.push(format!("{}: {}", id, e));
+                        }
+                    }
+                }
+            }
+        }
+
+        if !errors.is_empty() {
+            tracing::warn!(
+                "Some processes failed to auto-start ({} failures): {:?}",
+                errors.len(),
+                errors
+            );
+        }
+
+        Ok(started)
+    }
+
     /// Import processes from JSON file
     pub async fn import_processes(&self, file_path: &str) -> Result<(), String> {
         // Import from JSON file
