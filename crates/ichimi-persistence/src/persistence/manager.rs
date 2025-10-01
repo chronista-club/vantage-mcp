@@ -131,8 +131,8 @@ impl PersistenceManager {
             .await
             .map_err(|e| format!("Failed to read snapshot: {e}"))?;
 
-        let process_list: Vec<ProcessInfo> = serde_yaml::from_str(&yaml)
-            .map_err(|e| format!("Failed to deserialize YAML: {e}"))?;
+        let process_list: Vec<ProcessInfo> =
+            serde_yaml::from_str(&yaml).map_err(|e| format!("Failed to deserialize YAML: {e}"))?;
 
         let mut imported = HashMap::new();
         let mut processes = self.processes.write().await;
@@ -143,10 +143,7 @@ impl PersistenceManager {
             imported.insert(process_id, process_info);
         }
 
-        tracing::info!(
-            "Imported {} processes from YAML snapshot",
-            imported.len()
-        );
+        tracing::info!("Imported {} processes from YAML snapshot", imported.len());
 
         Ok(imported)
     }
