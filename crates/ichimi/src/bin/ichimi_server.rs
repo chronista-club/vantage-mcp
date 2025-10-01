@@ -516,81 +516,79 @@ async fn main() -> Result<()> {
 
             let browser_proc = browser_process.clone();
             tokio::spawn(async move {
-                    tokio::time::sleep(tokio::time::Duration::from_millis(
-                        BROWSER_STARTUP_DELAY_MS,
-                    ))
+                tokio::time::sleep(tokio::time::Duration::from_millis(BROWSER_STARTUP_DELAY_MS))
                     .await;
 
-                    if app_mode {
-                        // Try to open browser in app mode (dedicated window)
-                        let browser_result = if cfg!(target_os = "macos") {
-                            // macOS: Try Chrome first, then Safari
-                            std::process::Command::new(
-                                "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-                            )
-                            .arg(format!("--app={}", url))
-                            .arg("--new-window")
+                if app_mode {
+                    // Try to open browser in app mode (dedicated window)
+                    let browser_result = if cfg!(target_os = "macos") {
+                        // macOS: Try Chrome first, then Safari
+                        std::process::Command::new(
+                            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+                        )
+                        .arg(format!("--app={}", url))
+                        .arg("--new-window")
+                        .spawn()
+                        .or_else(|_| {
+                            // Fallback to open command with Safari
+                            std::process::Command::new("open")
+                                .arg("-n") // New instance
+                                .arg("-a")
+                                .arg("Safari")
+                                .arg(&url)
+                                .spawn()
+                        })
+                    } else if cfg!(target_os = "windows") {
+                        // Windows: Try Chrome, then Edge
+                        std::process::Command::new("cmd")
+                            .args(&["/C", "start", "chrome", &format!("--app={}", url)])
                             .spawn()
                             .or_else(|_| {
-                                // Fallback to open command with Safari
-                                std::process::Command::new("open")
-                                    .arg("-n") // New instance
-                                    .arg("-a")
-                                    .arg("Safari")
-                                    .arg(&url)
+                                std::process::Command::new("cmd")
+                                    .args(&["/C", "start", "msedge", &format!("--app={}", url)])
                                     .spawn()
                             })
-                        } else if cfg!(target_os = "windows") {
-                            // Windows: Try Chrome, then Edge
-                            std::process::Command::new("cmd")
-                                .args(&["/C", "start", "chrome", &format!("--app={}", url)])
-                                .spawn()
-                                .or_else(|_| {
-                                    std::process::Command::new("cmd")
-                                        .args(&["/C", "start", "msedge", &format!("--app={}", url)])
-                                        .spawn()
-                                })
-                        } else {
-                            // Linux: Try chromium or google-chrome
-                            std::process::Command::new("chromium")
-                                .arg(format!("--app={}", url))
-                                .spawn()
-                                .or_else(|_| {
-                                    std::process::Command::new("google-chrome")
-                                        .arg(format!("--app={}", url))
-                                        .spawn()
-                                })
-                        };
+                    } else {
+                        // Linux: Try chromium or google-chrome
+                        std::process::Command::new("chromium")
+                            .arg(format!("--app={}", url))
+                            .spawn()
+                            .or_else(|_| {
+                                std::process::Command::new("google-chrome")
+                                    .arg(format!("--app={}", url))
+                                    .spawn()
+                            })
+                    };
 
-                        match browser_result {
-                            Ok(child) => {
-                                tracing::info!(
-                                    "Opened browser in app mode at {} (PID: {:?})",
-                                    url,
-                                    child.id()
-                                );
-                                let mut browser_guard = browser_proc.lock().await;
-                                *browser_guard = Some(child);
-                            }
-                            Err(e) => {
-                                tracing::warn!(
-                                    "Failed to open browser in app mode: {}. Falling back to normal mode.",
-                                    e
-                                );
-                                // Fallback to normal browser open
-                                if let Err(e) = open::that(&url) {
-                                    tracing::warn!("Failed to open browser: {}", e);
-                                } else {
-                                    tracing::info!("Opening browser at {}", url);
-                                }
+                    match browser_result {
+                        Ok(child) => {
+                            tracing::info!(
+                                "Opened browser in app mode at {} (PID: {:?})",
+                                url,
+                                child.id()
+                            );
+                            let mut browser_guard = browser_proc.lock().await;
+                            *browser_guard = Some(child);
+                        }
+                        Err(e) => {
+                            tracing::warn!(
+                                "Failed to open browser in app mode: {}. Falling back to normal mode.",
+                                e
+                            );
+                            // Fallback to normal browser open
+                            if let Err(e) = open::that(&url) {
+                                tracing::warn!("Failed to open browser: {}", e);
+                            } else {
+                                tracing::info!("Opening browser at {}", url);
                             }
                         }
+                    }
+                } else {
+                    // Normal browser open (existing behavior)
+                    if let Err(e) = open::that(&url) {
+                        tracing::warn!("Failed to open browser: {}", e);
                     } else {
-                        // Normal browser open (existing behavior)
-                        if let Err(e) = open::that(&url) {
-                            tracing::warn!("Failed to open browser: {}", e);
-                        } else {
-                            tracing::info!("Opening browser at {}", url);
+                        tracing::info!("Opening browser at {}", url);
                     }
                 }
             });
