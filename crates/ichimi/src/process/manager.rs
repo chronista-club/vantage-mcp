@@ -445,10 +445,18 @@ impl ProcessManager {
                 if let Some(pid) = child.id() {
                     let pid = Pid::from_raw(pid as i32);
 
-                    // SIGTERMを送信
-                    if let Err(e) = signal::kill(pid, Signal::SIGTERM) {
-                        tracing::warn!("Failed to send SIGTERM to process {}: {}", id, e);
-                    } else {
+                    // まずプロセスグループ全体にSIGTERMを送信（Dockerなどの子プロセス対策）
+                    let pgid = Pid::from_raw(-(pid.as_raw()));
+                    if let Err(e) = signal::kill(pgid, Signal::SIGTERM) {
+                        tracing::debug!("Failed to send SIGTERM to process group {}: {}", id, e);
+                        // プロセスグループ送信が失敗した場合、個別のプロセスに送信
+                        if let Err(e) = signal::kill(pid, Signal::SIGTERM) {
+                            tracing::warn!("Failed to send SIGTERM to process {}: {}", id, e);
+                        }
+                    }
+
+                    // SIGTERM送信に成功した場合の処理
+                    {
                         info!(
                             "Sent SIGTERM to process '{}', waiting up to {}ms for graceful shutdown",
                             id, grace_ms
@@ -496,20 +504,43 @@ impl ProcessManager {
                                     "Process '{}' did not terminate within grace period, sending SIGKILL",
                                     id
                                 );
+                                // プロセスグループ全体にSIGKILLを送信
+                                let pgid = Pid::from_raw(-(pid.as_raw()));
+                                if let Err(e) = signal::kill(pgid, Signal::SIGKILL) {
+                                    tracing::debug!("Failed to send SIGKILL to process group {}: {}", id, e);
+                                    // プロセスグループ送信が失敗した場合、個別のプロセスに送信
+                                    if let Err(e) = signal::kill(pid, Signal::SIGKILL) {
+                                        tracing::warn!("Failed to send SIGKILL to process {}: {}", id, e);
+                                    }
+                                }
                             }
                         }
                     }
                 }
             }
 
-            // Windows または SIGTERM失敗時、またはタイムアウト時はkill()を使用
+            // Windows または SIGTERM/SIGKILL失敗時の最終手段としてkill()を使用
             child
                 .kill()
                 .await
                 .map_err(|e| format!("Failed to kill process: {e}"))?;
 
-            // プロセスの終了を待つ
-            let _ = child.wait().await;
+            // プロセスの終了を待つ（タイムアウト付き）
+            let wait_timeout = tokio::time::Duration::from_secs(10);
+            match tokio::time::timeout(wait_timeout, child.wait()).await {
+                Ok(Ok(status)) => {
+                    info!("Process '{}' terminated with status: {:?}", id, status);
+                }
+                Ok(Err(e)) => {
+                    return Err(format!("Error waiting for process '{}' to terminate: {}", id, e));
+                }
+                Err(_) => {
+                    return Err(format!(
+                        "Timeout waiting for process '{}' to terminate after kill signal",
+                        id
+                    ));
+                }
+            }
 
             // 出力ハンドルをクリーンアップ
             if let Some((stdout_handle, stderr_handle)) = process.output_handles.take() {
