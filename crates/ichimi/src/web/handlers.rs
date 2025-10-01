@@ -637,7 +637,8 @@ pub async fn get_clipboard(
         .persistence_manager
         .get_latest_clipboard_item()
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?
+        .ok_or_else(|| (StatusCode::NOT_FOUND, "No clipboard item found".to_string()))?;
 
     Ok(Json(ClipboardResponse {
         id: item.clipboard_id,
@@ -662,7 +663,7 @@ pub async fn get_clipboard_history(
 ) -> Result<Json<ClipboardHistoryResponse>, (StatusCode, String)> {
     let items = state
         .persistence_manager
-        .get_clipboard_history(query.limit.unwrap_or(100))
+        .get_clipboard_history(Some(query.limit.unwrap_or(100)))
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
 

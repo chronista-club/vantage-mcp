@@ -806,6 +806,11 @@ impl IchimiServer {
                 message: e.into(),
                 code: rmcp::model::ErrorCode::INTERNAL_ERROR,
                 data: None,
+            })?
+            .ok_or_else(|| McpError {
+                message: "No clipboard item found".into(),
+                code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+                data: None,
             })?;
 
         let response = ClipboardResponse {

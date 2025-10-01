@@ -294,10 +294,15 @@ impl PersistenceManager {
     }
 
     /// Set clipboard text (for compatibility)
-    pub async fn set_clipboard_text(&self, text: String) -> Result<()> {
+    pub async fn set_clipboard_text(&self, text: String) -> Result<ClipboardItem> {
         self.add_to_clipboard(text)
             .await
-            .map_err(|e| format!("Failed to set clipboard: {e}"))
+            .map_err(|e| format!("Failed to set clipboard: {e}"))?;
+
+        // Return the latest clipboard item (should be the one we just added)
+        self.get_latest_clipboard_item()
+            .await?
+            .ok_or_else(|| "Failed to retrieve clipboard item after adding".to_string())
     }
 
     /// Get clipboard text (for compatibility)
@@ -307,6 +312,41 @@ impl PersistenceManager {
             .await
             .map_err(|e| format!("Failed to get clipboard: {e}"))?;
         Ok(item.map(|i| i.content))
+    }
+
+    /// Save/update clipboard item
+    pub async fn save_clipboard_item(&self, item: &ClipboardItem) -> Result<()> {
+        let mut clipboard = self.clipboard.write().await;
+
+        // Find and update existing item by ID
+        if let Some(existing) = clipboard.iter_mut().find(|i| i.clipboard_id == item.clipboard_id) {
+            *existing = item.clone();
+        } else {
+            // If not found, add as new item
+            clipboard.push(item.clone());
+        }
+
+        Ok(())
+    }
+
+    /// Search clipboard items
+    pub async fn search_clipboard_items(&self, query: &str, limit: usize) -> Result<Vec<ClipboardItem>> {
+        let clipboard = self.clipboard.read().await;
+        let query_lower = query.to_lowercase();
+
+        let results: Vec<ClipboardItem> = clipboard
+            .iter()
+            .filter(|item| {
+                item.content.to_lowercase().contains(&query_lower) ||
+                item.tags.iter().any(|tag| tag.to_lowercase().contains(&query_lower)) ||
+                item.filename.as_ref().map(|f| f.to_lowercase().contains(&query_lower)).unwrap_or(false)
+            })
+            .rev()
+            .take(limit)
+            .cloned()
+            .collect();
+
+        Ok(results)
     }
 
     // Settings management
