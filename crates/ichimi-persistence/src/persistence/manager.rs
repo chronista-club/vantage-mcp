@@ -1,4 +1,3 @@
-use crate::snapshot::Snapshot;
 use crate::types::{ClipboardItem, ProcessInfo, ProcessTemplate, Settings};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -7,7 +6,7 @@ use std::sync::Arc;
 // Type alias for simplified Result type
 type Result<T> = std::result::Result<T, String>;
 
-/// Persistence manager for in-memory storage with KDL snapshot support
+/// Persistence manager for in-memory storage with YAML snapshot support
 #[derive(Clone)]
 pub struct PersistenceManager {
     #[allow(dead_code)]
@@ -43,7 +42,7 @@ impl PersistenceManager {
     /// Get default snapshot path
     fn default_snapshot_path() -> PathBuf {
         let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-        PathBuf::from(home).join(".ichimi").join("snapshot.kdl")
+        PathBuf::from(home).join(".ichimi").join("snapshot.yaml")
     }
 
     /// Save or update a process
@@ -73,7 +72,7 @@ impl PersistenceManager {
         Ok(processes.clone())
     }
 
-    /// Export processes to KDL snapshot
+    /// Export processes to YAML snapshot
     pub async fn export_snapshot(
         &self,
         file_path: Option<&str>,
@@ -85,28 +84,36 @@ impl PersistenceManager {
         };
 
         let processes = self.load_all_processes().await?;
-        let process_list: Vec<ProcessInfo> = processes.into_values().collect();
+        let mut process_list: Vec<ProcessInfo> = processes.into_values().collect();
 
-        let mut snapshot = Snapshot::new(process_list);
         if only_auto_start {
-            snapshot = snapshot.filter_auto_start();
+            process_list.retain(|p| p.auto_start_on_restore);
         }
 
-        snapshot
-            .save(&path)
+        // Create parent directory if it doesn't exist
+        if let Some(parent) = path.parent() {
+            tokio::fs::create_dir_all(parent)
+                .await
+                .map_err(|e| format!("Failed to create directory: {e}"))?;
+        }
+
+        let yaml = serde_yaml::to_string(&process_list)
+            .map_err(|e| format!("Failed to serialize to YAML: {e}"))?;
+
+        tokio::fs::write(&path, yaml)
             .await
-            .map_err(|e| format!("Failed to save snapshot: {e}"))?;
+            .map_err(|e| format!("Failed to write snapshot: {e}"))?;
 
         tracing::info!(
-            "Exported {} processes to KDL snapshot (auto_start_only: {})",
-            snapshot.processes.len(),
+            "Exported {} processes to YAML snapshot (auto_start_only: {})",
+            process_list.len(),
             only_auto_start
         );
 
         Ok(path.to_string_lossy().to_string())
     }
 
-    /// Import processes from KDL snapshot
+    /// Import processes from YAML snapshot
     pub async fn import_snapshot(
         &self,
         file_path: Option<&str>,
@@ -120,24 +127,25 @@ impl PersistenceManager {
             return Err(format!("Snapshot file not found: {}", path.display()));
         }
 
-        let snapshot = Snapshot::load(path)
+        let yaml = tokio::fs::read_to_string(path)
             .await
-            .map_err(|e| format!("Failed to load snapshot: {e}"))?;
+            .map_err(|e| format!("Failed to read snapshot: {e}"))?;
+
+        let process_list: Vec<ProcessInfo> = serde_yaml::from_str(&yaml)
+            .map_err(|e| format!("Failed to deserialize YAML: {e}"))?;
 
         let mut imported = HashMap::new();
         let mut processes = self.processes.write().await;
 
-        for process_snapshot in snapshot.processes {
-            let process_info = process_snapshot.to_process_info();
+        for process_info in process_list {
             let process_id = process_info.process_id.clone();
             processes.insert(process_id.clone(), process_info.clone());
             imported.insert(process_id, process_info);
         }
 
         tracing::info!(
-            "Imported {} processes from KDL snapshot (created at: {})",
-            imported.len(),
-            snapshot.timestamp
+            "Imported {} processes from YAML snapshot",
+            imported.len()
         );
 
         Ok(imported)
@@ -156,29 +164,21 @@ impl PersistenceManager {
         self.import_snapshot(file_path).await
     }
 
-    // Legacy YAML compatibility methods (redirect to KDL)
+    // YAML snapshot methods
 
-    /// Export to YAML (compatibility - actually exports KDL)
+    /// Export to YAML
     pub async fn export_to_yaml(&self, file_path: &str, only_auto_start: bool) -> Result<()> {
-        // Change extension to .kdl
-        let kdl_path = file_path.replace(".yaml", ".kdl").replace(".yml", ".kdl");
-        self.export_snapshot(Some(&kdl_path), only_auto_start)
+        self.export_snapshot(Some(file_path), only_auto_start)
             .await?;
         Ok(())
     }
 
-    /// Import from YAML (compatibility - actually imports KDL)
+    /// Import from YAML
     pub async fn import_from_yaml(&self, file_path: &str) -> Result<HashMap<String, ProcessInfo>> {
-        // Try KDL file first
-        let kdl_path = file_path.replace(".yaml", ".kdl").replace(".yml", ".kdl");
-        if Path::new(&kdl_path).exists() {
-            return self.import_snapshot(Some(&kdl_path)).await;
-        }
-        // Fall back to original path
         self.import_snapshot(Some(file_path)).await
     }
 
-    /// Restore YAML snapshot (compatibility - actually restores KDL)
+    /// Restore YAML snapshot
     pub async fn restore_yaml_snapshot(
         &self,
         file_path: Option<&str>,

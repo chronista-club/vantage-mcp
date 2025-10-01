@@ -12,9 +12,6 @@ description = "Persistence layer for ichimi-server"
 serde = { workspace = true }
 serde_json = { workspace = true }
 serde_yaml = "0.9"
-# KDL support
-kdl = "4.7"
-serde_kdl = "0.1"
 
 # Async runtime
 tokio = { workspace = true }

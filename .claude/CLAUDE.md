@@ -9,7 +9,7 @@ Ichimi (一味・いちみ) Server は Model Context Protocol (MCP) を介した
 ### 主な機能
 - プロセスのライフサイクル管理（作成、起動、停止、削除）
 - リアルタイムログキャプチャ（stdout/stderr）
-- KDL形式での永続化と設定ファイル管理（.ichimi/processes.kdl）
+- YAML形式での永続化と設定ファイル管理（.ichimi/snapshot.yaml）
 - Webダッシュボード（Vue 3 + TypeScript + Vite + Tabler UI）
 - 自動バックアップ機能
 
@@ -93,14 +93,10 @@ ICHIMI_AUTO_EXPORT_INTERVAL=300 cargo run  # 5分ごとに自動エクスポー�
 ### crates/ichimi-persistence - 永続化レイヤー
 
 - **`src/lib.rs`**: 永続化インターフェース定義
-- **`src/persistence/`**: インメモリストレージ実装
+- **`src/persistence/`**: インメモリストレージとYAML永続化実装
   - `Arc<RwLock<HashMap>>`による高速メモリストレージ
   - プロセス、クリップボード、設定の管理
-- **`src/kdl/`**: KDL形式の永続化実装
-  - KDLファイル（.ichimi/processes.kdl）での設定管理
-  - 人間が読み書きしやすい形式
-- **`src/yaml/`**: YAMLスナップショット
-  - エクスポート/インポート機能
+  - YAMLスナップショットのエクスポート/インポート機能
   - バックアップとリストア
 
 ### ui/web - Vue 3 SPA
@@ -131,9 +127,9 @@ ICHIMI_AUTO_EXPORT_INTERVAL=300 cargo run  # 5分ごとに自動エクスポー�
 4. **ツールルーター**: `#[tool_router]` マクロが MCP ツールルーティングを生成。ツールは `CallToolResult` を返す非同期関数です。
 
 5. **永続化アーキテクチャ**:
-   - KDL形式（デフォルト）: 人間が読み書きしやすい設定ファイル形式
+   - YAML形式: 人間が読み書きしやすい設定ファイル形式
    - インメモリストレージ: `Arc<RwLock<HashMap>>`による高速アクセス
-   - YAMLスナップショット: エクスポート/インポート機能とバックアップ
+   - スナップショット機能: エクスポート/インポート機能とバックアップ
 
 ## MCP 統合ポイント
 
@@ -195,8 +191,7 @@ cargo test test_export_import # 特定のテストを実行
 
 3. **永続化を変更する場合**：
    - `crates/ichimi-persistence/src/` の該当モジュールを更新
-   - KDL形式とSurrealDB形式の両方をサポート
-   - 型変換関数（to_db_process_info/from_db_process_info）の更新
+   - YAML形式でのスナップショット機能
 
 4. **WebUI開発**：
    ```bash

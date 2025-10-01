@@ -28,7 +28,8 @@
       "Bash(gh run view:*)",
       "Bash(cargo fmt:*)",
       "Bash(cargo clippy:*)",
-      "mcp__serena__list_dir"
+      "mcp__serena__list_dir",
+      "Bash(git rm:*)"
     ],
     "deny": [],
     "ask": []
