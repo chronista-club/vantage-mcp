@@ -2,6 +2,54 @@
 
 // Note: CSS imports are handled in main.ts instead to avoid Sass import issues
 
+// Global color scheme improvements
+.page {
+  background: linear-gradient(
+    135deg,
+    var(--tblr-bg-surface) 0%,
+    var(--tblr-bg-surface-secondary) 100%
+  );
+  min-height: 100vh;
+}
+
+.page-wrapper {
+  background: transparent;
+}
+
+.page-body {
+  padding: 1.5rem 0;
+}
+
+// Card depth and shadows
+.card {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08);
+  }
+}
+
+// Enhanced button and badge styles
+.btn,
+.badge {
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.btn {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+
+  &:hover:not(:disabled) {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  &:active:not(:disabled) {
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+}
+
 // Custom button styles using Ichimi Design System colors
 .btn-green {
   --tblr-btn-bg: var(--ichimi-btn-green-bg);
