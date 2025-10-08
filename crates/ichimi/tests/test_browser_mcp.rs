@@ -12,7 +12,6 @@
 /// Claude Codeのセッション内で以下を実行：
 /// 1. cargo build --release
 /// 2. このテストファイルの指示に従ってMCPツールを使用
-
 use std::time::Duration;
 
 /// テスト手順ドキュメント
@@ -112,7 +111,9 @@ mod mcp_automation {
     async fn test_dashboard_with_mcp() {
         // サーバー起動
         // 注: 実際のテストでは、別プロセスでサーバーを起動する必要があります
-        println!("Ichimiサーバーを起動してください: cargo run --bin ichimi -- --web --web-port 12700");
+        println!(
+            "Ichimiサーバーを起動してください: cargo run --bin ichimi -- --web --web-port 12700"
+        );
 
         // 待機
         tokio::time::sleep(Duration::from_secs(3)).await;

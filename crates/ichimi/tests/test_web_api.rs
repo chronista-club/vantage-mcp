@@ -31,9 +31,7 @@ async fn test_get_status() {
     let client = reqwest::Client::new();
 
     // テスト用サーバーを起動
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
-        .await
-        .unwrap();
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
 
     tokio::spawn(async move {
@@ -65,9 +63,7 @@ async fn test_process_lifecycle_api() {
 
     let client = reqwest::Client::new();
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
-        .await
-        .unwrap();
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
 
     tokio::spawn(async move {
@@ -103,7 +99,11 @@ async fn test_process_lifecycle_api() {
     );
 
     // 2. プロセス一覧を取得
-    let response = client.get(format!("{}/processes", base_url)).send().await.unwrap();
+    let response = client
+        .get(format!("{}/processes", base_url))
+        .send()
+        .await
+        .unwrap();
     assert_eq!(response.status(), 200);
 
     let processes: Vec<serde_json::Value> = response.json().await.unwrap();
@@ -123,7 +123,10 @@ async fn test_process_lifecycle_api() {
 
     // 4. プロセスのログを取得
     let response = client
-        .get(format!("{}/processes/api-test-echo/logs?stream=stdout&lines=10", base_url))
+        .get(format!(
+            "{}/processes/api-test-echo/logs?stream=stdout&lines=10",
+            base_url
+        ))
         .send()
         .await
         .unwrap();
@@ -157,9 +160,7 @@ async fn test_dashboard_endpoint() {
 
     let client = reqwest::Client::new();
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
-        .await
-        .unwrap();
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
 
     tokio::spawn(async move {
@@ -203,9 +204,7 @@ async fn test_process_filtering() {
 
     let client = reqwest::Client::new();
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
-        .await
-        .unwrap();
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
 
     tokio::spawn(async move {

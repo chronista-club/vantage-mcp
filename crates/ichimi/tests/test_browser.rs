@@ -53,9 +53,7 @@ mod browser_tests {
         );
 
         // ページの内容を取得
-        let content = tab
-            .get_content()
-            .expect("Failed to get page content");
+        let content = tab.get_content().expect("Failed to get page content");
 
         // Vue.jsアプリケーションの存在を確認
         assert!(
@@ -96,10 +94,7 @@ mod browser_tests {
 
         // プロセス一覧が表示されていることを確認
         // （空の場合でも、テーブルや一覧要素は存在するはず）
-        assert!(
-            elements.is_some(),
-            "Process list element not found"
-        );
+        assert!(elements.is_some(), "Process list element not found");
     }
 
     #[tokio::test]
@@ -127,9 +122,7 @@ mod browser_tests {
         tokio::time::sleep(Duration::from_millis(500)).await;
 
         // JSONレスポンスを取得
-        let content = tab
-            .get_content()
-            .expect("Failed to get page content");
+        let content = tab.get_content().expect("Failed to get page content");
 
         // JSONレスポンスの構造を確認
         assert!(content.contains("status"));
@@ -150,9 +143,7 @@ mod browser_tests {
 
         let app = create_api_routes().with_state(app_state);
 
-        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
-            .await
-            .unwrap();
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
 
         let handle = tokio::spawn(async move {
