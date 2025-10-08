@@ -27,22 +27,15 @@
 
 <script setup lang="ts">
 import { useRoute } from 'vue-router';
-import { 
-  IconHome, 
-  IconActivity, 
-  IconTemplate, 
-  IconClipboard 
+import {
+  IconActivity,
+  IconTemplate,
+  IconClipboard
 } from '@tabler/icons-vue';
 
 const route = useRoute();
 
 const navigationItems = [
-  {
-    name: 'dashboard',
-    route: 'dashboard',
-    label: 'Dashboard',
-    icon: IconHome,
-  },
   {
     name: 'processes',
     route: 'processes',
