@@ -1,0 +1,54 @@
+[package]
+name = "ichimi-mcp"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "MCP server binary for Ichimi - A powerful process management server for Claude Code"
+keywords = ["mcp", "process-management", "claude", "server", "orchestration"]
+categories = ["command-line-utilities", "development-tools"]
+
+[[bin]]
+name = "ichimimcp"
+path = "src/main.rs"
+
+[dependencies]
+# Core library
+ichimi = { path = "../ichimi", features = ["web"] }
+ichimi-persistence = { path = "../ichimi-persistence" }
+
+# MCP SDK
+rmcp = { workspace = true }
+
+# Async runtime
+tokio.workspace = true
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+
+# Error handling
+anyhow.workspace = true
+thiserror.workspace = true
+
+# Logging
+tracing.workspace = true
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Utils
+dirs = "5.0"
+open = "5.3"
+isatty = "0.1"
+chrono = { version = "0.4", features = ["serde"] }
+
+# Unix-specific dependencies
+[target.'cfg(unix)'.dependencies]
+nix = { version = "0.29", features = ["signal"] }
+
+[features]
+default = ["web"]
+web = ["ichimi/web"]
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }

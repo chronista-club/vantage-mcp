@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/ichimi", "crates/ichimi-persistence"]
+members = ["crates/ichimi", "crates/ichimi-persistence", "crates/ichimi-mcp"]
 resolver = "2"
 
 [workspace.package]
@@ -17,6 +17,7 @@ anyhow = "1.0"
 thiserror = "2.0"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+rmcp = { version = "0.8.1", features = ["server", "transport-io"] }
 
 [profile.release]
 opt-level = 3

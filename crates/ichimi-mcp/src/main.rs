@@ -1,5 +1,5 @@
 use anyhow::Result;
-use ichimi_server::IchimiServer;
+use ichimi::IchimiServer;
 use rmcp::{ServiceExt, transport::stdio};
 use std::env;
 use std::sync::Arc;
@@ -274,7 +274,7 @@ async fn main() -> Result<()> {
     }
 
     // Create a shared process manager
-    let process_manager = ichimi_server::process::ProcessManager::new().await;
+    let process_manager = ichimi::process::ProcessManager::new().await;
 
     // Track browser process for cleanup
     let browser_process: Arc<Mutex<Option<std::process::Child>>> = Arc::new(Mutex::new(None));
@@ -492,7 +492,7 @@ async fn main() -> Result<()> {
         let web_persistence = process_manager.persistence_manager();
 
         // Start web server and get actual port
-        let actual_port = match ichimi_server::web::start_web_server(
+        let actual_port = match ichimi::web::start_web_server(
             web_manager,
             web_persistence,
             web_port,

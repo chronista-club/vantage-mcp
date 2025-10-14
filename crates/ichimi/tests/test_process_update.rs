@@ -1,4 +1,4 @@
-use ichimi_server::{messages::CreateProcessRequest, process::ProcessManager};
+use ichimi::{messages::CreateProcessRequest, process::ProcessManager};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use tempfile::tempdir;

@@ -11,9 +11,9 @@
 mod browser_tests {
     use headless_chrome::{Browser, LaunchOptions};
     use ichimi_persistence::PersistenceManager;
-    use ichimi_server::process::ProcessManager;
-    use ichimi_server::web::api::create_api_routes;
-    use ichimi_server::web::server::AppState;
+    use ichimi::process::ProcessManager;
+    use ichimi::web::api::create_api_routes;
+    use ichimi::web::server::AppState;
     use std::sync::Arc;
     use std::time::Duration;
 
