@@ -1,4 +1,5 @@
 use anyhow::Result;
+use clap::Parser;
 use ichimi::IchimiServer;
 use rmcp::{ServiceExt, transport::stdio};
 use std::env;
@@ -10,6 +11,31 @@ use tracing_subscriber::{self, EnvFilter};
 const BROWSER_STARTUP_DELAY_MS: u64 = 500;
 const BROWSER_SHUTDOWN_GRACE_MS: u64 = 1000;
 const KEEPALIVE_INTERVAL_SECS: u64 = 3600;
+
+/// Ichimi Server - Process management server for Claude Code via MCP
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Cli {
+    /// Enable web dashboard alongside MCP server
+    #[arg(long)]
+    web: bool,
+
+    /// Run only web dashboard (no MCP server)
+    #[arg(long)]
+    web_only: bool,
+
+    /// Set web dashboard port
+    #[arg(long, default_value_t = 13000)]
+    web_port: u16,
+
+    /// Don't automatically open browser for web dashboard
+    #[arg(long)]
+    no_open: bool,
+
+    /// Open browser in app mode (dedicated window that closes with server)
+    #[arg(long)]
+    app_mode: bool,
+}
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
@@ -100,78 +126,18 @@ fn detect_default_browser() -> DefaultBrowser {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Parse command line arguments
-    let args: Vec<String> = env::args().collect();
-    let mut web_enabled = false; // Web is disabled by default (MCP mode is default)
-    let mut web_only = false; // Flag to run only web server without MCP
-    let mut web_port = 12700u16;
-    let mut auto_open = true; // Default to auto-open browser
-    let mut app_mode = false; // Open browser in app mode
+    // Parse command line arguments using clap
+    let cli = Cli::parse();
 
-    let mut i = 1;
-    while i < args.len() {
-        match args[i].as_str() {
-            "--help" | "-h" => {
-                println!("Ichimi Server - Process management server for Claude Code via MCP");
-                println!();
-                println!("Usage: ichimi [OPTIONS]");
-                println!();
-                println!("Default: Run as MCP server for Claude/Cline");
-                println!();
-                println!("Options:");
-                println!("  --help, -h       Show this help message");
-                println!("  --version, -v    Show version information");
-                println!("  --web            Enable web dashboard alongside MCP server");
-                println!("  --web-only       Run only web dashboard (no MCP server)");
-                println!("  --web-port PORT  Set web dashboard port (default: 12700)");
-                println!("  --no-open        Don't automatically open browser for web dashboard");
-                println!(
-                    "  --app-mode       Open browser in app mode (dedicated window that closes with server)"
-                );
-                return Ok(());
-            }
-            "--version" | "-v" => {
-                println!("ichimi-server v{}", env!("CARGO_PKG_VERSION"));
-                return Ok(());
-            }
-            "--web" => {
-                web_enabled = true;
-            }
-            "--web-only" => {
-                web_enabled = true;
-                web_only = true;
-            }
-            "--web-port" => {
-                if i + 1 < args.len() {
-                    match args[i + 1].parse::<u16>() {
-                        Ok(port) if port > 0 => web_port = port,
-                        Ok(_) => {
-                            eprintln!(
-                                "Warning: Port must be between 1 and 65535, using default {}",
-                                12700
-                            );
-                        }
-                        Err(_) => {
-                            eprintln!(
-                                "Warning: Invalid port '{}', using default {}",
-                                args[i + 1],
-                                12700
-                            );
-                        }
-                    }
-                    i += 1;
-                }
-            }
-            "--no-open" => {
-                auto_open = false;
-            }
-            "--app-mode" => {
-                app_mode = true;
-            }
-            _ => {}
-        }
-        i += 1;
-    }
+    // Derive settings from CLI arguments
+    let web_enabled = cli.web || cli.web_only;
+    let web_only = cli.web_only;
+    let web_port = cli.web_port;
+    let auto_open = !cli.no_open;
+    let app_mode = cli.app_mode;
+
+    // Collect args for logging
+    let args: Vec<String> = env::args().collect();
 
     // Determine operation mode
     let run_mcp = !web_only; // Run MCP server by default unless --web-only is specified

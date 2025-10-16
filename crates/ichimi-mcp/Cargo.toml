@@ -41,6 +41,7 @@ dirs = "5.0"
 open = "5.3"
 isatty = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
+clap = { version = "4.5", features = ["derive"] }
 
 # Unix-specific dependencies
 [target.'cfg(unix)'.dependencies]

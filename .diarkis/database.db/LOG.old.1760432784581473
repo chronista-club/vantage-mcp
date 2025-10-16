@@ -1,0 +1,1 @@
+2025/10/14-13:45:47.168732 8569440256 [WARN] [db/db_impl/db_impl_open.cc:2313] DB::Open() failed: IO error: While lock file: .diarkis/database.db/LOCK: Resource temporarily unavailable
