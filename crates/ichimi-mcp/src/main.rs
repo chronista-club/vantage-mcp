@@ -7,32 +7,32 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing_subscriber::{self, EnvFilter};
 
-// Constants for better maintainability
+// メンテナビリティ向上のための定数
 const BROWSER_STARTUP_DELAY_MS: u64 = 500;
 const BROWSER_SHUTDOWN_GRACE_MS: u64 = 1000;
 const KEEPALIVE_INTERVAL_SECS: u64 = 3600;
 
-/// Ichimi Server - Process management server for Claude Code via MCP
+/// Ichimi Server - MCP経由のClaude Code用プロセス管理サーバー
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
-    /// Enable web dashboard alongside MCP server
+    /// MCPサーバーと並行してWebダッシュボードを有効化
     #[arg(long)]
     web: bool,
 
-    /// Run only web dashboard (no MCP server)
+    /// Webダッシュボードのみを実行（MCPサーバーなし）
     #[arg(long)]
     web_only: bool,
 
-    /// Set web dashboard port
+    /// Webダッシュボードのポートを設定
     #[arg(long, default_value_t = 13000)]
     web_port: u16,
 
-    /// Don't automatically open browser for web dashboard
+    /// Webダッシュボード用のブラウザを自動的に開かない
     #[arg(long)]
     no_open: bool,
 
-    /// Open browser in app mode (dedicated window that closes with server)
+    /// ブラウザをアプリモードで開く（サーバーと連動して閉じる専用ウィンドウ）
     #[arg(long)]
     app_mode: bool,
 }
@@ -46,18 +46,18 @@ enum DefaultBrowser {
     Unknown,
 }
 
-// Detect the default browser on the system
+// システムのデフォルトブラウザを検出
 #[allow(dead_code)]
 fn detect_default_browser() -> DefaultBrowser {
     #[cfg(target_os = "macos")]
     {
-        // Try to read macOS default browser preference
+        // macOSのデフォルトブラウザ設定を読み取ろうと試行
         let output = std::process::Command::new("plutil")
             .args(["-p", &format!("{}/Library/Preferences/com.apple.LaunchServices/com.apple.launchservices.secure.plist", env::var("HOME").unwrap_or_default())])
             .output();
 
         if output.is_err() {
-            // Try alternate location
+            // 代替の場所を試行
             let output = std::process::Command::new("defaults")
                 .args([
                     "read",
@@ -89,7 +89,7 @@ fn detect_default_browser() -> DefaultBrowser {
 
     #[cfg(target_os = "windows")]
     {
-        // Check Windows registry for default browser
+        // デフォルトブラウザのWindowsレジストリをチェック
         let output = std::process::Command::new("reg")
             .args(&["query", r"HKEY_CURRENT_USER\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\https\UserChoice", "/v", "ProgId"])
             .output();
@@ -106,7 +106,7 @@ fn detect_default_browser() -> DefaultBrowser {
 
     #[cfg(target_os = "linux")]
     {
-        // Check xdg-settings for default browser
+        // デフォルトブラウザのxdg-settingsをチェック
         let output = std::process::Command::new("xdg-settings")
             .args(&["get", "default-web-browser"])
             .output();
@@ -126,43 +126,43 @@ fn detect_default_browser() -> DefaultBrowser {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Parse command line arguments using clap
+    // clapを使用してコマンドライン引数をパース
     let cli = Cli::parse();
 
-    // Derive settings from CLI arguments
+    // CLI引数から設定を導出
     let web_enabled = cli.web || cli.web_only;
     let web_only = cli.web_only;
     let web_port = cli.web_port;
     let auto_open = !cli.no_open;
     let app_mode = cli.app_mode;
 
-    // Collect args for logging
+    // ロギング用に引数を収集
     let args: Vec<String> = env::args().collect();
 
-    // Determine operation mode
-    let run_mcp = !web_only; // Run MCP server by default unless --web-only is specified
+    // 動作モードを決定
+    let run_mcp = !web_only; // --web-onlyが指定されていない限り、デフォルトでMCPサーバーを実行
 
-    // Setup logging based on environment
+    // 環境に基づいてロギングをセットアップ
     let log_level = env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string());
 
-    // When running as MCP (default), log to file to avoid interfering with stdio
+    // MCP（デフォルト）として実行する場合、stdioとの干渉を避けるためファイルにログ出力
     if run_mcp && !web_enabled {
-        // When running as MCP, log to file to avoid interfering with stdio
+        // MCPとして実行する場合、stdioとの干渉を避けるためファイルにログ出力
         let log_dir = dirs::home_dir()
             .unwrap_or_else(|| std::path::PathBuf::from("."))
             .join(".ichimi")
             .join("logs");
 
-        // Create log directory if it doesn't exist
+        // ログディレクトリが存在しない場合は作成
         std::fs::create_dir_all(&log_dir).ok();
 
-        // Generate log filename with timestamp
+        // タイムスタンプ付きのログファイル名を生成
         let log_file = log_dir.join(format!(
             "ichimi-mcp-{}.log",
             chrono::Local::now().format("%Y%m%d-%H%M%S")
         ));
 
-        // Create file appender
+        // ファイルアペンダーを作成
         let file = std::fs::OpenOptions::new()
             .create(true)
             .append(true)
@@ -206,7 +206,7 @@ async fn main() -> Result<()> {
         tracing::info!("Arguments: {:?}", args);
         tracing::info!("Working directory: {:?}", env::current_dir());
     } else {
-        // Web mode or MCP with web - log to stderr
+        // WebモードまたはMCP+Webモード - stderrにログ出力
         let filter = EnvFilter::from_default_env()
             .add_directive(
                 format!("ichimi={log_level}")
@@ -239,15 +239,15 @@ async fn main() -> Result<()> {
         }
     }
 
-    // Create a shared process manager
+    // 共有プロセスマネージャーを作成
     let process_manager = ichimi::process::ProcessManager::new().await;
 
-    // Track browser process for cleanup
+    // クリーンアップ用にブラウザプロセスを追跡
     let browser_process: Arc<Mutex<Option<std::process::Child>>> = Arc::new(Mutex::new(None));
     let browser_process_for_shutdown = browser_process.clone();
 
-    // Auto-import processes on startup if configured
-    // First try YAML snapshot for auto-start processes
+    // 設定されている場合、起動時にプロセスを自動インポート
+    // まず自動起動プロセス用のYAMLスナップショットを試行
     let yaml_snapshot = std::env::var("HOME")
         .map(|home| format!("{home}/.ichimi/snapshot.yaml"))
         .unwrap_or_else(|_| ".ichimi/snapshot.yaml".to_string());
@@ -258,7 +258,7 @@ async fn main() -> Result<()> {
             Ok(_) => {
                 tracing::info!("Successfully restored processes from YAML snapshot");
 
-                // Auto-start processes with auto_start_on_restore flag
+                // auto_start_on_restoreフラグが設定されたプロセスを自動起動
                 match process_manager.start_auto_start_processes().await {
                     Ok(started) => {
                         if !started.is_empty() {
@@ -282,7 +282,7 @@ async fn main() -> Result<()> {
             }
         }
     } else {
-        // Fall back to legacy import if no YAML snapshot
+        // YAMLスナップショットがない場合、レガシーインポートにフォールバック
         let import_file = env::var("ICHIMI_IMPORT_FILE").unwrap_or_else(|_| {
             std::env::current_dir()
                 .unwrap_or_else(|_| std::path::PathBuf::from("."))
@@ -307,15 +307,15 @@ async fn main() -> Result<()> {
         }
     }
 
-    // Note: We always stop all processes on shutdown to ensure clean state
-    // Processes will be restarted on next launch based on auto_start_on_restore flag
+    // 注記: クリーンな状態を確保するため、シャットダウン時は常に全プロセスを停止します
+    // プロセスは次回起動時にauto_start_on_restoreフラグに基づいて再起動されます
     tracing::info!("All processes will be stopped on shutdown for clean state management");
 
-    // Setup signal handler for graceful shutdown
+    // グレースフルシャットダウンのためのシグナルハンドラーをセットアップ
     let pm_for_shutdown = process_manager.clone();
     tokio::spawn(async move {
         let browser_proc = browser_process_for_shutdown;
-        // Handle both SIGINT (Ctrl+C) and SIGTERM
+        // SIGINT (Ctrl+C)とSIGTERMの両方を処理
         #[cfg(unix)]
         {
             use tokio::signal::unix::{SignalKind, signal};
@@ -341,7 +341,7 @@ async fn main() -> Result<()> {
             tracing::info!("Received shutdown signal, exporting processes and stopping all...");
         }
 
-        // First, create YAML snapshot of auto-start processes
+        // まず、自動起動プロセスのYAMLスナップショットを作成
         match pm_for_shutdown.create_auto_start_snapshot().await {
             Ok(path) => {
                 tracing::info!("Created auto-start snapshot at {}", path);
@@ -351,7 +351,7 @@ async fn main() -> Result<()> {
             }
         }
 
-        // Also export the full YAML snapshot
+        // 完全なYAMLスナップショットもエクスポート
         let export_file = env::var("ICHIMI_EXPORT_FILE").unwrap_or_else(|_| {
             std::env::current_dir()
                 .unwrap_or_else(|_| std::path::PathBuf::from("."))
@@ -361,7 +361,7 @@ async fn main() -> Result<()> {
                 .to_string()
         });
 
-        // Create directory if it doesn't exist
+        // ディレクトリが存在しない場合は作成
         if let Some(parent) = std::path::Path::new(&export_file).parent() {
             let _ = std::fs::create_dir_all(parent);
         }
@@ -374,7 +374,7 @@ async fn main() -> Result<()> {
             Err(e) => tracing::error!("Failed to export processes on shutdown: {}", e),
         }
 
-        // Then stop ALL processes for clean shutdown
+        // 次にクリーンシャットダウンのため全プロセスを停止
         match pm_for_shutdown.stop_all_processes().await {
             Ok(stopped) => {
                 if !stopped.is_empty() {
@@ -392,36 +392,36 @@ async fn main() -> Result<()> {
             }
         }
 
-        // Close browser if it was opened in app mode
+        // アプリモードで開かれていた場合、ブラウザを閉じる
         let mut browser_guard = browser_proc.lock().await;
         if let Some(mut child) = browser_guard.take() {
             let pid = child.id();
             tracing::info!("Closing browser window (PID: {})", pid);
 
-            // Platform-specific graceful shutdown
+            // プラットフォーム固有のグレースフルシャットダウン
             #[cfg(unix)]
             {
                 use nix::sys::signal::{self, Signal};
                 use nix::unistd::Pid;
 
-                // First try SIGTERM for graceful shutdown
+                // まずグレースフルシャットダウンのためSIGTERMを試行
                 if let Err(e) = signal::kill(Pid::from_raw(pid as i32), Signal::SIGTERM) {
                     tracing::debug!("Failed to send SIGTERM to browser: {}", e);
                 } else {
-                    // Give the browser time to close gracefully
+                    // ブラウザがグレースフルに閉じる時間を与える
                     tokio::time::sleep(tokio::time::Duration::from_millis(
                         BROWSER_SHUTDOWN_GRACE_MS,
                     ))
                     .await;
                 }
 
-                // Check if process is still running
+                // プロセスがまだ実行中かチェック
                 match child.try_wait() {
                     Ok(Some(status)) => {
                         tracing::debug!("Browser closed gracefully with status: {:?}", status);
                     }
                     Ok(None) => {
-                        // Process still running, force kill
+                        // プロセスがまだ実行中、強制終了
                         tracing::debug!("Browser didn't close gracefully, forcing shutdown");
                         if let Err(e) = child.kill() {
                             tracing::warn!("Failed to force kill browser: {}", e);
@@ -437,7 +437,7 @@ async fn main() -> Result<()> {
 
             #[cfg(not(unix))]
             {
-                // On Windows, just use kill() which is more appropriate
+                // Windowsでは、より適切なkill()を使用
                 if let Err(e) = child.kill() {
                     tracing::warn!("Failed to close browser window: {}", e);
                 } else {
@@ -449,7 +449,7 @@ async fn main() -> Result<()> {
         std::process::exit(0);
     });
 
-    // Start web server if enabled
+    // 有効化されている場合、Webサーバーを起動
     #[cfg(feature = "web")]
     if web_enabled {
         tracing::info!("Web dashboard enabled on port {}", web_port);
@@ -457,7 +457,7 @@ async fn main() -> Result<()> {
         let web_manager = process_manager.clone();
         let web_persistence = process_manager.persistence_manager();
 
-        // Start web server and get actual port
+        // Webサーバーを起動し、実際のポートを取得
         let actual_port = match ichimi::web::start_web_server(
             web_manager,
             web_persistence,
@@ -471,13 +471,13 @@ async fn main() -> Result<()> {
             }
             Err(e) => {
                 tracing::error!("Failed to start web server: {:?}", e);
-                web_port // Fall back to requested port
+                web_port // リクエストされたポートにフォールバック
             }
         };
 
-        // Open browser with actual port (when web is enabled)
+        // 実際のポートでブラウザを開く（webが有効の場合）
         if auto_open && (web_enabled || web_only) {
-            // Open browser when web dashboard is available
+            // Webダッシュボードが利用可能な場合、ブラウザを開く
             let url = format!("http://localhost:{actual_port}");
 
             let browser_proc = browser_process.clone();
@@ -486,9 +486,9 @@ async fn main() -> Result<()> {
                     .await;
 
                 if app_mode {
-                    // Try to open browser in app mode (dedicated window)
+                    // アプリモード（専用ウィンドウ）でブラウザを開こうと試行
                     let browser_result = if cfg!(target_os = "macos") {
-                        // macOS: Try Chrome first, then Safari
+                        // macOS: まずChromeを試行、次にSafari
                         std::process::Command::new(
                             "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
                         )
@@ -496,16 +496,16 @@ async fn main() -> Result<()> {
                         .arg("--new-window")
                         .spawn()
                         .or_else(|_| {
-                            // Fallback to open command with Safari
+                            // Safariでopenコマンドにフォールバック
                             std::process::Command::new("open")
-                                .arg("-n") // New instance
+                                .arg("-n") // 新規インスタンス
                                 .arg("-a")
                                 .arg("Safari")
                                 .arg(&url)
                                 .spawn()
                         })
                     } else if cfg!(target_os = "windows") {
-                        // Windows: Try Chrome, then Edge
+                        // Windows: Chromeを試行、次にEdge
                         std::process::Command::new("cmd")
                             .args(&["/C", "start", "chrome", &format!("--app={}", url)])
                             .spawn()
@@ -515,7 +515,7 @@ async fn main() -> Result<()> {
                                     .spawn()
                             })
                     } else {
-                        // Linux: Try chromium or google-chrome
+                        // Linux: chromiumまたはgoogle-chromeを試行
                         std::process::Command::new("chromium")
                             .arg(format!("--app={}", url))
                             .spawn()
@@ -541,7 +541,7 @@ async fn main() -> Result<()> {
                                 "Failed to open browser in app mode: {}. Falling back to normal mode.",
                                 e
                             );
-                            // Fallback to normal browser open
+                            // 通常のブラウザ起動にフォールバック
                             if let Err(e) = open::that(&url) {
                                 tracing::warn!("Failed to open browser: {}", e);
                             } else {
@@ -550,7 +550,7 @@ async fn main() -> Result<()> {
                         }
                     }
                 } else {
-                    // Normal browser open (existing behavior)
+                    // 通常のブラウザ起動（既存の動作）
                     if let Err(e) = open::that(&url) {
                         tracing::warn!("Failed to open browser: {}", e);
                     } else {
@@ -561,7 +561,7 @@ async fn main() -> Result<()> {
         }
     }
 
-    // Run MCP server unless --web-only is specified
+    // --web-onlyが指定されていない限り、MCPサーバーを実行
     if run_mcp {
         tracing::info!("Starting MCP server");
         let server = IchimiServer::with_process_manager(process_manager.clone())
@@ -599,8 +599,8 @@ async fn main() -> Result<()> {
                     "MCP Server not available: {:?}. Web server will continue running.",
                     e
                 );
-                // Keep the process alive for web server
-                // Signal handler already set up above, just wait forever
+                // Webサーバーのためプロセスを維持
+                // シグナルハンドラーは上記で既にセットアップ済み、永久に待機
                 loop {
                     tokio::time::sleep(tokio::time::Duration::from_secs(KEEPALIVE_INTERVAL_SECS))
                         .await;
@@ -609,7 +609,7 @@ async fn main() -> Result<()> {
         }
     } else {
         tracing::info!("Running in standalone mode (web server only)");
-        // Keep the process alive - the signal handler in the spawned task will handle shutdown
+        // プロセスを維持 - スポーンされたタスクのシグナルハンドラーがシャットダウンを処理
         loop {
             tokio::time::sleep(tokio::time::Duration::from_secs(KEEPALIVE_INTERVAL_SECS)).await;
         }
