@@ -1,11 +1,11 @@
 use anyhow::Result;
 use clap::Parser;
-use vantage::VantageServer;
 use rmcp::{ServiceExt, transport::stdio};
 use std::env;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing_subscriber::{self, EnvFilter};
+use vantage::VantageServer;
 
 // メンテナビリティ向上のための定数
 const BROWSER_STARTUP_DELAY_MS: u64 = 500;
@@ -458,22 +458,17 @@ async fn main() -> Result<()> {
         let web_persistence = process_manager.persistence_manager();
 
         // Webサーバーを起動し、実際のポートを取得
-        let actual_port = match vantage::web::start_web_server(
-            web_manager,
-            web_persistence,
-            web_port,
-        )
-        .await
-        {
-            Ok(port) => {
-                tracing::debug!("Web server started on actual port {}", port);
-                port
-            }
-            Err(e) => {
-                tracing::error!("Failed to start web server: {:?}", e);
-                web_port // リクエストされたポートにフォールバック
-            }
-        };
+        let actual_port =
+            match vantage::web::start_web_server(web_manager, web_persistence, web_port).await {
+                Ok(port) => {
+                    tracing::debug!("Web server started on actual port {}", port);
+                    port
+                }
+                Err(e) => {
+                    tracing::error!("Failed to start web server: {:?}", e);
+                    web_port // リクエストされたポートにフォールバック
+                }
+            };
 
         // 実際のポートでブラウザを開く（webが有効の場合）
         if auto_open && (web_enabled || web_only) {

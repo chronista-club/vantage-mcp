@@ -1,6 +1,6 @@
 use chrono::Utc;
-use vantage_persistence::{PersistenceManager, ProcessInfo, ProcessState, ProcessStatus};
 use std::collections::HashMap;
+use vantage_persistence::{PersistenceManager, ProcessInfo, ProcessState, ProcessStatus};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

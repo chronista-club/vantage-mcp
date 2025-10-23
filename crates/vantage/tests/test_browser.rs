@@ -10,12 +10,12 @@
 #[cfg(feature = "browser-test")]
 mod browser_tests {
     use headless_chrome::{Browser, LaunchOptions};
-    use vantage_persistence::PersistenceManager;
+    use std::sync::Arc;
+    use std::time::Duration;
     use vantage::process::ProcessManager;
     use vantage::web::api::create_api_routes;
     use vantage::web::server::AppState;
-    use std::sync::Arc;
-    use std::time::Duration;
+    use vantage_persistence::PersistenceManager;
 
     #[tokio::test]
     async fn test_dashboard_loads() {

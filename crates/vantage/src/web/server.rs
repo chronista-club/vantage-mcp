@@ -4,10 +4,10 @@ use axum::{
     http::StatusCode,
     response::{Html, IntoResponse, Response},
 };
-use vantage_persistence::PersistenceManager;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tower_http::cors::CorsLayer;
+use vantage_persistence::PersistenceManager;
 
 pub async fn start_web_server(
     process_manager: ProcessManager,
