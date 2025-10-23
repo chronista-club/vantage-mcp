@@ -28,7 +28,7 @@ test-output/
 .env.local
 
 # Project specific
-.ichimi/
+.vantage/
 data/
 *.backup
 *.tmp

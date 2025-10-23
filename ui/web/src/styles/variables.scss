@@ -34,43 +34,43 @@ $btn-gray-active: oklch(0.4547 0.0334 258.34);
 // CSS Custom Properties for runtime theming
 :root {
   // Creative button (Start)
-  --ichimi-btn-green-bg: #{$btn-green-bg};
-  --ichimi-btn-green-hover: #{$btn-green-hover};
-  --ichimi-btn-green-active: #{$btn-green-active};
+  --vantage-btn-green-bg: #{$btn-green-bg};
+  --vantage-btn-green-hover: #{$btn-green-hover};
+  --vantage-btn-green-active: #{$btn-green-active};
   
   // Provision button (Stop)
-  --ichimi-btn-yellow-bg: #{$btn-yellow-bg};
-  --ichimi-btn-yellow-hover: #{$btn-yellow-hover};
-  --ichimi-btn-yellow-active: #{$btn-yellow-active};
+  --vantage-btn-yellow-bg: #{$btn-yellow-bg};
+  --vantage-btn-yellow-hover: #{$btn-yellow-hover};
+  --vantage-btn-yellow-active: #{$btn-yellow-active};
   
   // Broadcast button (Remove)
-  --ichimi-btn-red-bg: #{$btn-red-bg};
-  --ichimi-btn-red-hover: #{$btn-red-hover};
-  --ichimi-btn-red-active: #{$btn-red-active};
+  --vantage-btn-red-bg: #{$btn-red-bg};
+  --vantage-btn-red-hover: #{$btn-red-hover};
+  --vantage-btn-red-active: #{$btn-red-active};
   
   // Develop button (Primary)
-  --ichimi-btn-primary-bg: #{$btn-primary-bg};
-  --ichimi-btn-primary-hover: #{$btn-primary-hover};
-  --ichimi-btn-primary-active: #{$btn-primary-active};
+  --vantage-btn-primary-bg: #{$btn-primary-bg};
+  --vantage-btn-primary-hover: #{$btn-primary-hover};
+  --vantage-btn-primary-active: #{$btn-primary-active};
   
   // Research button (Secondary)
-  --ichimi-btn-secondary-bg: #{$btn-secondary-bg};
-  --ichimi-btn-secondary-hover: #{$btn-secondary-hover};
-  --ichimi-btn-secondary-active: #{$btn-secondary-active};
+  --vantage-btn-secondary-bg: #{$btn-secondary-bg};
+  --vantage-btn-secondary-hover: #{$btn-secondary-hover};
+  --vantage-btn-secondary-active: #{$btn-secondary-active};
   
   // Finished button (Gray)
-  --ichimi-btn-gray-bg: #{$btn-gray-bg};
-  --ichimi-btn-gray-hover: #{$btn-gray-hover};
-  --ichimi-btn-gray-active: #{$btn-gray-active};
+  --vantage-btn-gray-bg: #{$btn-gray-bg};
+  --vantage-btn-gray-hover: #{$btn-gray-hover};
+  --vantage-btn-gray-active: #{$btn-gray-active};
 }
 
 // Dark mode overrides
 .dark {
   // Adjust lightness for dark mode
-  --ichimi-btn-green-bg: oklch(0.65 0.12 240);
-  --ichimi-btn-yellow-bg: oklch(0.65 0.12 45);
-  --ichimi-btn-red-bg: oklch(0.7843 0.1921 351.47);
-  --ichimi-btn-primary-bg: oklch(0.5823 0.0922 308.37);
-  --ichimi-btn-secondary-bg: oklch(0.3627 0.0977 311.87);
-  --ichimi-btn-gray-bg: oklch(0.6547 0.0134 258.34);
+  --vantage-btn-green-bg: oklch(0.65 0.12 240);
+  --vantage-btn-yellow-bg: oklch(0.65 0.12 45);
+  --vantage-btn-red-bg: oklch(0.7843 0.1921 351.47);
+  --vantage-btn-primary-bg: oklch(0.5823 0.0922 308.37);
+  --vantage-btn-secondary-bg: oklch(0.3627 0.0977 311.87);
+  --vantage-btn-gray-bg: oklch(0.6547 0.0134 258.34);
 }
