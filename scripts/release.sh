@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Release helper script for Ichimi Server
+# Release helper script for Vantage Server
 # Usage: ./scripts/release.sh [patch|minor|major|beta]
 
 set -e
@@ -115,4 +115,4 @@ echo "  1. Run tests on multiple platforms"
 echo "  2. Build release binaries"
 echo "  3. Create GitHub release"
 echo ""
-echo "Monitor progress at: https://github.com/chronista-club/ichimi-server/actions"
+echo "Monitor progress at: https://github.com/chronista-club/vantage-mcp/actions"

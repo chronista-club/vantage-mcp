@@ -1,19 +1,19 @@
 #!/bin/bash
 
-# MCP Protocol Test for Ichimi Server
+# MCP Protocol Test for Vantage Server
 
 echo "=== MCP Protocol Test ==="
 
 cleanup() {
     echo "Cleaning up..."
     pkill -f "npx.*mcp.*test" 2>/dev/null
-    pkill -f "ichimi" 2>/dev/null
+    pkill -f "vantagemcp" 2>/dev/null
 }
 trap cleanup EXIT
 
-echo "1. Starting ichimi MCP server..."
-./target/release/ichimi 2>&1 | tee /tmp/ichimi_mcp_test.log &
-ICHIMI_PID=$!
+echo "1. Starting vantage MCP server..."
+./target/release/vantagemcp 2>&1 | tee /tmp/vantage_mcp_test.log &
+VANTAGE_PID=$!
 sleep 2
 
 echo "2. Testing MCP connection..."
@@ -24,7 +24,7 @@ const { StdioClientTransport } = require('@modelcontextprotocol/sdk/client/stdio
 
 async function testMCP() {
     const transport = new StdioClientTransport({
-        command: './target/release/ichimi',
+        command: './target/release/vantagemcp',
         args: [],
     });
     
@@ -79,7 +79,7 @@ else
     echo "  To run this test, install: npm install @modelcontextprotocol/sdk"
 fi
 
-kill -TERM $ICHIMI_PID 2>/dev/null
-wait $ICHIMI_PID 2>/dev/null
+kill -TERM $VANTAGE_PID 2>/dev/null
+wait $VANTAGE_PID 2>/dev/null
 
 echo "✓ MCP test completed"

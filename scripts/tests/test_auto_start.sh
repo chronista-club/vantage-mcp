@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# ichimiサーバーのテストスクリプト
+# Vantageサーバーのテストスクリプト
 # auto_start_on_createとauto_start_on_restoreフラグのテスト
 
 API_URL="http://localhost:12700/api"
@@ -9,7 +9,7 @@ if ! curl -s -o /dev/null -w "%{http_code}" $API_URL/status | grep -q "200"; the
     API_URL="http://localhost:12701/api"
 fi
 
-echo "=== Ichimi Auto-Start Flags Test ==="
+echo "=== Vantage Auto-Start Flags Test ==="
 echo "API URL: $API_URL"
 echo ""
 
@@ -97,7 +97,7 @@ echo ""
 echo "=== Exporting processes for persistence test ==="
 curl -s -X POST $API_URL/export \
   -H "Content-Type: application/json" \
-  -d '{"file_path": "/tmp/ichimi_test_export.surql"}'
+  -d '{"file_path": "/tmp/vantage_test_export.surql"}'
 echo ""
 
 # クリーンアップ
