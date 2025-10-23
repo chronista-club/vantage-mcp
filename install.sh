@@ -2,11 +2,11 @@
 set -e
 
 # Vantage Server Installation Script
-# Usage: curl -fsSL https://raw.githubusercontent.com/chronista-club/vantage-server/main/install.sh | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/chronista-club/vantage-mcp/main/install.sh | bash
 
-REPO="chronista-club/vantage-server"
+REPO="chronista-club/vantage-mcp"
 INSTALL_DIR="${HOME}/.local/bin"
-BINARY_NAME="vantage"
+BINARY_NAME="vantagemcp"
 
 # Colors for output
 RED='\033[0;31m'
@@ -113,8 +113,8 @@ install_from_source() {
         error "Rust is not installed. Please install Rust first: https://rustup.rs/"
     fi
     
-    info "Installing vantage-server using cargo..."
-    cargo install --git "https://github.com/${REPO}" --bin vantage
+    info "Installing vantage-mcp using cargo..."
+    cargo install --git "https://github.com/${REPO}" --bin vantagemcp
     
     info "Successfully installed using cargo"
     return 0
@@ -141,15 +141,15 @@ main() {
         fi
         echo ""
         info "Installation complete!"
-        info "Run 'vantage --help' to get started"
+        info "Run 'vantagemcp --help' to get started"
         exit 0
     fi
-    
+
     # Fall back to source installation
     if install_from_source; then
         echo ""
         info "Installation complete!"
-        info "Run 'vantage --help' to get started"
+        info "Run 'vantagemcp --help' to get started"
         exit 0
     fi
     

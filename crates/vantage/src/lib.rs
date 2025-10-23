@@ -866,10 +866,10 @@ impl VantageServer {
                 Ok(CallToolResult::success(vec![Content::text(format!(
                     "Web console is not running. Please start Vantage with web mode:\n\
                      \n\
-                     ichimi --web-only --web-port {port}\n\
+                     vantagemcp --web-only --web-port {port}\n\
                      \n\
                      Or use the default port:\n\
-                     ichimi --web-only\n\
+                     vantagemcp --web-only\n\
                      \n\
                      The web console will be available at {url}"
                 ))]))

@@ -303,7 +303,7 @@ processes:
 ```
 
 **自動エクスポート:**
-- 環境変数 `ICHIMI_AUTO_EXPORT_INTERVAL`: 自動エクスポート間隔（秒）
+- 環境変数 `VANTAGE_AUTO_EXPORT_INTERVAL`: 自動エクスポート間隔（秒）
 - シャットダウン時の自動エクスポート
 
 #### インポート
@@ -550,9 +550,9 @@ vantage [OPTIONS]
 | 変数 | 説明 | デフォルト |
 |------|------|------------|
 | `RUST_LOG` | ログレベル | `info` |
-| `ICHIMI_AUTO_EXPORT_INTERVAL` | 自動エクスポート間隔（秒） | なし |
-| `ICHIMI_DATA_DIR` | データディレクトリ | `~/.vantage/data` |
-| `ICHIMI_STOP_ON_SHUTDOWN` | 終了時のプロセス停止 | `false` |
+| `VANTAGE_AUTO_EXPORT_INTERVAL` | 自動エクスポート間隔（秒） | なし |
+| `VANTAGE_DATA_DIR` | データディレクトリ | `~/.vantage/data` |
+| `VANTAGE_STOP_ON_SHUTDOWN` | 終了時のプロセス停止 | `false` |
 
 ### ログ出力
 
@@ -571,7 +571,7 @@ vantage [OPTIONS]
 **グレースフルシャットダウン:**
 1. SIGTERM/SIGINT受信
 2. 自動エクスポート実行
-3. オプション: 全プロセス停止（`ICHIMI_STOP_ON_SHUTDOWN=true`）
+3. オプション: 全プロセス停止（`VANTAGE_STOP_ON_SHUTDOWN=true`）
 4. クリーンアップ
 5. 終了
 

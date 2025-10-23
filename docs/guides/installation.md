@@ -66,10 +66,10 @@ cargo install --path crates/vantage
 export RUST_LOG=info
 
 # 自動エクスポート間隔（秒）
-export ICHIMI_AUTO_EXPORT_INTERVAL=300
+export VANTAGE_AUTO_EXPORT_INTERVAL=300
 
 # データディレクトリ
-export ICHIMI_DATA_DIR=~/.vantage/data
+export VANTAGE_DATA_DIR=~/.vantage/data
 ```
 
 ## 初回起動

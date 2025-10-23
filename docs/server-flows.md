@@ -295,10 +295,10 @@ vantage --web-only
 | 変数 | 説明 | デフォルト |
 |------|------|------------|
 | `RUST_LOG` | ログレベル (error, warn, info, debug, trace) | info |
-| `ICHIMI_IMPORT_FILE` | 起動時にインポートするファイル | ~/.vantage/snapshot.yaml |
-| `ICHIMI_EXPORT_FILE` | シャットダウン時のエクスポート先 | ~/.vantage/snapshot.yaml |
-| `ICHIMI_DATA_DIR` | データファイル用ディレクトリ | ~/.vantage/ |
-| `ICHIMI_STOP_ON_SHUTDOWN` | vantage終了時にプロセスを停止するか（true/false） | false（継続） |
+| `VANTAGE_IMPORT_FILE` | 起動時にインポートするファイル | ~/.vantage/snapshot.yaml |
+| `VANTAGE_EXPORT_FILE` | シャットダウン時のエクスポート先 | ~/.vantage/snapshot.yaml |
+| `VANTAGE_DATA_DIR` | データファイル用ディレクトリ | ~/.vantage/ |
+| `VANTAGE_STOP_ON_SHUTDOWN` | vantage終了時にプロセスを停止するか（true/false） | false（継続） |
 
 ## ディレクトリ構造
 
@@ -422,7 +422,7 @@ sequenceDiagram
    - 次回起動時に自動復元される
 
 2. **プロセス停止**
-   - すべての管理プロセスを停止（環境変数 `ICHIMI_STOP_ON_SHUTDOWN` に関係なく常に実行）
+   - すべての管理プロセスを停止（環境変数 `VANTAGE_STOP_ON_SHUTDOWN` に関係なく常に実行）
    - プロセスグループ単位でシグナル送信（Docker対応）
    - グレースフルシャットダウンを試みた後、必要に応じて強制終了
 

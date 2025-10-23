@@ -171,12 +171,12 @@ async fn main() -> Result<()> {
 
         let filter = EnvFilter::from_default_env()
             .add_directive(
-                format!("ichimi={log_level}")
+                format!("vantage={log_level}")
                     .parse()
                     .map_err(|e| anyhow::anyhow!("Invalid log level: {}", e))?,
             )
             .add_directive(
-                format!("ichimi_server={log_level}")
+                format!("vantage_mcp={log_level}")
                     .parse()
                     .map_err(|e| anyhow::anyhow!("Invalid log level: {}", e))?,
             )
@@ -209,12 +209,12 @@ async fn main() -> Result<()> {
         // WebモードまたはMCP+Webモード - stderrにログ出力
         let filter = EnvFilter::from_default_env()
             .add_directive(
-                format!("ichimi={log_level}")
+                format!("vantage={log_level}")
                     .parse()
                     .map_err(|e| anyhow::anyhow!("Invalid log level: {}", e))?,
             )
             .add_directive(
-                format!("ichimi_server={log_level}")
+                format!("vantage_mcp={log_level}")
                     .parse()
                     .map_err(|e| anyhow::anyhow!("Invalid log level: {}", e))?,
             )

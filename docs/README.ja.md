@@ -328,11 +328,11 @@ vantage-server/
 | 変数 | 説明 | デフォルト |
 |------|------|----------|
 | `RUST_LOG` | ログレベル (error, warn, info, debug, trace) | info |
-| `ICHIMI_DATA_DIR` | データファイル用ディレクトリ | ~/.vantage/data |
-| `ICHIMI_IMPORT_FILE` | 起動時にインポートするファイル | ~/.vantage/data/processes.yaml |
-| `ICHIMI_EXPORT_FILE` | シャットダウン時のエクスポート先 | ~/.vantage/data/processes.yaml |
-| `ICHIMI_STOP_ON_SHUTDOWN` | vantage終了時にプロセスを停止するか（true/false） | false（継続） |
-| `ICHIMI_AUTO_EXPORT_INTERVAL` | 自動エクスポート間隔（秒） | なし |
+| `VANTAGE_DATA_DIR` | データファイル用ディレクトリ | ~/.vantage/data |
+| `VANTAGE_IMPORT_FILE` | 起動時にインポートするファイル | ~/.vantage/data/processes.yaml |
+| `VANTAGE_EXPORT_FILE` | シャットダウン時のエクスポート先 | ~/.vantage/data/processes.yaml |
+| `VANTAGE_STOP_ON_SHUTDOWN` | vantage終了時にプロセスを停止するか（true/false） | false（継続） |
+| `VANTAGE_AUTO_EXPORT_INTERVAL` | 自動エクスポート間隔（秒） | なし |
 
 ## 🚧 開発
 

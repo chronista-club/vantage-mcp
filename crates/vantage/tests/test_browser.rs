@@ -57,7 +57,7 @@ mod browser_tests {
 
         // Vue.jsアプリケーションの存在を確認
         assert!(
-            content.contains("id=\"app\"") || content.contains("ichimi"),
+            content.contains("id=\"app\"") || content.contains("vantage"),
             "Vue app not found in page content"
         );
     }

@@ -111,8 +111,8 @@ Import processes from backup file
 
 環境変数で設定：
 ```bash
-export ICHIMI_AUTO_EXPORT_INTERVAL=300  # 5分ごと
-export ICHIMI_EXPORT_FILE=~/.vantage/backup.yml
+export VANTAGE_AUTO_EXPORT_INTERVAL=300  # 5分ごと
+export VANTAGE_EXPORT_FILE=~/.vantage/backup.yml
 ```
 
 ## ベストプラクティス

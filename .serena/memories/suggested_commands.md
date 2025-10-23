@@ -66,7 +66,7 @@ RUST_LOG=debug cargo run
 RUST_LOG=info cargo run
 
 # Run with auto-export
-ICHIMI_AUTO_EXPORT_INTERVAL=300 cargo run
+VANTAGE_AUTO_EXPORT_INTERVAL=300 cargo run
 ```
 
 ## Frontend Development (Vue 3)
