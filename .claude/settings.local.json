@@ -36,7 +36,19 @@
       "mcp__chrome-devtools__navigate_page",
       "Bash(bun run:*)",
       "mcp__chrome-devtools__click",
-      "mcp__chrome-devtools__take_screenshot"
+      "mcp__chrome-devtools__take_screenshot",
+      "Bash(git flow:*)",
+      "Bash(brew info:*)",
+      "Bash(brew upgrade:*)",
+      "Bash(tree:*)",
+      "Bash(kill:*)",
+      "Bash(find:*)",
+      "Bash(for file in crates/ichimi/tests/test_web_api.rs crates/ichimi/tests/test_integration.rs crates/ichimi/tests/test_browser.rs crates/ichimi/tests/test_process_update.rs)",
+      "Bash(do)",
+      "Bash(echo \"Updated: $file\")",
+      "Bash(done)",
+      "Bash(./target/debug/ichimimcp:*)",
+      "Bash(cargo run:*)"
     ],
     "deny": [],
     "ask": []

@@ -4,8 +4,7 @@ import type { RouteRecordRaw } from 'vue-router';
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
-    name: 'dashboard',
-    component: () => import('@/views/DashboardView.vue'),
+    redirect: '/processes',
   },
   {
     path: '/processes',
@@ -25,7 +24,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
-    redirect: '/',
+    redirect: '/processes',
   },
 ];
 

@@ -28,7 +28,11 @@
     "ichimi": {
       "type": "stdio",
       "command": "./target/release/ichimi",
-      "args": ["--web"]
+      "args": [
+        "--web",
+        "--web-port",
+        "8080"
+      ]
     }
   }
 }

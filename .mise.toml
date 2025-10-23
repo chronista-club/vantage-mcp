@@ -1,8 +1,14 @@
 [tools]
 bun = "latest"
 
+[tasks."web:install"]
+description = "Install Web UI dependencies"
+dir = "ui/web"
+run = "bun install"
+
 [tasks.build-web]
 description = "Build web UI with Bun"
+depends = ["web:install"]
 dir = "ui/web"
 run = "bun run build"
 
@@ -38,14 +44,13 @@ run = "bun run build --watch"
 # ローカルインストールタスク
 [tasks.install]
 description = "Build release and install to ~/.local/bin"
+depends = ["build"]
 run = """
-    echo "🚀 Building release version..."
-    cargo build --release
     mkdir -p ~/.local/bin
-    cp target/release/ichimi ~/.local/bin/
-    chmod +x ~/.local/bin/ichimi
-    echo "✅ Installed to ~/.local/bin/ichimi"
-    ~/.local/bin/ichimi --version
+    cp target/release/ichimimcp ~/.local/bin/
+    chmod +x ~/.local/bin/ichimimcp
+    echo "✅ Installed to ~/.local/bin/ichimimcp"
+    ~/.local/bin/ichimimcp --version
 """
 
 [tasks.install-debug]
@@ -62,10 +67,12 @@ run = """
 
 [tasks.build]
 description = "Build release version"
+depends = ["build-web"]
 run = "cargo build --release"
 
 [tasks.build-debug]
 description = "Build debug version"
+depends = ["build-web"]
 run = "cargo build"
 
 [tasks.test]

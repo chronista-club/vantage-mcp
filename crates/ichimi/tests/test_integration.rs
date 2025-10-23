@@ -1,4 +1,4 @@
-use ichimi_server::process::{OutputStream, ProcessFilter, ProcessManager, ProcessStateFilter};
+use ichimi::process::{OutputStream, ProcessFilter, ProcessManager, ProcessStateFilter};
 use std::collections::HashMap;
 use std::time::Duration;
 
