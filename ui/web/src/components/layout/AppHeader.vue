@@ -1,40 +1,59 @@
 <template>
-  <header class="navbar navbar-expand-md d-print-none sticky-top bg-white border-bottom">
+  <header class="vantage-header">
     <div class="container-xl">
-      <h1 class="navbar-brand navbar-brand-autodark d-none-navbar-horizontal pe-0 pe-md-3 mb-0">
-        <router-link to="/" class="text-decoration-none d-flex align-items-center">
-          <span class="brand-logo me-2">🚀</span>
-          <span class="brand-text">
-            <span class="fw-bold">Vantage</span>
-            <span class="text-muted ms-1">Server</span>
-          </span>
+      <div class="header-content">
+        <!-- Brand -->
+        <router-link to="/" class="brand">
+          <div class="brand-logo">
+            <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M16 4L4 10L16 16L28 10L16 4Z"
+                fill="currentColor"
+                opacity="0.9"
+              />
+              <path
+                d="M4 16L16 22L28 16"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                opacity="0.7"
+              />
+              <path
+                d="M4 22L16 28L28 22"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                opacity="0.5"
+              />
+            </svg>
+          </div>
+          <div class="brand-text">
+            <span class="brand-name">Vantage</span>
+            <span class="brand-subtitle">MCP Server</span>
+          </div>
         </router-link>
-      </h1>
 
-      <div class="navbar-nav flex-row order-md-last">
-        <!-- Theme Toggle -->
-        <div class="nav-item">
+        <!-- Actions -->
+        <nav class="header-actions">
           <button
             @click="toggleTheme"
-            class="btn btn-icon"
-            :class="isDarkMode ? 'btn-icon-light' : 'btn-icon-dark'"
+            class="header-action-btn"
             :title="`Switch to ${isDarkMode ? 'light' : 'dark'} mode`"
+            :aria-label="`Switch to ${isDarkMode ? 'light' : 'dark'} mode`"
           >
-            <IconSun v-if="isDarkMode" />
-            <IconMoon v-else />
+            <IconSun v-if="isDarkMode" :size="20" :stroke-width="2" />
+            <IconMoon v-else :size="20" :stroke-width="2" />
           </button>
-        </div>
 
-        <!-- Settings Button -->
-        <div class="nav-item ms-2">
           <button
             @click="showSettings"
-            class="btn btn-icon btn-icon-secondary"
+            class="header-action-btn"
             title="Settings"
+            aria-label="Settings"
           >
-            <IconSettings />
+            <IconSettings :size="20" :stroke-width="2" />
           </button>
-        </div>
+        </nav>
       </div>
     </div>
   </header>
@@ -59,31 +78,170 @@ function showSettings() {
 }
 </script>
 
-<style scoped>
-.brand-logo {
-  font-size: 1.5rem;
-  line-height: 1;
-  transition: transform 0.2s ease;
+<style scoped lang="scss">
+.vantage-header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: oklch(1 0 0 / 0.8);
+  backdrop-filter: blur(12px) saturate(180%);
+  border-bottom: 1px solid oklch(0.92 0 0);
+  transition: all 0.2s ease;
+
+  @media (prefers-color-scheme: dark) {
+    background: oklch(0.2 0 0 / 0.85);
+    border-bottom-color: oklch(0.3 0 0);
+  }
 }
 
-.navbar-brand:hover .brand-logo {
-  transform: scale(1.1);
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+  gap: 2rem;
+}
+
+// Brand Section
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+  color: inherit;
+  transition: opacity 0.2s ease;
+
+  &:hover {
+    opacity: 0.8;
+
+    .brand-logo {
+      transform: translateY(-2px);
+    }
+  }
+
+  &:active {
+    opacity: 0.6;
+  }
+}
+
+.brand-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  color: var(--vantage-btn-primary-bg);
+  transition: transform 0.2s ease;
+
+  svg {
+    width: 100%;
+    height: 100%;
+  }
 }
 
 .brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.brand-name {
   font-size: 1.25rem;
+  font-weight: 700;
   line-height: 1;
+  letter-spacing: -0.02em;
+  color: oklch(0.2 0 0);
+
+  @media (prefers-color-scheme: dark) {
+    color: oklch(0.95 0 0);
+  }
 }
 
-.btn-icon {
-  transition: all 0.2s ease;
+.brand-subtitle {
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  color: oklch(0.5 0 0);
+  text-transform: uppercase;
+
+  @media (prefers-color-scheme: dark) {
+    color: oklch(0.6 0 0);
+  }
 }
 
-.btn-icon:hover {
-  transform: translateY(-1px);
+// Header Actions
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.navbar {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+.header-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: oklch(0.4 0 0);
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  @media (prefers-color-scheme: dark) {
+    color: oklch(0.7 0 0);
+  }
+
+  &:hover {
+    background: oklch(0.95 0 0);
+    color: oklch(0.2 0 0);
+    transform: translateY(-1px);
+
+    @media (prefers-color-scheme: dark) {
+      background: oklch(0.25 0 0);
+      color: oklch(0.9 0 0);
+    }
+  }
+
+  &:active {
+    transform: translateY(0);
+    background: oklch(0.92 0 0);
+
+    @media (prefers-color-scheme: dark) {
+      background: oklch(0.22 0 0);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--vantage-btn-primary-bg);
+    outline-offset: 2px;
+  }
+}
+
+// Responsive Design
+@media (max-width: 768px) {
+  .header-content {
+    height: 56px;
+  }
+
+  .brand-logo {
+    width: 32px;
+    height: 32px;
+  }
+
+  .brand-name {
+    font-size: 1.125rem;
+  }
+
+  .brand-subtitle {
+    font-size: 0.6875rem;
+  }
+
+  .header-action-btn {
+    width: 36px;
+    height: 36px;
+  }
 }
 </style>
