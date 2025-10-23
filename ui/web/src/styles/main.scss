@@ -2,14 +2,14 @@
 
 // Note: CSS imports are handled in main.ts instead to avoid Sass import issues
 
-// Global color scheme improvements
+// Global page styling
 .page {
-  background: linear-gradient(
-    135deg,
-    var(--tblr-bg-surface) 0%,
-    var(--tblr-bg-surface-secondary) 100%
-  );
+  background: oklch(0.96 0 0);
   min-height: 100vh;
+
+  @media (prefers-color-scheme: dark) {
+    background: oklch(0.14 0 0);
+  }
 }
 
 .page-wrapper {
@@ -17,17 +17,37 @@
 }
 
 .page-body {
-  padding: 1.5rem 0;
+  padding: 2rem 0;
+
+  @media (max-width: 768px) {
+    padding: 1.5rem 0;
+  }
+
+  @media (max-width: 576px) {
+    padding: 1rem 0;
+  }
 }
 
 // Card depth and shadows
 .card {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  background: oklch(1 0 0);
+  border-radius: 10px;
+  border: 1px solid oklch(0.92 0 0);
+  box-shadow: 0 1px 3px oklch(0 0 0 / 0.08);
   transition: all 0.2s ease;
 
+  @media (prefers-color-scheme: dark) {
+    background: oklch(0.2 0 0);
+    border-color: oklch(0.28 0 0);
+    box-shadow: 0 1px 3px oklch(0 0 0 / 0.2);
+  }
+
   &:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 12px oklch(0 0 0 / 0.12);
+
+    @media (prefers-color-scheme: dark) {
+      box-shadow: 0 4px 12px oklch(0 0 0 / 0.3);
+    }
   }
 }
 
