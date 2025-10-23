@@ -48,7 +48,14 @@
       "Bash(echo \"Updated: $file\")",
       "Bash(done)",
       "Bash(./target/debug/ichimimcp:*)",
-      "Bash(cargo run:*)"
+      "Bash(cargo run:*)",
+      "Bash(if [ -f install-local.sh ])",
+      "Bash(then sed -i '' 's/ichimi/vantage/g' install-local.sh)",
+      "Bash(fi)",
+      "Bash(if [ -f install.sh ])",
+      "Bash(then sed -i '' 's/ichimi/vantage/g' install.sh)",
+      "Bash(cargo clean:*)",
+      "Bash(./target/release/vantagemcp:*)"
     ],
     "deny": [],
     "ask": []

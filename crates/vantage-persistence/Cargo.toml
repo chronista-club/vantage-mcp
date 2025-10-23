@@ -1,11 +1,11 @@
 [package]
-name = "ichimi-persistence"
+name = "vantage-persistence"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Persistence layer for Ichimi"
+description = "Persistence layer for Vantage"
 
 [dependencies]
 # Serialization

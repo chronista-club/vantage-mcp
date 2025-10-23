@@ -1,4 +1,4 @@
-use ichimi::process::{OutputStream, ProcessFilter, ProcessManager, ProcessStateFilter};
+use vantage::process::{OutputStream, ProcessFilter, ProcessManager, ProcessStateFilter};
 use std::collections::HashMap;
 use std::time::Duration;
 
@@ -11,7 +11,7 @@ async fn test_process_basic_lifecycle() {
         .create_process(
             "basic-test".to_string(),
             "echo".to_string(),
-            vec!["Hello, Ichimi!".to_string()],
+            vec!["Hello, Vantage!".to_string()],
             HashMap::new(),
             None,
             false,
@@ -36,7 +36,7 @@ async fn test_process_basic_lifecycle() {
         .expect("Failed to get output");
 
     assert!(!output.is_empty());
-    assert!(output[0].contains("Hello, Ichimi!"));
+    assert!(output[0].contains("Hello, Vantage!"));
 
     // Clean up
     manager
@@ -51,14 +51,14 @@ async fn test_process_with_environment() {
 
     let mut env = HashMap::new();
     env.insert("TEST_VAR".to_string(), "test_value".to_string());
-    env.insert("ICHIMI_TEST".to_string(), "running".to_string());
+    env.insert("VANTAGE_TEST".to_string(), "running".to_string());
 
     // Create process with environment variables
     manager
         .create_process(
             "env-test".to_string(),
             "sh".to_string(),
-            vec!["-c".to_string(), "echo $TEST_VAR $ICHIMI_TEST".to_string()],
+            vec!["-c".to_string(), "echo $TEST_VAR $VANTAGE_TEST".to_string()],
             env,
             None,
             false,

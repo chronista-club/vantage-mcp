@@ -1,7 +1,7 @@
-use ichimi_persistence::PersistenceManager;
-use ichimi::process::ProcessManager;
-use ichimi::web::api::create_api_routes;
-use ichimi::web::server::AppState;
+use vantage_persistence::PersistenceManager;
+use vantage::process::ProcessManager;
+use vantage::web::api::create_api_routes;
+use vantage::web::server::AppState;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;

@@ -1108,78 +1108,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ichimi"
-version = "0.2.3"
-dependencies = [
- "anyhow",
- "axum",
- "axum-extra",
- "chrono",
- "dirs",
- "futures",
- "headless_chrome",
- "ichimi-persistence",
- "isatty",
- "nix",
- "open",
- "regex",
- "reqwest",
- "rmcp",
- "rust-embed",
- "schemars",
- "serde",
- "serde_json",
- "tempfile",
- "tera",
- "thiserror 2.0.16",
- "tokio",
- "tokio-stream",
- "tower",
- "tower-http",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "ichimi-mcp"
-version = "0.2.3"
-dependencies = [
- "anyhow",
- "chrono",
- "clap",
- "dirs",
- "ichimi",
- "ichimi-persistence",
- "isatty",
- "nix",
- "open",
- "rmcp",
- "serde",
- "serde_json",
- "thiserror 2.0.16",
- "tokio",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "ichimi-persistence"
-version = "0.2.3"
-dependencies = [
- "anyhow",
- "chrono",
- "hostname",
- "nanoid",
- "serde",
- "serde_json",
- "serde_yaml",
- "thiserror 2.0.16",
- "tokio",
- "tracing",
- "uuid",
-]
-
-[[package]]
 name = "icu_collections"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2976,6 +2904,78 @@ name = "valuable"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba73ea9cf16a25df0c8caa16c51acb937d5712a8429db78a3ee29d5dcacd3a65"
+
+[[package]]
+name = "vantage"
+version = "0.2.3"
+dependencies = [
+ "anyhow",
+ "axum",
+ "axum-extra",
+ "chrono",
+ "dirs",
+ "futures",
+ "headless_chrome",
+ "isatty",
+ "nix",
+ "open",
+ "regex",
+ "reqwest",
+ "rmcp",
+ "rust-embed",
+ "schemars",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tera",
+ "thiserror 2.0.16",
+ "tokio",
+ "tokio-stream",
+ "tower",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "vantage-persistence",
+]
+
+[[package]]
+name = "vantage-mcp"
+version = "0.2.3"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "clap",
+ "dirs",
+ "isatty",
+ "nix",
+ "open",
+ "rmcp",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.16",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "vantage",
+ "vantage-persistence",
+]
+
+[[package]]
+name = "vantage-persistence"
+version = "0.2.3"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "hostname",
+ "nanoid",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "thiserror 2.0.16",
+ "tokio",
+ "tracing",
+ "uuid",
+]
 
 [[package]]
 name = "vcpkg"

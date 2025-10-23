@@ -1,14 +1,14 @@
-# Ichimi Server Project Structure
+# Vantage Server Project Structure
 
 ## Repository Layout
 ```
-ichimi-server/
+vantage-server/
 ├── crates/                     # Rust workspace crates
-│   ├── ichimi/                 # Main server crate
+│   ├── vantage/                 # Main server crate
 │   │   ├── src/
 │   │   │   ├── lib.rs         # Core MCP server implementation
 │   │   │   ├── bin/           # Binary entry points
-│   │   │   │   └── ichimi_server.rs
+│   │   │   │   └── vantage_server.rs
 │   │   │   ├── process/       # Process management
 │   │   │   │   ├── manager.rs # ProcessManager core
 │   │   │   │   ├── buffer.rs  # Circular buffer for logs
@@ -29,7 +29,7 @@ ichimi-server/
 │   │   │   ├── learning/      # Learning engine
 │   │   │   └── security/      # Security features
 │   │   └── tests/             # Integration tests
-│   └── ichimi-persistence/    # Persistence layer crate
+│   └── vantage-persistence/    # Persistence layer crate
 │       ├── src/
 │       │   ├── lib.rs         # Persistence interface
 │       │   ├── types.rs       # Shared types
@@ -58,7 +58,7 @@ ichimi-server/
 ├── scripts/                   # Utility scripts
 ├── examples/                  # Usage examples
 ├── .github/                   # GitHub Actions workflows
-├── .ichimi/                   # Runtime data directory
+├── .vantage/                   # Runtime data directory
 │   ├── processes.kdl         # Process configurations
 │   └── snapshot.surql        # Database snapshots
 ├── .serena/                   # Serena configuration
@@ -78,24 +78,24 @@ ichimi-server/
 
 ## Key Architectural Components
 
-### 1. MCP Server Layer (`crates/ichimi/src/lib.rs`)
-- Implements `IchimiServer` struct
+### 1. MCP Server Layer (`crates/vantage/src/lib.rs`)
+- Implements `VantageServer` struct
 - Defines all MCP tools with `#[tool]` attributes
 - Routes tool calls to appropriate handlers
 
-### 2. Process Management (`crates/ichimi/src/process/`)
+### 2. Process Management (`crates/vantage/src/process/`)
 - `ProcessManager`: Core process lifecycle management
 - Thread-safe with `Arc<RwLock<HashMap>>`
 - Circular buffer for efficient log storage
 - Graceful shutdown with configurable timeout
 
-### 3. Web Dashboard (`crates/ichimi/src/web/`)
+### 3. Web Dashboard (`crates/vantage/src/web/`)
 - Axum-based HTTP server
 - RESTful API endpoints
 - Static file serving for Vue SPA
 - Auto port selection if default port busy
 
-### 4. Persistence Layer (`crates/ichimi-persistence/`)
+### 4. Persistence Layer (`crates/vantage-persistence/`)
 - Abstraction over multiple storage backends
 - KDL format for human-readable configs
 - SurrealDB for advanced queries
@@ -109,14 +109,14 @@ ichimi-server/
 - Tabler UI components
 
 ## Data Flow
-1. MCP Client → IchimiServer (MCP tools)
-2. IchimiServer → ProcessManager (process operations)
+1. MCP Client → VantageServer (MCP tools)
+2. VantageServer → ProcessManager (process operations)
 3. ProcessManager → Persistence Layer (save state)
 4. Web API → ProcessManager (HTTP operations)
 5. Vue Frontend → Web API (REST calls)
 
 ## Configuration Files
 - `.mcp.json`: MCP server configuration
-- `.ichimi/processes.kdl`: Process definitions
+- `.vantage/processes.kdl`: Process definitions
 - `rust-toolchain.toml`: Rust version (2024 edition)
 - `.mise.toml`: Development environment setup

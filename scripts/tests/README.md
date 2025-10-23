@@ -1,4 +1,4 @@
-# Ichimi Server テストスイート
+# Vantage Server テストスイート
 
 ## テストの実行方法
 
@@ -50,12 +50,12 @@
 
 ### プロセスが残ってしまった場合
 ```bash
-pkill -f ichimi
+pkill -f vantage
 pkill -f "sleep 9999"
 ```
 
 ### テストファイルが残ってしまった場合
 ```bash
 rm -f /tmp/test_*.txt /tmp/test_*.sh
-rm -rf /tmp/ichimi_test_*
+rm -rf /tmp/vantage_test_*
 ```

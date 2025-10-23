@@ -1,18 +1,18 @@
-# Ichimi Browser E2Eテスト（Chrome MCP版）
+# Vantage Browser E2Eテスト（Chrome MCP版）
 
-このテストは、Chrome DevTools MCPサーバーを使用してIchimiのWebダッシュボードの動作を検証します。
+このテストは、Chrome DevTools MCPサーバーを使用してVantageのWebダッシュボードの動作を検証します。
 
 ## 前提条件
 
 - Claude CodeでChrome DevTools MCPサーバーが利用可能
-- Ichimiがビルド済み
+- Vantageがビルド済み
 
 ## テスト実行手順
 
-### 1. Ichimiサーバーを起動
+### 1. Vantageサーバーを起動
 
 ```bash
-cargo run --bin ichimi -- --web --web-port 12700
+cargo run --bin vantage -- --web --web-port 12700
 ```
 
 サーバーが起動したら、次のメッセージが表示されます：
@@ -33,7 +33,7 @@ url: http://localhost:12700
 MCPツール`take_snapshot`を使用してページの内容を確認：
 
 **期待される内容**：
-- ページタイトルに "Ichimi" が含まれる
+- ページタイトルに "Vantage" が含まれる
 - `id="app"` の要素が存在する
 - Vue.jsアプリケーションが読み込まれている
 
@@ -169,7 +169,7 @@ curl -X DELETE http://localhost:12700/api/processes/browser-test-echo
 ```bash
 #!/bin/bash
 # start_server.sh
-cargo run --bin ichimi -- --web --web-port 12700 &
+cargo run --bin vantage -- --web --web-port 12700 &
 SERVER_PID=$!
 sleep 3
 

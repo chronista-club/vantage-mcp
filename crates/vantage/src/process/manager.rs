@@ -1,8 +1,8 @@
 use super::buffer::CircularBuffer;
 use super::types::*;
 use chrono::Utc;
-use ichimi_persistence::{PersistenceManager, ProcessTemplate, Settings};
-use ichimi_persistence::{
+use vantage_persistence::{PersistenceManager, ProcessTemplate, Settings};
+use vantage_persistence::{
     ProcessInfo as DbProcessInfo, ProcessState as DbProcessState, ProcessStatus as DbProcessStatus,
 };
 use std::collections::HashMap;
@@ -749,8 +749,8 @@ impl ProcessManager {
             Some(p) => p,
             None => {
                 let snapshot_dir = std::env::var("HOME")
-                    .map(|home| format!("{home}/.ichimi"))
-                    .unwrap_or_else(|_| ".ichimi".to_string());
+                    .map(|home| format!("{home}/.vantage"))
+                    .unwrap_or_else(|_| ".vantage".to_string());
                 format!("{snapshot_dir}/processes.json")
             }
         };
@@ -771,8 +771,8 @@ impl ProcessManager {
             Some(p) => p,
             None => {
                 let snapshot_dir = std::env::var("HOME")
-                    .map(|home| format!("{home}/.ichimi"))
-                    .unwrap_or_else(|_| ".ichimi".to_string());
+                    .map(|home| format!("{home}/.vantage"))
+                    .unwrap_or_else(|_| ".vantage".to_string());
                 format!("{snapshot_dir}/snapshot.yaml")
             }
         };
@@ -829,8 +829,8 @@ impl ProcessManager {
     /// Restore from YAML snapshot on startup
     pub async fn restore_yaml_snapshot(&self) -> Result<(), String> {
         let snapshot_dir = std::env::var("HOME")
-            .map(|home| format!("{home}/.ichimi"))
-            .unwrap_or_else(|_| ".ichimi".to_string());
+            .map(|home| format!("{home}/.vantage"))
+            .unwrap_or_else(|_| ".vantage".to_string());
         let snapshot_path = format!("{snapshot_dir}/snapshot.yaml");
 
         if !std::path::Path::new(&snapshot_path).exists() {

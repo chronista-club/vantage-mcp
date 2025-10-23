@@ -1,9 +1,9 @@
 use std::io;
 use thiserror::Error;
 
-/// Ichimi Server の統一エラー型
+/// Vantage Server の統一エラー型
 #[derive(Debug, Error)]
-pub enum IchimiError {
+pub enum VantageError {
     // プロセス管理エラー
     #[error("Process not found: {0}")]
     ProcessNotFound(String),
@@ -82,17 +82,17 @@ pub enum IchimiError {
     Other(String),
 }
 
-/// Result型のエイリアス（IchimiResult として使用）
-pub type IchimiResult<T> = std::result::Result<T, IchimiError>;
+/// Result型のエイリアス（VantageResult として使用）
+pub type VantageResult<T> = std::result::Result<T, VantageError>;
 
-impl IchimiError {
+impl VantageError {
     /// エラーをMCP用の文字列に変換
     pub fn to_mcp_error(&self) -> String {
         match self {
-            IchimiError::ProcessNotFound(id) => format!("Process '{id}' not found"),
-            IchimiError::ProcessAlreadyExists(id) => format!("Process '{id}' already exists"),
-            IchimiError::SecurityValidation(msg) => format!("Security validation failed: {msg}"),
-            IchimiError::CommandInjection(msg) => format!("Command injection detected: {msg}"),
+            VantageError::ProcessNotFound(id) => format!("Process '{id}' not found"),
+            VantageError::ProcessAlreadyExists(id) => format!("Process '{id}' already exists"),
+            VantageError::SecurityValidation(msg) => format!("Security validation failed: {msg}"),
+            VantageError::CommandInjection(msg) => format!("Command injection detected: {msg}"),
             _ => self.to_string(),
         }
     }
@@ -101,10 +101,10 @@ impl IchimiError {
     pub fn is_security_error(&self) -> bool {
         matches!(
             self,
-            IchimiError::SecurityValidation(_)
-                | IchimiError::CommandInjection(_)
-                | IchimiError::InvalidPath(_)
-                | IchimiError::PermissionDenied(_)
+            VantageError::SecurityValidation(_)
+                | VantageError::CommandInjection(_)
+                | VantageError::InvalidPath(_)
+                | VantageError::PermissionDenied(_)
         )
     }
 
@@ -112,28 +112,28 @@ impl IchimiError {
     pub fn is_retryable(&self) -> bool {
         matches!(
             self,
-            IchimiError::Io(_) | IchimiError::DatabaseConnection(_) | IchimiError::Timeout(_)
+            VantageError::Io(_) | VantageError::DatabaseConnection(_) | VantageError::Timeout(_)
         )
     }
 }
 
 // 文字列からのエラー変換（後方互換性のため）
-impl From<String> for IchimiError {
+impl From<String> for VantageError {
     fn from(s: String) -> Self {
-        IchimiError::Other(s)
+        VantageError::Other(s)
     }
 }
 
-impl From<&str> for IchimiError {
+impl From<&str> for VantageError {
     fn from(s: &str) -> Self {
-        IchimiError::Other(s.to_string())
+        VantageError::Other(s.to_string())
     }
 }
 
 // anyhow::Errorからの変換
-impl From<anyhow::Error> for IchimiError {
+impl From<anyhow::Error> for VantageError {
     fn from(err: anyhow::Error) -> Self {
-        IchimiError::Internal(err.to_string())
+        VantageError::Internal(err.to_string())
     }
 }
 
@@ -143,25 +143,25 @@ mod tests {
 
     #[test]
     fn test_error_display() {
-        let err = IchimiError::ProcessNotFound("test-process".to_string());
+        let err = VantageError::ProcessNotFound("test-process".to_string());
         assert_eq!(err.to_string(), "Process not found: test-process");
     }
 
     #[test]
     fn test_security_error_detection() {
-        let err = IchimiError::CommandInjection("rm -rf /".to_string());
+        let err = VantageError::CommandInjection("rm -rf /".to_string());
         assert!(err.is_security_error());
 
-        let err = IchimiError::ProcessNotFound("test".to_string());
+        let err = VantageError::ProcessNotFound("test".to_string());
         assert!(!err.is_security_error());
     }
 
     #[test]
     fn test_retryable_error() {
-        let err = IchimiError::Timeout("operation".to_string());
+        let err = VantageError::Timeout("operation".to_string());
         assert!(err.is_retryable());
 
-        let err = IchimiError::ProcessAlreadyExists("test".to_string());
+        let err = VantageError::ProcessAlreadyExists("test".to_string());
         assert!(!err.is_retryable());
     }
 }

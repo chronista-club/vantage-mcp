@@ -9,7 +9,7 @@ use axum::{
     response::sse::{Event, KeepAlive, Sse},
 };
 use futures::stream::Stream;
-use ichimi_persistence::{ClipboardItem, ProcessTemplate, TemplateVariable};
+use vantage_persistence::{ClipboardItem, ProcessTemplate, TemplateVariable};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::convert::Infallible;
@@ -380,7 +380,7 @@ pub async fn update_settings(
     Json(settings): Json<Settings>,
 ) -> Result<StatusCode, StatusCode> {
     // Convert to DB settings
-    let db_settings = ichimi_persistence::Settings {
+    let db_settings = vantage_persistence::Settings {
         theme: settings.color_mode,
         auto_save_interval: Some(settings.refresh_interval as u64),
         max_log_lines: None,
@@ -732,7 +732,7 @@ pub async fn set_clipboard_file(
 ) -> Result<Json<ClipboardResponse>, (StatusCode, String)> {
     let item = ClipboardItem {
         id: None,
-        clipboard_id: ichimi_persistence::generate_id(),
+        clipboard_id: vantage_persistence::generate_id(),
         content: req.content,
         filename: Some(req.filename),
         created_at: chrono::Utc::now(),

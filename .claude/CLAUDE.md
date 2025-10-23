@@ -4,12 +4,12 @@
 
 ## プロジェクト概要
 
-Ichimi (一味・いちみ) Server は Model Context Protocol (MCP) を介した Claude Code 用のプロセス管理サーバーです。Claude がプロセスの起動、停止、監視、および MCP ツールを通じた出力のキャプチャを可能にします。
+Vantage (一味・いちみ) Server は Model Context Protocol (MCP) を介した Claude Code 用のプロセス管理サーバーです。Claude がプロセスの起動、停止、監視、および MCP ツールを通じた出力のキャプチャを可能にします。
 
 ### 主な機能
 - プロセスのライフサイクル管理（作成、起動、停止、削除）
 - リアルタイムログキャプチャ（stdout/stderr）
-- YAML形式での永続化と設定ファイル管理（.ichimi/snapshot.yaml）
+- YAML形式での永続化と設定ファイル管理（.vantage/snapshot.yaml）
 - Webダッシュボード（Vue 3 + TypeScript + Vite + Tabler UI）
 - 自動バックアップ機能
 
@@ -17,15 +17,15 @@ Ichimi (一味・いちみ) Server は Model Context Protocol (MCP) を介した
 
 ```bash
 # GitHubから特定のバージョンを直接インストール（推奨）
-cargo install --git https://github.com/chronista-club/ichimi-server --tag v0.1.0-beta20
+cargo install --git https://github.com/chronista-club/vantage-server --tag v0.1.0-beta20
 
 # 最新のmainブランチからインストール
-cargo install --git https://github.com/chronista-club/ichimi-server
+cargo install --git https://github.com/chronista-club/vantage-server
 
 # ローカルでビルドしてインストール
-git clone https://github.com/chronista-club/ichimi-server.git
-cd ichimi-server
-cargo install --path crates/ichimi
+git clone https://github.com/chronista-club/vantage-server.git
+cd vantage-server
+cargo install --path crates/vantage
 ```
 
 ## ビルド・開発コマンド
@@ -46,16 +46,16 @@ cargo clippy         # リンターを実行
 cargo clippy -- -D warnings # 警告でエラーにする
 
 # サーバーの実行
-cargo run --bin ichimi
-./target/release/ichimi # リリースビルドを実行
+cargo run --bin vantage
+./target/release/vantage # リリースビルドを実行
 
 # Webダッシュボード付きで実行
-cargo run --bin ichimi -- --web
-cargo run --bin ichimi -- --web --web-port 8080  # カスタムポート
+cargo run --bin vantage -- --web
+cargo run --bin vantage -- --web --web-port 8080  # カスタムポート
 
 # 環境変数を設定して実行
 RUST_LOG=debug cargo run
-ICHIMI_AUTO_EXPORT_INTERVAL=300 cargo run  # 5分ごとに自動エクスポート
+VANTAGE_AUTO_EXPORT_INTERVAL=300 cargo run  # 5分ごとに自動エクスポート
 ```
 
 ## アーキテクチャ
@@ -64,7 +64,7 @@ ICHIMI_AUTO_EXPORT_INTERVAL=300 cargo run  # 5分ごとに自動エクスポー�
 
 プロジェクトはワークスペース構造で整理されています：
 
-### crates/ichimi - メインサーバークレート
+### crates/vantage - メインサーバークレート
 
 - **`src/lib.rs`**: MCP ツールハンドラーを持つメインサーバー実装。各ツールメソッドは `#[tool]` 属性で装飾され、Claude に公開される MCP ツールにマッピングされます。
 
@@ -90,7 +90,7 @@ ICHIMI_AUTO_EXPORT_INTERVAL=300 cargo run  # 5分ごとに自動エクスポー�
   - `api.rs`: APIルーティング
   - デフォルトポート 12700、占有時は自動で別ポートを選択
 
-### crates/ichimi-persistence - 永続化レイヤー
+### crates/vantage-persistence - 永続化レイヤー
 
 - **`src/lib.rs`**: 永続化インターフェース定義
 - **`src/persistence/`**: インメモリストレージとYAML永続化実装
@@ -114,7 +114,7 @@ ICHIMI_AUTO_EXPORT_INTERVAL=300 cargo run  # 5分ごとに自動エクスポー�
   - `src/stores/`: Piniaステート管理
   - `src/api/`: APIクライアント層
   - `src/types/`: TypeScript型定義
-  - `src/themes.ts`: Ichimi Design System（OKLCH色空間）
+  - `src/themes.ts`: Vantage Design System（OKLCH色空間）
 
 ### 主要な設計パターン
 
@@ -139,7 +139,7 @@ ICHIMI_AUTO_EXPORT_INTERVAL=300 cargo run  # 5分ごとに自動エクスポー�
 - 永続化: `export_processes`、`import_processes`
 - CI監視: `list_ci_runs`、`get_ci_run_details`、`get_ci_failed_logs`、`wait_for_ci_completion`、`start_ci_monitoring`
 
-各ツールは `lib.rs` の `IchimiServer` impl ブロック内のメソッドに直接マッピングされます。
+各ツールは `lib.rs` の `VantageServer` impl ブロック内のメソッドに直接マッピングされます。
 
 ## プロセスライフサイクル
 
@@ -160,11 +160,11 @@ ICHIMI_AUTO_EXPORT_INTERVAL=300 cargo run  # 5分ごとに自動エクスポー�
 | 変数 | 説明 | デフォルト |
 |------|------|------------|
 | `RUST_LOG` | ログレベル (error, warn, info, debug, trace) | info |
-| `ICHIMI_AUTO_EXPORT_INTERVAL` | 自動エクスポート間隔（秒） | なし |
-| `ICHIMI_IMPORT_FILE` | 起動時にインポートするファイル | ~/.ichimi/data/processes.surql |
-| `ICHIMI_EXPORT_FILE` | シャットダウン時のエクスポート先 | ~/.ichimi/data/processes.surql |
-| `ICHIMI_DATA_DIR` | データファイル用ディレクトリ | ~/.ichimi/data |
-| `ICHIMI_STOP_ON_SHUTDOWN` | ichimi終了時にプロセスを停止するか（true/false） | false（継続） |
+| `VANTAGE_AUTO_EXPORT_INTERVAL` | 自動エクスポート間隔（秒） | なし |
+| `VANTAGE_IMPORT_FILE` | 起動時にインポートするファイル | ~/.vantage/data/processes.surql |
+| `VANTAGE_EXPORT_FILE` | シャットダウン時のエクスポート先 | ~/.vantage/data/processes.surql |
+| `VANTAGE_DATA_DIR` | データファイル用ディレクトリ | ~/.vantage/data |
+| `VANTAGE_STOP_ON_SHUTDOWN` | vantage終了時にプロセスを停止するか（true/false） | false（継続） |
 
 ## テストに関する考慮事項
 
@@ -181,16 +181,16 @@ cargo test test_export_import # 特定のテストを実行
 ## 開発のヒント
 
 1. **新しいMCPツールを追加する場合**：
-   - `crates/ichimi/src/messages/` にリクエスト型を定義
-   - `crates/ichimi/src/lib.rs` の `IchimiServer` impl ブロックにツールメソッドを追加
+   - `crates/vantage/src/messages/` にリクエスト型を定義
+   - `crates/vantage/src/lib.rs` の `VantageServer` impl ブロックにツールメソッドを追加
    - `#[tool]` 属性でメソッドを装飾
 
 2. **プロセス管理ロジックを変更する場合**：
-   - `crates/ichimi/src/process/manager.rs` の `ProcessManager` を更新
-   - 内部型は `crates/ichimi/src/messages/process.rs` で定義
+   - `crates/vantage/src/process/manager.rs` の `ProcessManager` を更新
+   - 内部型は `crates/vantage/src/messages/process.rs` で定義
 
 3. **永続化を変更する場合**：
-   - `crates/ichimi-persistence/src/` の該当モジュールを更新
+   - `crates/vantage-persistence/src/` の該当モジュールを更新
    - YAML形式でのスナップショット機能
 
 4. **WebUI開発**：

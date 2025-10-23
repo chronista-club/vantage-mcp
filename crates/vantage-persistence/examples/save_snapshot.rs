@@ -1,5 +1,5 @@
 use chrono::Utc;
-use ichimi_persistence::{PersistenceManager, ProcessInfo, ProcessState, ProcessStatus};
+use vantage_persistence::{PersistenceManager, ProcessInfo, ProcessState, ProcessStatus};
 use std::collections::HashMap;
 
 #[tokio::main]
@@ -103,7 +103,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create snapshot directory
     let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-    let snapshot_dir = std::path::Path::new(&home).join(".ichimi");
+    let snapshot_dir = std::path::Path::new(&home).join(".vantage");
     std::fs::create_dir_all(&snapshot_dir)?;
 
     // Export snapshot to KDL

@@ -4,7 +4,7 @@ use axum::{
     http::StatusCode,
     response::{Html, IntoResponse, Response},
 };
-use ichimi_persistence::PersistenceManager;
+use vantage_persistence::PersistenceManager;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tower_http::cors::CorsLayer;

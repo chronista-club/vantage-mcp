@@ -42,7 +42,7 @@ impl PersistenceManager {
     /// Get default snapshot path
     fn default_snapshot_path() -> PathBuf {
         let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-        PathBuf::from(home).join(".ichimi").join("snapshot.yaml")
+        PathBuf::from(home).join(".vantage").join("snapshot.yaml")
     }
 
     /// Save or update a process

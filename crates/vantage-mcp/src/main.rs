@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
-use ichimi::IchimiServer;
+use vantage::VantageServer;
 use rmcp::{ServiceExt, transport::stdio};
 use std::env;
 use std::sync::Arc;
@@ -12,7 +12,7 @@ const BROWSER_STARTUP_DELAY_MS: u64 = 500;
 const BROWSER_SHUTDOWN_GRACE_MS: u64 = 1000;
 const KEEPALIVE_INTERVAL_SECS: u64 = 3600;
 
-/// Ichimi Server - MCP経由のClaude Code用プロセス管理サーバー
+/// Vantage Server - MCP経由のClaude Code用プロセス管理サーバー
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
@@ -150,7 +150,7 @@ async fn main() -> Result<()> {
         // MCPとして実行する場合、stdioとの干渉を避けるためファイルにログ出力
         let log_dir = dirs::home_dir()
             .unwrap_or_else(|| std::path::PathBuf::from("."))
-            .join(".ichimi")
+            .join(".vantage")
             .join("logs");
 
         // ログディレクトリが存在しない場合は作成
@@ -158,7 +158,7 @@ async fn main() -> Result<()> {
 
         // タイムスタンプ付きのログファイル名を生成
         let log_file = log_dir.join(format!(
-            "ichimi-mcp-{}.log",
+            "vantage-mcp-{}.log",
             chrono::Local::now().format("%Y%m%d-%H%M%S")
         ));
 
@@ -201,7 +201,7 @@ async fn main() -> Result<()> {
             .with_line_number(true)
             .init();
 
-        tracing::info!("=== Ichimi MCP Server Starting (silent mode) ===");
+        tracing::info!("=== Vantage MCP Server Starting (silent mode) ===");
         tracing::info!("Log file: {:?}", log_file);
         tracing::info!("Arguments: {:?}", args);
         tracing::info!("Working directory: {:?}", env::current_dir());
@@ -231,16 +231,16 @@ async fn main() -> Result<()> {
             .init();
 
         if web_only {
-            tracing::info!("🚀 Starting Ichimi Development Server (web-only mode)");
+            tracing::info!("🚀 Starting Vantage Development Server (web-only mode)");
         } else if run_mcp && web_enabled {
-            tracing::info!("Starting Ichimi Server (MCP + web mode)");
+            tracing::info!("Starting Vantage Server (MCP + web mode)");
         } else {
-            tracing::info!("Starting Ichimi Server (MCP mode)");
+            tracing::info!("Starting Vantage Server (MCP mode)");
         }
     }
 
     // 共有プロセスマネージャーを作成
-    let process_manager = ichimi::process::ProcessManager::new().await;
+    let process_manager = vantage::process::ProcessManager::new().await;
 
     // クリーンアップ用にブラウザプロセスを追跡
     let browser_process: Arc<Mutex<Option<std::process::Child>>> = Arc::new(Mutex::new(None));
@@ -249,8 +249,8 @@ async fn main() -> Result<()> {
     // 設定されている場合、起動時にプロセスを自動インポート
     // まず自動起動プロセス用のYAMLスナップショットを試行
     let yaml_snapshot = std::env::var("HOME")
-        .map(|home| format!("{home}/.ichimi/snapshot.yaml"))
-        .unwrap_or_else(|_| ".ichimi/snapshot.yaml".to_string());
+        .map(|home| format!("{home}/.vantage/snapshot.yaml"))
+        .unwrap_or_else(|_| ".vantage/snapshot.yaml".to_string());
 
     if std::path::Path::new(&yaml_snapshot).exists() {
         tracing::info!("Restoring from YAML snapshot: {}", yaml_snapshot);
@@ -283,10 +283,10 @@ async fn main() -> Result<()> {
         }
     } else {
         // YAMLスナップショットがない場合、レガシーインポートにフォールバック
-        let import_file = env::var("ICHIMI_IMPORT_FILE").unwrap_or_else(|_| {
+        let import_file = env::var("VANTAGE_IMPORT_FILE").unwrap_or_else(|_| {
             std::env::current_dir()
                 .unwrap_or_else(|_| std::path::PathBuf::from("."))
-                .join(".ichimi")
+                .join(".vantage")
                 .join("snapshot.yaml")
                 .to_string_lossy()
                 .to_string()
@@ -352,10 +352,10 @@ async fn main() -> Result<()> {
         }
 
         // 完全なYAMLスナップショットもエクスポート
-        let export_file = env::var("ICHIMI_EXPORT_FILE").unwrap_or_else(|_| {
+        let export_file = env::var("VANTAGE_EXPORT_FILE").unwrap_or_else(|_| {
             std::env::current_dir()
                 .unwrap_or_else(|_| std::path::PathBuf::from("."))
-                .join(".ichimi")
+                .join(".vantage")
                 .join("snapshot.yaml")
                 .to_string_lossy()
                 .to_string()
@@ -458,7 +458,7 @@ async fn main() -> Result<()> {
         let web_persistence = process_manager.persistence_manager();
 
         // Webサーバーを起動し、実際のポートを取得
-        let actual_port = match ichimi::web::start_web_server(
+        let actual_port = match vantage::web::start_web_server(
             web_manager,
             web_persistence,
             web_port,
@@ -564,9 +564,9 @@ async fn main() -> Result<()> {
     // --web-onlyが指定されていない限り、MCPサーバーを実行
     if run_mcp {
         tracing::info!("Starting MCP server");
-        let server = IchimiServer::with_process_manager(process_manager.clone())
+        let server = VantageServer::with_process_manager(process_manager.clone())
             .await
-            .map_err(|e| anyhow::anyhow!("Failed to initialize IchimiServer: {}", e))?;
+            .map_err(|e| anyhow::anyhow!("Failed to initialize VantageServer: {}", e))?;
         let server_arc = std::sync::Arc::new(server);
 
         tracing::debug!("Serving MCP on stdio");
@@ -620,6 +620,6 @@ async fn main() -> Result<()> {
         tracing::warn!("Web feature not enabled. Rebuild with --features web to enable dashboard.");
     }
 
-    tracing::info!("Ichimi server shutdown complete");
+    tracing::info!("Vantage server shutdown complete");
     Ok(())
 }

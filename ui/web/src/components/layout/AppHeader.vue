@@ -5,7 +5,7 @@
         <router-link to="/" class="text-decoration-none d-flex align-items-center">
           <span class="brand-logo me-2">🚀</span>
           <span class="brand-text">
-            <span class="fw-bold">Ichimi</span>
+            <span class="fw-bold">Vantage</span>
             <span class="text-muted ms-1">Server</span>
           </span>
         </router-link>

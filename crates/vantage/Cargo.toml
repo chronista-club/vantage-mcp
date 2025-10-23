@@ -1,9 +1,9 @@
 [package]
-name = "ichimi"
+name = "vantage"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-description = "Core library for Ichimi - A powerful process management server for Claude Code via Model Context Protocol (MCP)"
+description = "Core library for Vantage - A powerful process management server for Claude Code via Model Context Protocol (MCP)"
 license.workspace = true
 repository.workspace = true
 keywords = ["mcp", "process-management", "claude", "server", "orchestration"]
@@ -29,7 +29,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # Persistence layer
-ichimi-persistence = { path = "../ichimi-persistence" }
+vantage-persistence = { path = "../vantage-persistence" }
 
 # Utils
 chrono = { version = "0.4", features = ["serde"] }

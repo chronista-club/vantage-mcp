@@ -1,4 +1,4 @@
-# Release Template for Ichimi Server
+# Release Template for Vantage Server
 
 以下のテンプレートを使用してGitHubリリースを作成してください。
 
@@ -12,20 +12,20 @@
 ## リリースノートテンプレート
 
 ```markdown
-## 🎉 Ichimi Server vX.X.X-betaXX
+## 🎉 Vantage Server vX.X.X-betaXX
 
 ### 📦 インストール方法
 
 ```bash
 # cargo installを使用（推奨）
-cargo install --git https://github.com/chronista-club/ichimi-server --tag vX.X.X-betaXX
+cargo install --git https://github.com/chronista-club/vantage-server --tag vX.X.X-betaXX
 
 # または最新版をインストール
-cargo install --git https://github.com/chronista-club/ichimi-server
+cargo install --git https://github.com/chronista-club/vantage-server
 
 # ソースからビルド
-git clone https://github.com/chronista-club/ichimi-server.git
-cd ichimi-server
+git clone https://github.com/chronista-club/vantage-server.git
+cd vantage-server
 git checkout vX.X.X-betaXX
 cargo build --release
 ```
@@ -53,8 +53,8 @@ cargo build --release
 ```json
 {
   "mcpServers": {
-    "ichimi": {
-      "command": "ichimi",
+    "vantage": {
+      "command": "vantage",
       "env": {
         "RUST_LOG": "info"
       }
@@ -68,7 +68,7 @@ cargo build --release
 
 ---
 
-**Full Changelog**: https://github.com/chronista-club/ichimi-server/compare/vX.X.X-betaXX...vX.X.X-betaXX
+**Full Changelog**: https://github.com/chronista-club/vantage-server/compare/vX.X.X-betaXX...vX.X.X-betaXX
 ```
 
 ## リリース作成手順

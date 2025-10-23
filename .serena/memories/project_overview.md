@@ -1,7 +1,7 @@
-# Ichimi Server Project Overview
+# Vantage Server Project Overview
 
 ## Project Purpose
-Ichimi Server is a powerful process management server for Claude Code via the Model Context Protocol (MCP). It enables Claude to manage processes as resources, providing capabilities for starting, stopping, monitoring processes, and capturing their outputs.
+Vantage Server is a powerful process management server for Claude Code via the Model Context Protocol (MCP). It enables Claude to manage processes as resources, providing capabilities for starting, stopping, monitoring processes, and capturing their outputs.
 
 ## Tech Stack
 
@@ -28,7 +28,7 @@ Ichimi Server is a powerful process management server for Claude Code via the Mo
 ## Key Features
 - Process lifecycle management (create, start, stop, delete)
 - Real-time log capture (stdout/stderr)
-- KDL format persistence (`.ichimi/processes.kdl`)
+- KDL format persistence (`.vantage/processes.kdl`)
 - Auto-start processes with `auto_start` flag
 - Web dashboard with modern Vue 3 SPA
 - MCP-compliant server with 12+ tools

@@ -17,7 +17,7 @@ pub mod security;
 #[cfg(feature = "web")]
 pub mod web;
 
-pub use error::{IchimiError, IchimiResult};
+pub use error::{VantageError, VantageResult};
 
 use ci::CiMonitor;
 use events::EventSystem;
@@ -26,7 +26,7 @@ use messages::*;
 use process::ProcessManager;
 
 #[derive(Clone)]
-pub struct IchimiServer {
+pub struct VantageServer {
     start_time: Arc<Mutex<chrono::DateTime<chrono::Utc>>>,
     process_manager: ProcessManager,
     #[allow(dead_code)]
@@ -34,13 +34,13 @@ pub struct IchimiServer {
     learning_engine: Arc<LearningEngine>,
     #[allow(dead_code)]
     ci_monitor: Arc<CiMonitor>,
-    tool_router: ToolRouter<IchimiServer>,
+    tool_router: ToolRouter<VantageServer>,
 }
 
 #[tool_router]
-impl IchimiServer {
+impl VantageServer {
     pub async fn new() -> anyhow::Result<Self> {
-        tracing::info!("Initializing IchimiServer");
+        tracing::info!("Initializing VantageServer");
 
         // ProcessManagerを初期化
         tracing::debug!("Initializing process manager");
@@ -58,7 +58,7 @@ impl IchimiServer {
         tracing::debug!("Initializing CI monitor");
         let ci_monitor = Arc::new(CiMonitor::new(None, Some(30)));
 
-        tracing::info!("IchimiServer initialization complete");
+        tracing::info!("VantageServer initialization complete");
         Ok(Self {
             start_time: Arc::new(Mutex::new(chrono::Utc::now())),
             process_manager,
@@ -73,9 +73,9 @@ impl IchimiServer {
         self.process_manager = manager;
     }
 
-    /// Create IchimiServer with existing ProcessManager (shares database)
+    /// Create VantageServer with existing ProcessManager (shares database)
     pub async fn with_process_manager(process_manager: ProcessManager) -> anyhow::Result<Self> {
-        tracing::info!("Initializing IchimiServer with existing ProcessManager");
+        tracing::info!("Initializing VantageServer with existing ProcessManager");
 
         // Initialize event system
         let event_system = Arc::new(EventSystem::new());
@@ -91,7 +91,7 @@ impl IchimiServer {
             tracing::info!("Learning engine started successfully");
         }
 
-        tracing::info!("IchimiServer initialization complete");
+        tracing::info!("VantageServer initialization complete");
 
         // CI監視を初期化（2回目の初期化）
         let ci_monitor_2 = Arc::new(CiMonitor::new(None, Some(30)));
@@ -108,7 +108,7 @@ impl IchimiServer {
 
     /// サーバー終了時の処理
     pub async fn shutdown(&self) -> std::result::Result<(), String> {
-        tracing::info!("Shutting down IchimiServer");
+        tracing::info!("Shutting down VantageServer");
 
         // シャットダウン時にプロセス状態を保存（YAMLスナップショット）
         self.process_manager
@@ -832,7 +832,7 @@ impl IchimiServer {
         Ok(CallToolResult::success(vec![Content::text(json)]))
     }
 
-    #[tool(description = "Open the Ichimi web console in your browser")]
+    #[tool(description = "Open the Vantage web console in your browser")]
     async fn open_web_console(
         &self,
         Parameters(request): Parameters<messages::OpenWebConsoleRequest>,
@@ -864,7 +864,7 @@ impl IchimiServer {
                 // Note: In MCP context, we cannot spawn a long-running web server
                 // We should guide the user to run it separately
                 Ok(CallToolResult::success(vec![Content::text(format!(
-                    "Web console is not running. Please start Ichimi with web mode:\n\
+                    "Web console is not running. Please start Vantage with web mode:\n\
                      \n\
                      ichimi --web-only --web-port {port}\n\
                      \n\
@@ -879,21 +879,21 @@ impl IchimiServer {
 }
 
 #[tool_handler]
-impl ServerHandler for IchimiServer {
+impl ServerHandler for VantageServer {
     fn get_info(&self) -> ServerInfo {
         tracing::info!("MCP client requesting server info");
         let info = ServerInfo {
             protocol_version: ProtocolVersion::V_2024_11_05,
             capabilities: ServerCapabilities::builder().enable_tools().build(),
             server_info: Implementation {
-                name: "ichimi-server".to_string(),
+                name: "vantage-mcp".to_string(),
                 version: env!("CARGO_PKG_VERSION").to_string(),
-                title: Some("Ichimi Server".to_string()),
-                website_url: Some("https://github.com/chronista-club/ichimi-server".to_string()),
+                title: Some("Vantage Server".to_string()),
+                website_url: Some("https://github.com/chronista-club/vantage-mcp".to_string()),
                 icons: None,
             },
             instructions: Some(
-                "Ichimi Server - A powerful process management server for Claude Code via MCP."
+                "Vantage Server - A powerful process management server for Claude Code via MCP."
                     .to_string(),
             ),
         };

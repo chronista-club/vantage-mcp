@@ -10,10 +10,10 @@
 #[cfg(feature = "browser-test")]
 mod browser_tests {
     use headless_chrome::{Browser, LaunchOptions};
-    use ichimi_persistence::PersistenceManager;
-    use ichimi::process::ProcessManager;
-    use ichimi::web::api::create_api_routes;
-    use ichimi::web::server::AppState;
+    use vantage_persistence::PersistenceManager;
+    use vantage::process::ProcessManager;
+    use vantage::web::api::create_api_routes;
+    use vantage::web::server::AppState;
     use std::sync::Arc;
     use std::time::Duration;
 
@@ -47,7 +47,7 @@ mod browser_tests {
         // タイトルを確認
         let title = tab.get_title().expect("Failed to get title");
         assert!(
-            title.contains("Ichimi") || title.contains("Dashboard"),
+            title.contains("Vantage") || title.contains("Dashboard"),
             "Unexpected page title: {}",
             title
         );

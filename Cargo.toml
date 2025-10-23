@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/ichimi", "crates/ichimi-persistence", "crates/ichimi-mcp"]
+members = ["crates/vantage", "crates/vantage-persistence", "crates/vantage-mcp"]
 resolver = "2"
 
 [workspace.package]
@@ -7,7 +7,7 @@ version = "0.2.3"
 authors = ["mito@chronista.club"]
 edition = "2024"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/chronista-club/ichimi-server"
+repository = "https://github.com/chronista-club/vantage-mcp"
 
 [workspace.dependencies]
 tokio = { version = "1.45", features = ["full"] }

@@ -25,7 +25,7 @@ export const useSettingsStore = defineStore('settings', () => {
     try {
       const serverSettings = await apiClient.getSettings();
       // Preserve local theme preference if it exists
-      const localTheme = localStorage.getItem('ichimi-theme') as 'light' | 'dark' | null;
+      const localTheme = localStorage.getItem('vantage-theme') as 'light' | 'dark' | null;
       if (localTheme) {
         serverSettings.theme = localTheme;
       }
@@ -74,7 +74,7 @@ export const useSettingsStore = defineStore('settings', () => {
   function setViewMode(mode: 'card' | 'table') {
     viewMode.value = mode;
     // Persist to localStorage
-    localStorage.setItem('ichimi-view-mode', mode);
+    localStorage.setItem('vantage-view-mode', mode);
   }
 
   function applyTheme(theme: 'light' | 'dark') {
@@ -89,12 +89,12 @@ export const useSettingsStore = defineStore('settings', () => {
     }
     
     // Store preference
-    localStorage.setItem('ichimi-theme', theme);
+    localStorage.setItem('vantage-theme', theme);
   }
 
   function initializeSettings() {
     // Load theme from localStorage
-    const savedTheme = localStorage.getItem('ichimi-theme') as 'light' | 'dark' | null;
+    const savedTheme = localStorage.getItem('vantage-theme') as 'light' | 'dark' | null;
     if (savedTheme) {
       settings.value.theme = savedTheme;
       applyTheme(savedTheme);
@@ -107,7 +107,7 @@ export const useSettingsStore = defineStore('settings', () => {
     }
     
     // Load view mode from localStorage
-    const savedViewMode = localStorage.getItem('ichimi-view-mode') as 'card' | 'table' | null;
+    const savedViewMode = localStorage.getItem('vantage-view-mode') as 'card' | 'table' | null;
     if (savedViewMode) {
       viewMode.value = savedViewMode;
     }
@@ -121,7 +121,7 @@ export const useSettingsStore = defineStore('settings', () => {
   if (window.matchMedia) {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     mediaQuery.addEventListener('change', (e) => {
-      if (!localStorage.getItem('ichimi-theme')) {
+      if (!localStorage.getItem('vantage-theme')) {
         const theme = e.matches ? 'dark' : 'light';
         settings.value.theme = theme;
         applyTheme(theme);

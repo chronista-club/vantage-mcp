@@ -1,8 +1,8 @@
-# Ichimi Server Web UI 設計ドキュメント
+# Vantage Server Web UI 設計ドキュメント
 
 ## 概要
 
-Ichimi ServerのWebダッシュボードは、プロセス管理のための直感的なユーザーインターフェースを提供します。Vue 3 + TypeScript + Viteをベースとした、モダンでレスポンシブなシングルページアプリケーション（SPA）です。
+Vantage ServerのWebダッシュボードは、プロセス管理のための直感的なユーザーインターフェースを提供します。Vue 3 + TypeScript + Viteをベースとした、モダンでレスポンシブなシングルページアプリケーション（SPA）です。
 
 ### 目的
 
@@ -404,7 +404,7 @@ export default defineConfig({
 - コンポーネントのunmountedで`stopAutoRefresh()`を呼んでいるか確認
 
 **APIエラー**
-- サーバーが起動しているか確認（`cargo run --bin ichimi -- --web`）
+- サーバーが起動しているか確認（`cargo run --bin vantage -- --web`）
 - CORSエラーの場合、サーバー側の設定を確認
 
 ## 参考リンク

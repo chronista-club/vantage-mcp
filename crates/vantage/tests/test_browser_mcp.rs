@@ -1,11 +1,11 @@
 /// ブラウザE2Eテスト（MCP Chrome DevTools版）
 ///
 /// Chrome DevTools MCPサーバーを使用してWebダッシュボードの動作を検証
-/// 実際のIchimiサーバーを起動し、ブラウザで操作をテストする
+/// 実際のVantageサーバーを起動し、ブラウザで操作をテストする
 ///
 /// 前提条件：
 /// - Claude Codeでchrome-devtools MCPサーバーが利用可能であること
-/// - Ichimiサーバーが実行可能であること
+/// - Vantageサーバーが実行可能であること
 ///
 /// 実行方法：
 /// このテストは手動実行を想定しています。
@@ -18,9 +18,9 @@ use std::time::Duration;
 ///
 /// このテストはClaude Codeのセッション内でMCPツールを使って実行します。
 ///
-/// ## 手順1: Ichimiサーバーを起動
+/// ## 手順1: Vantageサーバーを起動
 /// ```bash
-/// cargo run --bin ichimi -- --web --web-port 12700
+/// cargo run --bin vantage -- --web --web-port 12700
 /// ```
 ///
 /// ## 手順2: ブラウザページを開く（MCPツール使用）
@@ -37,7 +37,7 @@ use std::time::Duration;
 /// ```
 ///
 /// 期待される内容：
-/// - ページタイトルに "Ichimi" または "Dashboard" が含まれる
+/// - ページタイトルに "Vantage" または "Dashboard" が含まれる
 /// - id="app" の要素が存在する
 /// - プロセス一覧テーブルが表示される
 ///
@@ -81,13 +81,13 @@ use std::time::Duration;
 
 #[test]
 fn test_browser_mcp_instructions() {
-    println!("=== Ichimi Browser E2E Test (MCP版) ===");
+    println!("=== Vantage Browser E2E Test (MCP版) ===");
     println!();
     println!("このテストはMCPツールを使った手動実行を想定しています。");
     println!("詳細な手順はソースコードのドキュメントを参照してください。");
     println!();
     println!("手順概要：");
-    println!("1. cargo run --bin ichimi -- --web --web-port 12700");
+    println!("1. cargo run --bin vantage -- --web --web-port 12700");
     println!("2. mcp__chrome-devtools__new_page で http://localhost:12700 を開く");
     println!("3. mcp__chrome-devtools__take_snapshot でダッシュボードを確認");
     println!("4. curlでプロセスを作成");
@@ -112,7 +112,7 @@ mod mcp_automation {
         // サーバー起動
         // 注: 実際のテストでは、別プロセスでサーバーを起動する必要があります
         println!(
-            "Ichimiサーバーを起動してください: cargo run --bin ichimi -- --web --web-port 12700"
+            "Vantageサーバーを起動してください: cargo run --bin vantage -- --web --web-port 12700"
         );
 
         // 待機

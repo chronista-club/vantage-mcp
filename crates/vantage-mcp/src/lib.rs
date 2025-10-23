@@ -1,4 +1,4 @@
-//! Ichimi MCP (Model Context Protocol) クレート
+//! Vantage MCP (Model Context Protocol) クレート
 //!
 //! MCPプロトコル関連の型定義と実装を提供します。
 

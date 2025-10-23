@@ -1,5 +1,5 @@
 #!/bin/bash
-# Local install script for ichimi-server
+# Local install script for vantage-server
 
 set -e
 
@@ -11,10 +11,10 @@ NC='\033[0m' # No Color
 
 # Configuration
 INSTALL_DIR="$HOME/.local/bin"
-BINARY_NAME="ichimi"
+BINARY_NAME="vantage"
 BUILD_MODE="${1:-release}"
 
-echo -e "${YELLOW}🚀 Installing ichimi-server locally...${NC}"
+echo -e "${YELLOW}🚀 Installing vantage-server locally...${NC}"
 
 # Create install directory if it doesn't exist
 if [ ! -d "$INSTALL_DIR" ]; then
@@ -58,15 +58,15 @@ if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
     echo -e "${GREEN}export PATH=\"\$PATH:$INSTALL_DIR\"${NC}"
 fi
 
-echo -e "${GREEN}✅ Successfully installed ichimi-server!${NC}"
+echo -e "${GREEN}✅ Successfully installed vantage-server!${NC}"
 echo -e "Version: $VERSION"
 echo -e "Location: $INSTALL_DIR/$BINARY_NAME"
 echo -e ""
-echo -e "You can now run: ${GREEN}ichimi${NC}"
+echo -e "You can now run: ${GREEN}vantage${NC}"
 
 # Optional: Show current installation info
-if command -v ichimi &> /dev/null; then
-    CURRENT_PATH=$(which ichimi)
+if command -v vantage &> /dev/null; then
+    CURRENT_PATH=$(which vantage)
     if [ "$CURRENT_PATH" != "$INSTALL_DIR/$BINARY_NAME" ]; then
         echo -e "${YELLOW}Note: Another version exists at: $CURRENT_PATH${NC}"
     fi

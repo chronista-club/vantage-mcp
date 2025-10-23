@@ -2,7 +2,7 @@
 
 use thiserror::Error;
 
-/// Ichimi MCPのエラー型
+/// Vantage MCPのエラー型
 #[derive(Error, Debug)]
 pub enum Error {
     /// 一般的なエラー
