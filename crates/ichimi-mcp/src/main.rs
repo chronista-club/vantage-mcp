@@ -25,7 +25,7 @@ struct Cli {
     web_only: bool,
 
     /// Webダッシュボードのポートを設定
-    #[arg(long, default_value_t = 13000)]
+    #[arg(long, default_value_t = 12700)]
     web_port: u16,
 
     /// Webダッシュボード用のブラウザを自動的に開かない
