@@ -1,6 +1,6 @@
 <template>
   <div class="btn-list">
-    <button 
+    <button
       @click="handleStart"
       class="btn btn-green"
       :class="{ 'btn-sm': small }"
@@ -8,10 +8,10 @@
       :title="startTooltip"
     >
       <IconPlayerPlay v-if="!small || !iconOnly" />
-      <span v-if="!iconOnly" class="ms-1">Start</span>
+      <span v-if="!iconOnly" class="ms-1">{{ t('process.actions.start') }}</span>
     </button>
-    
-    <button 
+
+    <button
       @click="handleStop"
       class="btn btn-yellow"
       :class="{ 'btn-sm': small }"
@@ -19,10 +19,10 @@
       :title="stopTooltip"
     >
       <IconPlayerStop v-if="!small || !iconOnly" />
-      <span v-if="!iconOnly" class="ms-1">Stop</span>
+      <span v-if="!iconOnly" class="ms-1">{{ t('process.actions.stop') }}</span>
     </button>
-    
-    <button 
+
+    <button
       @click="handleRemove"
       class="btn btn-red"
       :class="{ 'btn-sm': small }"
@@ -30,24 +30,25 @@
       :title="removeTooltip"
     >
       <IconTrash v-if="!small || !iconOnly" />
-      <span v-if="!iconOnly" class="ms-1">Remove</span>
+      <span v-if="!iconOnly" class="ms-1">{{ t('process.actions.remove') }}</span>
     </button>
-    
-    <button 
+
+    <button
       v-if="showOutput"
       @click="handleShowOutput"
       class="btn btn-ghost-secondary"
       :class="{ 'btn-sm': small }"
-      title="Show Output"
+      :title="t('process.actions.showOutput')"
     >
       <IconTerminal />
-      <span v-if="!iconOnly" class="ms-1">Output</span>
+      <span v-if="!iconOnly" class="ms-1">{{ t('process.actions.output') }}</span>
     </button>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { IconPlayerPlay, IconPlayerStop, IconTrash, IconTerminal } from '@tabler/icons-vue';
 import type { ProcessInfo } from '@/types';
 import { isRunning, isNotStarted } from '@/types';
@@ -65,6 +66,8 @@ const props = withDefaults(defineProps<Props>(), {
   showOutput: false,
 });
 
+const { t } = useI18n();
+
 const emit = defineEmits<{
   start: [id: string];
   stop: [id: string];
@@ -81,21 +84,21 @@ const canStop = computed(() => isRunning(props.process.state));
 const canRemove = computed(() => !isRunning(props.process.state));
 
 const startTooltip = computed(() => {
-  if (starting.value) return 'Starting...';
-  if (!canStart.value) return 'Process is already running';
-  return 'Start Process';
+  if (starting.value) return t('process.actions.starting');
+  if (!canStart.value) return t('process.actions.alreadyRunning');
+  return t('process.actions.startProcess');
 });
 
 const stopTooltip = computed(() => {
-  if (stopping.value) return 'Stopping...';
-  if (!canStop.value) return 'Process is not running';
-  return 'Stop Process';
+  if (stopping.value) return t('process.actions.stopping');
+  if (!canStop.value) return t('process.actions.notRunning');
+  return t('process.actions.stopProcess');
 });
 
 const removeTooltip = computed(() => {
-  if (removing.value) return 'Removing...';
-  if (!canRemove.value) return 'Cannot remove running process';
-  return 'Remove Process';
+  if (removing.value) return t('process.actions.removing');
+  if (!canRemove.value) return t('process.actions.cannotRemoveRunning');
+  return t('process.actions.removeProcess');
 });
 
 async function handleStart() {
@@ -126,11 +129,11 @@ async function handleStop() {
 
 async function handleRemove() {
   if (!canRemove.value || removing.value) return;
-  
-  if (!confirm(`Are you sure you want to remove process "${props.process.id}"?`)) {
+
+  if (!confirm(t('process.actions.confirmRemove', { id: props.process.id }))) {
     return;
   }
-  
+
   removing.value = true;
   try {
     emit('remove', props.process.id);

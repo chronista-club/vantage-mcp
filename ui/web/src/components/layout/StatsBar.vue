@@ -10,7 +10,7 @@
               <IconChartPie :size="20" :stroke-width="2" />
             </div>
             <div class="stat-content">
-              <div class="stat-label">Total</div>
+              <div class="stat-label">{{ t('stats.total') }}</div>
               <div class="stat-value">{{ processStore.processCount }}</div>
             </div>
           </div>
@@ -21,7 +21,7 @@
               <IconPlayerPlay :size="20" :stroke-width="2" />
             </div>
             <div class="stat-content">
-              <div class="stat-label">Running</div>
+              <div class="stat-label">{{ t('stats.running') }}</div>
               <div class="stat-value">{{ processStore.runningCount }}</div>
             </div>
           </div>
@@ -32,7 +32,7 @@
               <IconPlayerPause :size="20" :stroke-width="2" />
             </div>
             <div class="stat-content">
-              <div class="stat-label">Stopped</div>
+              <div class="stat-label">{{ t('stats.stopped') }}</div>
               <div class="stat-value">{{ processStore.stoppedCount }}</div>
             </div>
           </div>
@@ -43,7 +43,7 @@
               <IconAlertCircle :size="20" :stroke-width="2" />
             </div>
             <div class="stat-content">
-              <div class="stat-label">Failed</div>
+              <div class="stat-label">{{ t('stats.failed') }}</div>
               <div class="stat-value">{{ processStore.failedCount }}</div>
             </div>
           </div>
@@ -55,7 +55,7 @@
             @click="refreshProcesses"
             class="action-btn action-btn-icon"
             :class="{ 'action-btn-loading': processStore.loading }"
-            title="Refresh"
+            :title="t('stats.refresh')"
             :disabled="processStore.loading"
           >
             <IconRefresh :size="18" :stroke-width="2" />
@@ -65,10 +65,10 @@
             @click="addTestProcesses"
             class="action-btn action-btn-secondary"
             :disabled="addingTestProcess"
-            title="Add test processes for demo/testing"
+            :title="t('stats.addTest')"
           >
             <IconTestPipe :size="18" :stroke-width="2" />
-            <span class="action-label">Add Test</span>
+            <span class="action-label">{{ t('stats.addTest') }}</span>
           </button>
 
           <button
@@ -77,7 +77,7 @@
             v-if="templateStore.templateCount > 0"
           >
             <IconPlus :size="18" :stroke-width="2" />
-            <span class="action-label">New Process</span>
+            <span class="action-label">{{ t('stats.newProcess') }}</span>
           </button>
         </div>
       </div>
@@ -88,6 +88,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import {
   IconRefresh,
   IconTestPipe,
@@ -103,6 +104,7 @@ import { useTemplateStore } from '@/stores/template';
 const router = useRouter();
 const processStore = useProcessStore();
 const templateStore = useTemplateStore();
+const { t } = useI18n();
 
 const addingTestProcess = ref(false);
 

@@ -13,6 +13,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const loading = ref(false);
   const error = ref<string | null>(null);
   const viewMode = ref<'card' | 'table'>('card');
+  const locale = ref<'ja' | 'en'>('ja');
 
   // Computed
   const isDarkMode = computed(() => settings.value.theme === 'dark');
@@ -77,6 +78,12 @@ export const useSettingsStore = defineStore('settings', () => {
     localStorage.setItem('vantage-view-mode', mode);
   }
 
+  function setLocale(newLocale: 'ja' | 'en') {
+    locale.value = newLocale;
+    // Persist to localStorage
+    localStorage.setItem('vantage-locale', newLocale);
+  }
+
   function applyTheme(theme: 'light' | 'dark') {
     const html = document.documentElement;
     
@@ -105,11 +112,21 @@ export const useSettingsStore = defineStore('settings', () => {
       settings.value.theme = theme;
       applyTheme(theme);
     }
-    
+
     // Load view mode from localStorage
     const savedViewMode = localStorage.getItem('vantage-view-mode') as 'card' | 'table' | null;
     if (savedViewMode) {
       viewMode.value = savedViewMode;
+    }
+
+    // Load locale from localStorage
+    const savedLocale = localStorage.getItem('vantage-locale') as 'ja' | 'en' | null;
+    if (savedLocale) {
+      locale.value = savedLocale;
+    } else {
+      // Check browser language
+      const browserLang = navigator.language.split('-')[0];
+      locale.value = browserLang === 'en' ? 'en' : 'ja';
     }
   }
 
@@ -135,16 +152,18 @@ export const useSettingsStore = defineStore('settings', () => {
     loading,
     error,
     viewMode,
-    
+    locale,
+
     // Computed
     isDarkMode,
     refreshIntervalSeconds,
-    
+
     // Actions
     loadSettings,
     updateSettings,
     toggleTheme,
     setViewMode,
+    setLocale,
     applyTheme,
     initializeSettings,
     clearError,

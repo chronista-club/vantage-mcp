@@ -37,11 +37,11 @@
         </div>
         <div v-if="hasEnvVars" class="meta-item">
           <IconVariable :size="16" :stroke-width="2" class="meta-icon" />
-          <span class="meta-text">{{ envVarCount }} env var{{ envVarCount !== 1 ? 's' : '' }}</span>
+          <span class="meta-text">{{ t('process.card.envVars', { count: envVarCount }) }}</span>
         </div>
         <div v-if="pid" class="meta-item">
           <IconHash :size="16" :stroke-width="2" class="meta-icon" />
-          <span class="meta-text">PID: {{ pid }}</span>
+          <span class="meta-text">{{ t('process.card.pid') }}: {{ pid }}</span>
         </div>
       </div>
     </div>
@@ -50,6 +50,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { IconFolder, IconVariable, IconHash } from '@tabler/icons-vue';
 import type { ProcessInfo } from '@/types';
 import { isRunning, isStopped, isFailed } from '@/types';
@@ -64,6 +65,7 @@ interface Props {
 const props = defineProps<Props>();
 
 const processStore = useProcessStore();
+const { t } = useI18n();
 
 const commandLine = computed(() => {
   const args = props.process.args.join(' ');

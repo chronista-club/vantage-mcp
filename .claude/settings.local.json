@@ -51,7 +51,13 @@
       "Bash(cargo run:*)",
       "Bash(cargo clean:*)",
       "Bash(./target/release/vantagemcp:*)",
-      "Bash(git grep:*)"
+      "Bash(git grep:*)",
+      "Bash(git remote:*)",
+      "Bash(gh repo rename:*)",
+      "Bash(npm run build:*)",
+      "Bash(mise tasks:*)",
+      "Bash(mise run:*)",
+      "Bash(bun add:*)"
     ],
     "deny": [],
     "ask": []

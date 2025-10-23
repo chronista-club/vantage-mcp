@@ -1,0 +1,49 @@
+{
+  "header": {
+    "brandName": "Vantage",
+    "brandSubtitle": "MCP サーバー",
+    "themeSwitch": "{mode}モードに切り替え",
+    "settings": "設定"
+  },
+  "navigation": {
+    "processes": "プロセス",
+    "templates": "テンプレート",
+    "clipboard": "クリップボード"
+  },
+  "stats": {
+    "total": "合計",
+    "running": "実行中",
+    "stopped": "停止中",
+    "failed": "失敗",
+    "refresh": "更新",
+    "addTest": "テスト追加",
+    "newProcess": "新規プロセス"
+  },
+  "process": {
+    "card": {
+      "pid": "PID",
+      "envVars": "{count} 個の環境変数"
+    },
+    "actions": {
+      "start": "開始",
+      "stop": "停止",
+      "remove": "削除",
+      "showOutput": "出力を表示",
+      "output": "出力",
+      "starting": "開始中...",
+      "stopping": "停止中...",
+      "removing": "削除中...",
+      "alreadyRunning": "プロセスは既に実行中です",
+      "notRunning": "プロセスは実行されていません",
+      "cannotRemoveRunning": "実行中のプロセスは削除できません",
+      "startProcess": "プロセスを開始",
+      "stopProcess": "プロセスを停止",
+      "removeProcess": "プロセスを削除",
+      "confirmRemove": "プロセス「{id}」を削除してもよろしいですか？"
+    }
+  },
+  "theme": {
+    "light": "ライト",
+    "dark": "ダーク"
+  }
+}
