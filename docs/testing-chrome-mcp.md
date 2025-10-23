@@ -1,8 +1,8 @@
-# Ichimi Browser E2Eテスト - Chrome MCP版（実行結果）
+# Vantage Browser E2Eテスト - Chrome MCP版（実行結果）
 
 ## テスト概要
 
-Chrome DevTools MCPサーバーを使用したIchimi Webダッシュボードの統合E2Eテストの実行結果です。
+Chrome DevTools MCPサーバーを使用したVantage Webダッシュボードの統合E2Eテストの実行結果です。
 
 ## テスト日時
 
@@ -10,7 +10,7 @@ Chrome DevTools MCPサーバーを使用したIchimi Webダッシュボードの
 
 ## テスト環境
 
-- Ichimi Server バージョン: 0.2.2
+- Vantage Server バージョン: 0.2.2
 - Chrome DevTools MCP: 利用可能
 - ポート: 12700
 
@@ -35,7 +35,7 @@ Chrome DevTools MCPサーバーを使用したIchimi Webダッシュボードの
 
 ### 1. サーバー起動
 ```bash
-cargo run --bin ichimi -- --web --web-port 12700
+cargo run --bin vantage -- --web --web-port 12700
 ```
 
 結果: 正常起動、http://127.0.0.1:12700 でアクセス可能
@@ -54,7 +54,7 @@ MCPツール: `mcp__chrome-devtools__new_page`
 MCPツール: `mcp__chrome-devtools__take_snapshot`
 
 確認できた要素:
-- ✅ ヘッダー: "🚀 Ichimi Server"
+- ✅ ヘッダー: "🚀 Vantage Server"
 - ✅ ナビゲーション: Dashboard, Processes, Templates, Clipboard
 - ✅ 統計情報: TOTAL 3, RUNNING 1, STOPPED 0, FAILED 0
 - ✅ プロセス一覧（既存プロセス3つ）
@@ -180,7 +180,7 @@ cd ../../
 cargo build --release
 
 # 3. サーバー起動
-cargo run --bin ichimi -- --web --web-port 12700
+cargo run --bin vantage -- --web --web-port 12700
 
 # 4. Chrome MCPでE2Eテスト実行
 # （Claude Codeセッション内で手順に従う）
@@ -202,4 +202,4 @@ Chrome MCP DevToolsを使用したブラウザE2Eテストは非常に効果的�
 2. 重要な機能変更時にはE2Eテストを実施
 3. スクリーンショットをドキュメントに保存してリグレッション検出に活用
 
-Chrome MCP DevToolsは、Ichimiの品質保証において非常に有用なツールであることが実証されました。
+Chrome MCP DevToolsは、Vantageの品質保証において非常に有用なツールであることが実証されました。

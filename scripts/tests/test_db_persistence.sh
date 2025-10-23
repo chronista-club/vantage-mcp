@@ -5,12 +5,12 @@
 echo "=== Database Persistence Test ==="
 
 # テスト用ディレクトリ
-TEST_DIR="/tmp/ichimi_test_$$"
+TEST_DIR="/tmp/vantage_test_$$"
 mkdir -p "$TEST_DIR"
 
 cleanup() {
     echo "Cleaning up..."
-    pkill -f "ichimi.*--web" 2>/dev/null
+    pkill -f "vantagemcp.*--web" 2>/dev/null
     rm -rf "$TEST_DIR"
 }
 trap cleanup EXIT
@@ -18,9 +18,9 @@ trap cleanup EXIT
 # エクスポートファイル
 EXPORT_FILE="$TEST_DIR/test_export.surql"
 
-echo "1. Starting ichimi server..."
-ICHIMI_EXPORT_FILE="$EXPORT_FILE" RUST_LOG=info ./target/release/ichimi --web-only --no-open --web-port 12720 &
-ICHIMI_PID=$!
+echo "1. Starting vantage server..."
+VANTAGE_EXPORT_FILE="$EXPORT_FILE" RUST_LOG=info ./target/release/vantagemcp --web-only --no-open --web-port 12720 &
+VANTAGE_PID=$!
 sleep 2
 
 echo "2. Creating test process..."
@@ -29,8 +29,8 @@ curl -s -X POST http://localhost:12720/api/processes \
     -d '{"id": "test-db-process", "command": "echo", "args": ["Database Test"], "env": {"TEST": "123"}}' | jq
 
 echo "3. Exporting database..."
-kill -TERM $ICHIMI_PID
-wait $ICHIMI_PID 2>/dev/null
+kill -TERM $VANTAGE_PID
+wait $VANTAGE_PID 2>/dev/null
 
 if [ -f "$EXPORT_FILE" ]; then
     echo "✓ Export file created"
@@ -42,8 +42,8 @@ else
 fi
 
 echo "4. Re-importing database..."
-ICHIMI_IMPORT_FILE="$EXPORT_FILE" RUST_LOG=info ./target/release/ichimi --web-only --no-open --web-port 12721 &
-ICHIMI_PID=$!
+VANTAGE_IMPORT_FILE="$EXPORT_FILE" RUST_LOG=info ./target/release/vantagemcp --web-only --no-open --web-port 12721 &
+VANTAGE_PID=$!
 sleep 2
 
 echo "5. Verifying imported data..."
@@ -57,7 +57,7 @@ else
     exit 1
 fi
 
-kill -TERM $ICHIMI_PID
-wait $ICHIMI_PID 2>/dev/null
+kill -TERM $VANTAGE_PID
+wait $VANTAGE_PID 2>/dev/null
 
 echo "✓ Database persistence test passed"

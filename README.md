@@ -1,4 +1,4 @@
-# Ichimi Server
+# Vantage Server
 
 **English** | [日本語](./docs/README.ja.md)
 
@@ -17,7 +17,7 @@ A powerful process management server for Claude Code via the Model Context Proto
 - 📊 **Real-time Logging**: Capture and stream stdout/stderr outputs
 - 🔍 **Status Monitoring**: Track process states and metrics
 - 🎯 **Flexible Filtering**: Search processes by state or pattern
-- 💾 **Persistence**: Configuration management in KDL format (`.ichimi/processes.kdl`)
+- 💾 **Persistence**: Configuration management in KDL format (`.vantage/processes.kdl`)
 - 🔄 **Auto-start**: Automatic process startup with `auto_start` flag
 
 ### Web Dashboard
@@ -41,24 +41,24 @@ A powerful process management server for Claude Code via the Model Context Proto
 
 ```bash
 # Install from GitHub repository
-cargo install --git https://github.com/chronista-club/ichimi-server --tag v0.2.0
+cargo install --git https://github.com/chronista-club/vantage-server --tag v0.2.0
 
 # Or install latest from main branch
-cargo install --git https://github.com/chronista-club/ichimi-server
+cargo install --git https://github.com/chronista-club/vantage-server
 ```
 
 ### From Source
 
 ```bash
 # Clone the repository
-git clone https://github.com/chronista-club/ichimi-server
-cd ichimi-server
+git clone https://github.com/chronista-club/vantage-server
+cd vantage-server
 
 # Release build
 cargo build --release
 
 # Binary will be at:
-# target/release/ichimi
+# target/release/vantage
 ```
 
 ## Configuration
@@ -70,12 +70,12 @@ Add the server to your `.mcp.json` or Claude Code settings:
 ```json
 {
     "mcpServers": {
-        "ichimi": {
+        "vantage": {
             "type": "stdio",
-            "command": "ichimi",
+            "command": "vantage",
             "env": {
                 "RUST_LOG": "info",
-                "ICHIMI_AUTO_EXPORT_INTERVAL": "300"
+                "VANTAGE_AUTO_EXPORT_INTERVAL": "300"
             }
         }
     }
@@ -89,7 +89,7 @@ In Claude Code, run:
 /mcp
 ```
 
-You should see "ichimi" server as "connected".
+You should see "vantage" server as "connected".
 
 ## Usage
 
@@ -190,12 +190,12 @@ for process in list_processes(filter={"name_pattern": "worker"}):
 
 ### KDL Configuration Files
 
-Ichimi Server uses [KDL (Cuddly Data Language)](https://kdl.dev/) format for process persistence. Configuration files are automatically saved to `.ichimi/processes.kdl`.
+Vantage Server uses [KDL (Cuddly Data Language)](https://kdl.dev/) format for process persistence. Configuration files are automatically saved to `.vantage/processes.kdl`.
 
 #### Example KDL Configuration
 
 ```kdl
-// Ichimi Server Process Configuration
+// Vantage Server Process Configuration
 meta {
     version "1.0.0"
 }
@@ -232,12 +232,12 @@ Process configurations can be exported/imported in YAML format for backup and mi
 
 ```bash
 # Export processes to YAML file
-curl http://127.0.0.1:12700/api/export > ichimi_export.yaml
+curl http://127.0.0.1:12700/api/export > vantage_export.yaml
 
 # Import processes from YAML file
 curl -X POST http://127.0.0.1:12700/api/import \
   -H "Content-Type: application/yaml" \
-  -d @ichimi_export.yaml
+  -d @vantage_export.yaml
 ```
 
 ## 🌐 Web Dashboard
@@ -246,13 +246,13 @@ curl -X POST http://127.0.0.1:12700/api/import \
 
 ```bash
 # Start with web dashboard (default port 12700)
-ichimi --web
+vantage --web
 
 # Specify custom port
-ichimi --web --web-port 8080
+vantage --web --web-port 8080
 
 # Web dashboard only (no MCP server)
-ichimi --web-only
+vantage --web-only
 ```
 
 Open your browser to `http://localhost:12700`
@@ -311,13 +311,13 @@ RUST_LOG=debug cargo run
 ### Project Structure
 
 ```
-ichimi-server/
+vantage-server/
 ├── crates/
-│   ├── ichimi/                 # Main server crate
+│   ├── vantage/                 # Main server crate
 │   │   ├── src/
 │   │   │   ├── lib.rs          # Core server implementation
 │   │   │   ├── bin/
-│   │   │   │   └── ichimi_server.rs  # Binary entry point
+│   │   │   │   └── vantage_server.rs  # Binary entry point
 │   │   │   ├── process/        # Process management
 │   │   │   │   ├── mod.rs
 │   │   │   │   ├── manager.rs
@@ -331,7 +331,7 @@ ichimi-server/
 │   │   │   ├── ci/             # CI/CD monitoring
 │   │   │   └── events/         # Event system
 │   │   └── tests/
-│   └── ichimi-persistence/     # Persistence layer
+│   └── vantage-persistence/     # Persistence layer
 │       ├── src/
 │       │   ├── lib.rs          # Persistence interface
 │       │   ├── kdl/            # KDL format persistence
@@ -354,7 +354,7 @@ ichimi-server/
 │       ├── tsconfig.json
 │       └── vite.config.ts
 │       ├── dist/               # Production build
-├── .ichimi/                    # Data directory
+├── .vantage/                    # Data directory
 │   └── processes.kdl           # Process config file
 └── examples/                   # Usage examples
 ```
@@ -383,11 +383,11 @@ at your option.
 | Variable | Description | Default |
 |----------|-------------|---------|  
 | `RUST_LOG` | Log level (error, warn, info, debug, trace) | info |
-| `ICHIMI_DATA_DIR` | Directory for data files | ~/.ichimi/data |
-| `ICHIMI_IMPORT_FILE` | File to import on startup | ~/.ichimi/data/processes.yaml |
-| `ICHIMI_EXPORT_FILE` | Export destination on shutdown | ~/.ichimi/data/processes.yaml |
-| `ICHIMI_STOP_ON_SHUTDOWN` | Stop processes on ichimi exit (true/false) | false (continue) |
-| `ICHIMI_AUTO_EXPORT_INTERVAL` | Auto-export interval in seconds | - |
+| `VANTAGE_DATA_DIR` | Directory for data files | ~/.vantage/data |
+| `VANTAGE_IMPORT_FILE` | File to import on startup | ~/.vantage/data/processes.yaml |
+| `VANTAGE_EXPORT_FILE` | Export destination on shutdown | ~/.vantage/data/processes.yaml |
+| `VANTAGE_STOP_ON_SHUTDOWN` | Stop processes on vantage exit (true/false) | false (continue) |
+| `VANTAGE_AUTO_EXPORT_INTERVAL` | Auto-export interval in seconds | - |
 
 ## 🙏 Acknowledgments
 
@@ -401,9 +401,9 @@ at your option.
 ## Support
 
 For issues, questions, or suggestions:
-- Open an issue on [GitHub](https://github.com/chronista-club/ichimi-server/issues)
-- Check the [documentation](https://github.com/chronista-club/ichimi-server/wiki)
+- Open an issue on [GitHub](https://github.com/chronista-club/vantage-server/issues)
+- Check the [documentation](https://github.com/chronista-club/vantage-server/wiki)
 
 ---
 
-*Ichimi Server - Making process management simple and powerful for Claude Code*
+*Vantage Server - Making process management simple and powerful for Claude Code*

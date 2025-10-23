@@ -13,21 +13,21 @@ dir = "ui/web"
 run = "bun run build"
 
 [tasks.web]
-description = "Run Ichimi server with web dashboard"
-run = "RUST_LOG=info cargo run --bin ichimimcp -- --web-only"
+description = "Run Vantage server with web dashboard"
+run = "RUST_LOG=info cargo run --bin vantagemcp -- --web-only"
 
 [tasks.dev]
-description = "Build web console and run Ichimi server"
+description = "Build web console and run Vantage server"
 depends = ["build-web"]
-run = "RUST_LOG=info cargo run --bin ichimimcp -- --web-only"
+run = "RUST_LOG=info cargo run --bin vantagemcp -- --web-only"
 
 [tasks.dev-watch]
 description = "Development server with auto-reload (Rust + Web)"
 run = """
     # Kill any existing processes
-    pkill -f 'cargo run.*ichimimcp' || true
+    pkill -f 'cargo run.*vantagemcp' || true
     # Start cargo-watch for Rust code auto-reload
-    cargo watch -x 'run --bin ichimimcp -- --web-only' &
+    cargo watch -x 'run --bin vantagemcp -- --web-only' &
     # Store PID for cleanup
     CARGO_PID=$!
     echo "Started cargo-watch with PID: $CARGO_PID"
@@ -47,10 +47,10 @@ description = "Build release and install to ~/.local/bin"
 depends = ["build"]
 run = """
     mkdir -p ~/.local/bin
-    cp target/release/ichimimcp ~/.local/bin/
-    chmod +x ~/.local/bin/ichimimcp
-    echo "✅ Installed to ~/.local/bin/ichimimcp"
-    ~/.local/bin/ichimimcp --version
+    cp target/release/vantagemcp ~/.local/bin/
+    chmod +x ~/.local/bin/vantagemcp
+    echo "✅ Installed to ~/.local/bin/vantagemcp"
+    ~/.local/bin/vantagemcp --version
 """
 
 [tasks.install-debug]
@@ -58,10 +58,10 @@ description = "Build debug and install to ~/.local/bin (fast)"
 depends = ["build-debug"]
 run = """
     mkdir -p ~/.local/bin
-    cp target/debug/ichimimcp ~/.local/bin/
-    chmod +x ~/.local/bin/ichimimcp
-    echo "✅ Installed debug build to ~/.local/bin/ichimimcp"
-    ~/.local/bin/ichimimcp --version
+    cp target/debug/vantagemcp ~/.local/bin/
+    chmod +x ~/.local/bin/vantagemcp
+    echo "✅ Installed debug build to ~/.local/bin/vantagemcp"
+    ~/.local/bin/vantagemcp --version
 """
 
 [tasks.build]
@@ -87,12 +87,12 @@ description = "Clean build artifacts"
 run = "cargo clean"
 
 [tasks.uninstall]
-description = "Remove ichimimcp from ~/.local/bin"
+description = "Remove vantagemcp from ~/.local/bin"
 run = """
-    if [ -f ~/.local/bin/ichimimcp ]; then
-        rm -f ~/.local/bin/ichimimcp
-        echo "✅ Uninstalled ichimimcp from ~/.local/bin"
+    if [ -f ~/.local/bin/vantagemcp ]; then
+        rm -f ~/.local/bin/vantagemcp
+        echo "✅ Uninstalled vantagemcp from ~/.local/bin"
     else
-        echo "⚠️  ichimimcp not found in ~/.local/bin"
+        echo "⚠️  vantagemcp not found in ~/.local/bin"
     fi
 """

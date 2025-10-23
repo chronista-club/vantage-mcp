@@ -1,6 +1,6 @@
 # MCP サーバー起動フロー
 
-このドキュメントは、Ichimi MCP サーバーの起動から起動完了までのフローを説明します。
+このドキュメントは、Vantage MCP サーバーの起動から起動完了までのフローを説明します。
 
 ## 起動フロー概要
 
@@ -17,7 +17,7 @@ flowchart TD
     ShowVersion --> End
 
     InitLogging --> LogMode{ログ出力先}
-    LogMode -->|MCPモード| FileLog[ファイルログ<br/>~/.ichimi/logs/]
+    LogMode -->|MCPモード| FileLog[ファイルログ<br/>~/.vantage/logs/]
     LogMode -->|Webモード| StderrLog[標準エラー出力]
 
     FileLog --> InitPM[ProcessManager初期化]
@@ -41,7 +41,7 @@ flowchart TD
     LaunchBrowser --> CheckMCP
 
     CheckMCP{MCPサーバー起動?}
-    CheckMCP -->|Yes| InitServer[IchimiServer初期化]
+    CheckMCP -->|Yes| InitServer[VantageServer初期化]
     CheckMCP -->|No| KeepAlive[プロセス維持ループ]
 
     InitServer --> InitEvent[EventSystem初期化]
@@ -75,7 +75,7 @@ flowchart TD
 起動モードによってログ出力先が変わります：
 
 #### MCP モード（デフォルト）
-- **出力先**: `~/.ichimi/logs/ichimi-mcp-YYYYMMDD-HHMMSS.log`
+- **出力先**: `~/.vantage/logs/vantage-mcp-YYYYMMDD-HHMMSS.log`
 - **理由**: stdio を MCP 通信に使用するため、ログは別ファイルに出力
 - **設定**: ファイルアペンダー、ANSI カラー無効
 
@@ -95,7 +95,7 @@ sequenceDiagram
     Main->>PM: new()
     PM->>Persist: new()
     Persist->>KDL: 初期化
-    KDL->>KDL: ~/.ichimi/processes.kdl 確認
+    KDL->>KDL: ~/.vantage/processes.kdl 確認
     KDL-->>Persist: OK
     Persist-->>PM: Arc<PersistenceManager>
     PM->>PM: HashMap<String, Process> 作成
@@ -105,8 +105,8 @@ sequenceDiagram
 **初期化内容**：
 - `PersistenceManager` の初期化
   - KDL 形式のストレージ初期化
-  - データディレクトリ: `~/.ichimi/`
-  - 設定ファイル: `~/.ichimi/processes.kdl`
+  - データディレクトリ: `~/.vantage/`
+  - 設定ファイル: `~/.vantage/processes.kdl`
 - プロセス管理用 `HashMap` の作成（`Arc<RwLock<HashMap>>`）
 
 ### 4. プロセスリストア
@@ -120,7 +120,7 @@ sequenceDiagram
     participant Persist as PersistenceManager
     participant YAML as YAML File
 
-    Main->>YAML: ~/.ichimi/snapshot.yaml 存在確認
+    Main->>YAML: ~/.vantage/snapshot.yaml 存在確認
     alt ファイル存在
         Main->>PM: restore_yaml_snapshot()
         PM->>Persist: load YAML
@@ -188,14 +188,14 @@ sequenceDiagram
 - RESTful API
 - リアルタイムログ表示
 
-### 7. IchimiServer 初期化
+### 7. VantageServer 初期化
 
 MCP サーバーのコア機能を初期化：
 
 ```mermaid
 sequenceDiagram
     participant Main
-    participant Server as IchimiServer
+    participant Server as VantageServer
     participant Event as EventSystem
     participant Learning as LearningEngine
     participant CI as CiMonitor
@@ -217,7 +217,7 @@ sequenceDiagram
     Server->>Server: tool_router() マクロ実行
     Server->>Server: MCP ツール登録
 
-    Server-->>Main: IchimiServer
+    Server-->>Main: VantageServer
 ```
 
 **初期化コンポーネント**：
@@ -233,7 +233,7 @@ STDIO トランスポートで MCP サーバーを起動：
 ```mermaid
 sequenceDiagram
     participant Main
-    participant Server as IchimiServer
+    participant Server as VantageServer
     participant MCP as MCP Service
     participant Client as Claude Code
 
@@ -269,7 +269,7 @@ sequenceDiagram
 
 ### MCP モード（デフォルト）
 ```bash
-ichimi
+vantage
 ```
 - MCP サーバーのみ起動
 - Claude Code から利用可能
@@ -277,14 +277,14 @@ ichimi
 
 ### MCP + Web モード
 ```bash
-ichimi --web
+vantage --web
 ```
 - MCP サーバーと Web ダッシュボードの両方起動
 - Claude Code と Web UI の両方から管理可能
 
 ### Web のみモード
 ```bash
-ichimi --web-only
+vantage --web-only
 ```
 - Web ダッシュボードのみ起動
 - Claude Code からは利用不可
@@ -295,19 +295,19 @@ ichimi --web-only
 | 変数 | 説明 | デフォルト |
 |------|------|------------|
 | `RUST_LOG` | ログレベル (error, warn, info, debug, trace) | info |
-| `ICHIMI_IMPORT_FILE` | 起動時にインポートするファイル | ~/.ichimi/snapshot.yaml |
-| `ICHIMI_EXPORT_FILE` | シャットダウン時のエクスポート先 | ~/.ichimi/snapshot.yaml |
-| `ICHIMI_DATA_DIR` | データファイル用ディレクトリ | ~/.ichimi/ |
-| `ICHIMI_STOP_ON_SHUTDOWN` | ichimi終了時にプロセスを停止するか（true/false） | false（継続） |
+| `VANTAGE_IMPORT_FILE` | 起動時にインポートするファイル | ~/.vantage/snapshot.yaml |
+| `VANTAGE_EXPORT_FILE` | シャットダウン時のエクスポート先 | ~/.vantage/snapshot.yaml |
+| `VANTAGE_DATA_DIR` | データファイル用ディレクトリ | ~/.vantage/ |
+| `VANTAGE_STOP_ON_SHUTDOWN` | vantage終了時にプロセスを停止するか（true/false） | false（継続） |
 
 ## ディレクトリ構造
 
 ```
-~/.ichimi/
+~/.vantage/
 ├── processes.kdl          # KDL形式のプロセス設定
 ├── snapshot.yaml          # YAMLスナップショット（バックアップ/リストア用）
 ├── logs/                  # ログディレクトリ（MCPモード時）
-│   └── ichimi-mcp-YYYYMMDD-HHMMSS.log
+│   └── vantage-mcp-YYYYMMDD-HHMMSS.log
 └── data/                  # その他のデータファイル
 ```
 
@@ -315,7 +315,7 @@ ichimi --web-only
 
 ## シャットダウンフロー
 
-Ichimi サーバーの終了処理は、管理プロセスのクリーンアップとデータ保存を確実に行います。
+Vantage サーバーの終了処理は、管理プロセスのクリーンアップとデータ保存を確実に行います。
 
 ```mermaid
 flowchart TD
@@ -373,7 +373,7 @@ sequenceDiagram
     Note over Handler: 1. スナップショット作成
     Handler->>PM: create_auto_start_snapshot()
     PM->>PM: auto_start_on_restore=true<br/>のプロセスをフィルタ
-    PM->>PM: ~/.ichimi/snapshot.yaml に保存
+    PM->>PM: ~/.vantage/snapshot.yaml に保存
     PM-->>Handler: OK
 
     Note over Handler: 2. プロセス停止
@@ -422,7 +422,7 @@ sequenceDiagram
    - 次回起動時に自動復元される
 
 2. **プロセス停止**
-   - すべての管理プロセスを停止（環境変数 `ICHIMI_STOP_ON_SHUTDOWN` に関係なく常に実行）
+   - すべての管理プロセスを停止（環境変数 `VANTAGE_STOP_ON_SHUTDOWN` に関係なく常に実行）
    - プロセスグループ単位でシグナル送信（Docker対応）
    - グレースフルシャットダウンを試みた後、必要に応じて強制終了
 
@@ -587,8 +587,8 @@ sequenceDiagram
     Persist-->>PM: OK
 
     Note over User,YAML: 起動時の復元
-    User->>PM: ichimi 起動
-    PM->>YAML: ~/.ichimi/snapshot.yaml 存在確認
+    User->>PM: vantage 起動
+    PM->>YAML: ~/.vantage/snapshot.yaml 存在確認
     alt ファイル存在
         PM->>Persist: restore_yaml_snapshot()
         Persist->>YAML: 読み込み

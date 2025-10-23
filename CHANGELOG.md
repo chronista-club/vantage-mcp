@@ -26,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0-alpha1] - 2025-08-22
 
 ### Added
-- Initial alpha release of Ichimi Server
+- Initial alpha release of Vantage Server
 - Core process management functionality (start, stop, monitor)
 - Real-time stdout/stderr capture with circular buffers
 - SurrealDB-based persistence with in-memory storage

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "=== Testing ichimi shutdown behavior ==="
+echo "=== Testing vantage shutdown behavior ==="
 
 # Cleanup function
 cleanup() {
@@ -13,13 +13,13 @@ cleanup() {
 trap cleanup EXIT
 
 # Build if needed
-echo "Building ichimi..."
+echo "Building vantage..."
 cargo build --release
 
 echo ""
-echo "Starting ichimi with web dashboard..."
-RUST_LOG=info ./target/release/ichimi --web-only --no-open &
-ICHIMI_PID=$!
+echo "Starting vantage with web dashboard..."
+RUST_LOG=info ./target/release/vantagemcp --web-only --no-open &
+VANTAGE_PID=$!
 
 # Wait for server to start
 sleep 2
@@ -38,7 +38,7 @@ done
 EOF
 chmod +x /tmp/test_long_runner.sh
 
-# Use the ichimi CLI to create and start processes
+# Use the vantage CLI to create and start processes
 echo "Creating and starting test processes..."
 curl -X POST http://localhost:12700/api/processes \
   -H "Content-Type: application/json" \
@@ -67,20 +67,20 @@ echo "Checking running processes..."
 ps aux | grep -E "(sleep 9999|test_long_runner)" | grep -v grep
 
 echo ""
-echo "Sending shutdown signal to ichimi (Ctrl+C)..."
-kill -SIGINT $ICHIMI_PID
+echo "Sending shutdown signal to vantage (Ctrl+C)..."
+kill -SIGINT $VANTAGE_PID
 
-# Wait for ichimi to shutdown
+# Wait for vantage to shutdown
 sleep 3
 
 echo ""
-echo "Checking if processes are still running after ichimi shutdown..."
+echo "Checking if processes are still running after vantage shutdown..."
 REMAINING=$(ps aux | grep -E "(sleep 9999|test_long_runner)" | grep -v grep | wc -l)
 
 if [ $REMAINING -eq 0 ]; then
     echo "✅ SUCCESS: All managed processes were properly stopped!"
 else
-    echo "❌ FAILURE: $REMAINING process(es) still running after ichimi shutdown:"
+    echo "❌ FAILURE: $REMAINING process(es) still running after vantage shutdown:"
     ps aux | grep -E "(sleep 9999|test_long_runner)" | grep -v grep
 fi
 

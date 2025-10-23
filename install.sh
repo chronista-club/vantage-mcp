@@ -1,12 +1,12 @@
 #!/bin/bash
 set -e
 
-# Ichimi Server Installation Script
-# Usage: curl -fsSL https://raw.githubusercontent.com/chronista-club/ichimi-server/main/install.sh | bash
+# Vantage Server Installation Script
+# Usage: curl -fsSL https://raw.githubusercontent.com/chronista-club/vantage-mcp/main/install.sh | bash
 
-REPO="chronista-club/ichimi-server"
+REPO="chronista-club/vantage-mcp"
 INSTALL_DIR="${HOME}/.local/bin"
-BINARY_NAME="ichimi"
+BINARY_NAME="vantagemcp"
 
 # Colors for output
 RED='\033[0;31m'
@@ -113,8 +113,8 @@ install_from_source() {
         error "Rust is not installed. Please install Rust first: https://rustup.rs/"
     fi
     
-    info "Installing ichimi-server using cargo..."
-    cargo install --git "https://github.com/${REPO}" --bin ichimi
+    info "Installing vantage-mcp using cargo..."
+    cargo install --git "https://github.com/${REPO}" --bin vantagemcp
     
     info "Successfully installed using cargo"
     return 0
@@ -128,7 +128,7 @@ install_with_homebrew() {
 
 # Main installation flow
 main() {
-    echo "Installing Ichimi Server..."
+    echo "Installing Vantage Server..."
     echo ""
     
     # Try binary release
@@ -141,15 +141,15 @@ main() {
         fi
         echo ""
         info "Installation complete!"
-        info "Run 'ichimi --help' to get started"
+        info "Run 'vantagemcp --help' to get started"
         exit 0
     fi
-    
+
     # Fall back to source installation
     if install_from_source; then
         echo ""
         info "Installation complete!"
-        info "Run 'ichimi --help' to get started"
+        info "Run 'vantagemcp --help' to get started"
         exit 0
     fi
     

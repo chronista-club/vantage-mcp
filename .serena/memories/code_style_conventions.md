@@ -29,7 +29,7 @@
 #### Module Organization
 ```
 crates/
-├── ichimi/           # Main server crate
+├── vantage/           # Main server crate
 │   ├── src/
 │   │   ├── lib.rs    # Core server with MCP tools
 │   │   ├── bin/      # Binary entry points
@@ -38,7 +38,7 @@ crates/
 │   │   ├── messages/ # MCP message types
 │   │   ├── ci/       # CI/CD monitoring
 │   │   └── events/   # Event system
-└── ichimi-persistence/ # Persistence layer
+└── vantage-persistence/ # Persistence layer
     ├── src/
     │   ├── lib.rs    # Persistence interface
     │   ├── kdl/      # KDL format

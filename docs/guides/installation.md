@@ -12,26 +12,26 @@
 
 最新リリースをインストール：
 ```bash
-cargo install --git https://github.com/chronista-club/ichimi-server --tag v0.2.0
+cargo install --git https://github.com/chronista-club/vantage-server --tag v0.2.0
 ```
 
 または最新の開発版：
 ```bash
-cargo install --git https://github.com/chronista-club/ichimi-server
+cargo install --git https://github.com/chronista-club/vantage-server
 ```
 
 ### 方法2: ソースからビルド
 
 ```bash
 # リポジトリをクローン
-git clone https://github.com/chronista-club/ichimi-server.git
-cd ichimi-server
+git clone https://github.com/chronista-club/vantage-server.git
+cd vantage-server
 
 # リリースビルド
 cargo build --release
 
 # インストール
-cargo install --path crates/ichimi
+cargo install --path crates/vantage
 ```
 
 ### 方法3: ローカルインストールスクリプト
@@ -50,8 +50,8 @@ cargo install --path crates/ichimi
 ```json
 {
   "mcpServers": {
-    "ichimi": {
-      "command": "ichimi",
+    "vantage": {
+      "command": "vantage",
       "args": [],
       "env": {}
     }
@@ -66,23 +66,23 @@ cargo install --path crates/ichimi
 export RUST_LOG=info
 
 # 自動エクスポート間隔（秒）
-export ICHIMI_AUTO_EXPORT_INTERVAL=300
+export VANTAGE_AUTO_EXPORT_INTERVAL=300
 
 # データディレクトリ
-export ICHIMI_DATA_DIR=~/.ichimi/data
+export VANTAGE_DATA_DIR=~/.vantage/data
 ```
 
 ## 初回起動
 
 ```bash
 # サーバーを起動
-ichimi
+vantage
 
 # Webダッシュボード付きで起動
-ichimi --web
+vantage --web
 
 # カスタムポートで起動
-ichimi --web --web-port 8080
+vantage --web --web-port 8080
 ```
 
 ## 動作確認
@@ -90,7 +90,7 @@ ichimi --web --web-port 8080
 Claude Code で以下のコマンドを実行：
 
 1. サーバーステータスの確認：
-   - "Check Ichimi server status"
+   - "Check Vantage server status"
 
 2. テストプロセスの作成：
    - "Create a test process that echoes hello world"
@@ -115,9 +115,9 @@ cargo update
 ### Claude Code が認識しない
 
 1. MCP設定ファイルのパスを確認
-2. `ichimi` コマンドがPATHに含まれているか確認：
+2. `vantage` コマンドがPATHに含まれているか確認：
 ```bash
-which ichimi
+which vantage
 ```
 
 3. Claude Code を再起動
@@ -126,17 +126,17 @@ which ichimi
 
 別のポートを指定：
 ```bash
-ichimi --web --web-port 12701
+vantage --web --web-port 12701
 ```
 
 ## アンインストール
 
 ```bash
-cargo uninstall ichimi-server
+cargo uninstall vantage-server
 ```
 
 設定ファイルとデータを削除：
 ```bash
-rm -rf ~/.ichimi
+rm -rf ~/.vantage
 rm ~/.config/claude/mcp.json  # 他のMCPサーバーがある場合は編集
 ```

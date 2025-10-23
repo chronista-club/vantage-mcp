@@ -1,12 +1,12 @@
-# Ichimi Server コードベース構造
+# Vantage Server コードベース構造
 
 ## ディレクトリ構造
 ```
-ichimi-server/
+vantage-server/
 ├── src/
 │   ├── lib.rs              # メインサーバー実装、MCPツールハンドラー
 │   ├── bin/
-│   │   └── ichimi_server.rs # エントリーポイント
+│   │   └── vantage_server.rs # エントリーポイント
 │   ├── messages/           # リクエスト/レスポンスメッセージ
 │   │   ├── basic.rs       # 基本メッセージタイプ
 │   │   ├── process.rs     # プロセス管理リクエスト
@@ -31,7 +31,7 @@ ichimi-server/
 ├── examples/              # サンプルコード
 ├── static/                # Web静的ファイル
 ├── data/                  # データベースファイル
-│   ├── ichimi.db/        # SurrealDB RocksDB
+│   ├── vantage.db/        # SurrealDB RocksDB
 │   └── setup.surql       # DBスキーマ定義
 ├── .claude/              # Claude Code設定
 │   └── CLAUDE.md         # プロジェクト固有の指示

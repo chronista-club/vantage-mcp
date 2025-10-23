@@ -81,7 +81,7 @@ Wait for CI run #12345 to complete
 ### 起動方法
 
 ```bash
-ichimi --web
+vantage --web
 ```
 
 ブラウザで `http://localhost:12700` を開きます。
@@ -111,8 +111,8 @@ Import processes from backup file
 
 環境変数で設定：
 ```bash
-export ICHIMI_AUTO_EXPORT_INTERVAL=300  # 5分ごと
-export ICHIMI_EXPORT_FILE=~/.ichimi/backup.yml
+export VANTAGE_AUTO_EXPORT_INTERVAL=300  # 5分ごと
+export VANTAGE_EXPORT_FILE=~/.vantage/backup.yml
 ```
 
 ## ベストプラクティス

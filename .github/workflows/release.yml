@@ -58,16 +58,16 @@ jobs:
         include:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
-            artifact: ichimi-linux-x86_64
+            artifact: vantagemcp-linux-x86_64
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-latest
-            artifact: ichimi-linux-aarch64
+            artifact: vantagemcp-linux-aarch64
           - target: x86_64-apple-darwin
             os: macos-latest
-            artifact: ichimi-macos-x86_64
+            artifact: vantagemcp-macos-x86_64
           - target: aarch64-apple-darwin
             os: macos-latest
-            artifact: ichimi-macos-aarch64
+            artifact: vantagemcp-macos-aarch64
 
     steps:
       - uses: actions/checkout@v4
@@ -99,7 +99,7 @@ jobs:
       - name: Package
         run: |
           cd target/${{ matrix.target }}/release
-          tar czf ../../../${{ matrix.artifact }}.tar.gz ichimi
+          tar czf ../../../${{ matrix.artifact }}.tar.gz vantagemcp
           cd ../../../
           sha256sum ${{ matrix.artifact }}.tar.gz > ${{ matrix.artifact }}.tar.gz.sha256
       
@@ -151,28 +151,28 @@ jobs:
           files: release-files/*
           body: |
             ## Installation
-            
+
             ### Quick Install (Unix-like systems)
             ```bash
-            curl -fsSL https://raw.githubusercontent.com/chronista-club/ichimi-server/main/install.sh | bash
+            curl -fsSL https://raw.githubusercontent.com/chronista-club/vantage-mcp/main/install.sh | bash
             ```
-            
+
             ### Homebrew (macOS/Linux)
             ```bash
             brew tap chronista-club/tap
-            brew install ichimi-server
+            brew install vantage-mcp
             ```
-            
+
             ### Cargo
             ```bash
-            cargo install --git https://github.com/chronista-club/ichimi-server --bin ichimi
+            cargo install --git https://github.com/chronista-club/vantage-mcp --bin vantagemcp
             ```
-            
+
             ### Manual Download
             Download the appropriate binary for your platform from the assets below.
-            
+
             ## What's Changed
-            * See [CHANGELOG.md](https://github.com/chronista-club/ichimi-server/blob/main/CHANGELOG.md) for details
-            
+            * See [CHANGELOG.md](https://github.com/chronista-club/vantage-mcp/blob/main/CHANGELOG.md) for details
+
             ## Checksums
             SHA256 checksums are provided for each binary.

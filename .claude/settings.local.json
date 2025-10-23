@@ -4,8 +4,8 @@
       "Bash(chmod:*)",
       "Bash(cargo test:*)",
       "Bash(cargo build:*)",
-      "Bash(./target/release/ichimi:*)",
-      "Bash(/Users/makoto/repos/ichimi-server/verify_fix.sh:*)",
+      "Bash(./target/release/vantagemcp:*)",
+      "Bash(/Users/makoto/repos/vantage-mcp/verify_fix.sh:*)",
       "Bash(git add:*)",
       "Bash(git commit -m \"$(cat <<''EOF''\nfeat: プロセス起動時にプロセスグループを設定\n\n- プロセス起動時にprocess_group(0)を設定\n- 新しいプロセスグループのリーダーとして起動\n- これによりDocker等の子プロセスも含めてシグナル送信が可能に\n\nUnix系システムでのみ有効（#[cfg(unix)]）\n\nこの変更と前回のプロセスグループへのシグナル送信により、\nDockerプロセスとコンテナが確実に停止するようになります。\nEOF\n)\")",
       "Bash(git checkout:*)",
@@ -43,12 +43,15 @@
       "Bash(tree:*)",
       "Bash(kill:*)",
       "Bash(find:*)",
-      "Bash(for file in crates/ichimi/tests/test_web_api.rs crates/ichimi/tests/test_integration.rs crates/ichimi/tests/test_browser.rs crates/ichimi/tests/test_process_update.rs)",
+      "Bash(for file in crates/vantage/tests/test_web_api.rs crates/vantage/tests/test_integration.rs crates/vantage/tests/test_browser.rs crates/vantage/tests/test_process_update.rs)",
       "Bash(do)",
       "Bash(echo \"Updated: $file\")",
       "Bash(done)",
-      "Bash(./target/debug/ichimimcp:*)",
-      "Bash(cargo run:*)"
+      "Bash(./target/debug/vantagemcp:*)",
+      "Bash(cargo run:*)",
+      "Bash(cargo clean:*)",
+      "Bash(./target/release/vantagemcp:*)",
+      "Bash(git grep:*)"
     ],
     "deny": [],
     "ask": []
@@ -57,6 +60,6 @@
   "enabledMcpjsonServers": [
     "serena",
     "SurrealDB",
-    "ichimi"
+    "vantage"
   ]
 }

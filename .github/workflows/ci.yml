@@ -98,11 +98,11 @@ jobs:
       run: cargo build --release
     - name: Test binary execution
       run: |
-        ./target/release/ichimi --version
-        ./target/release/ichimi --help
+        ./target/release/vantagemcp --version
+        ./target/release/vantagemcp --help
     - name: Test web server mode
       run: |
-        ./target/release/ichimi --web-only &
+        ./target/release/vantagemcp --web-only &
         SERVER_PID=$!
         sleep 5
         curl -f http://localhost:12700/api/status || exit 1

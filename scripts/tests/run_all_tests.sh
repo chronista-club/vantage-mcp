@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Ichimi Server 統合テストスイート
+# Vantage Server 統合テストスイート
 # すべてのテストを順番に実行
 
 set -e  # エラーが発生したら停止
@@ -39,14 +39,14 @@ run_test() {
     fi
     
     # クリーンアップ
-    pkill -f "ichimi.*--web" 2>/dev/null || true
+    pkill -f "vantagemcp.*--web" 2>/dev/null || true
     pkill -f "sleep 9999" 2>/dev/null || true
     rm -f /tmp/test_*.txt /tmp/test_*.sh 2>/dev/null || true
     sleep 1
 }
 
 # ビルド
-echo -e "${YELLOW}Building ichimi...${NC}"
+echo -e "${YELLOW}Building vantage...${NC}"
 cargo build --release
 
 # テスト実行

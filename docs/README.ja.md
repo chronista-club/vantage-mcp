@@ -1,4 +1,4 @@
-# Ichimi Server
+# Vantage Server
 
 [English](../README.md) | **日本語**
 
@@ -17,7 +17,7 @@ Model Context Protocol (MCP) を介した Claude Code 用の強力なプロセ�
 - 📊 **リアルタイムログ**: stdout/stderr 出力のキャプチャとストリーミング
 - 🔍 **ステータス監視**: プロセスの状態とメトリクスの追跡
 - 🎯 **柔軟なフィルタリング**: 状態やパターンでプロセスを検索
-- 💾 **永続化**: KDL形式での設定ファイル管理（`.ichimi/processes.kdl`）
+- 💾 **永続化**: KDL形式での設定ファイル管理（`.vantage/processes.kdl`）
 - 🔄 **自動起動**: `auto_start` フラグでサーバー起動時のプロセス自動起動
 
 ### Webダッシュボード (v0.1.0-beta20〜)
@@ -40,22 +40,22 @@ Model Context Protocol (MCP) を介した Claude Code 用の強力なプロセ�
 ### Cargoを使用（推奨）
 
 ```bash
-cargo install ichimi-server
-# コマンドは 'ichimi' として利用可能になります
+cargo install vantage-server
+# コマンドは 'vantage' として利用可能になります
 ```
 
 ### ソースからのインストール
 
 ```bash
 # リポジトリをクローン
-git clone https://github.com/chronista-club/ichimi-server
-cd ichimi-server
+git clone https://github.com/chronista-club/vantage-server
+cd vantage-server
 
 # リリースビルド
 cargo build --release
 
 # バイナリは以下の場所に生成されます:
-# target/release/ichimi
+# target/release/vantage
 ```
 
 ## 🔧 設定
@@ -67,9 +67,9 @@ cargo build --release
 ```json
 {
     "mcpServers": {
-        "ichimi": {
+        "vantage": {
             "type": "stdio",
-            "command": "ichimi",
+            "command": "vantage",
             "env": {
                 "RUST_LOG": "info"
             }
@@ -85,7 +85,7 @@ Claude Code で以下を実行:
 /mcp
 ```
 
-"ichimi" サーバーが "connected" と表示されるはずです。
+"vantage" サーバーが "connected" と表示されるはずです。
 
 ## 📚 使い方
 
@@ -172,12 +172,12 @@ for process in list_processes(filter={"name_pattern": "worker"}):
 
 ### KDL設定ファイル
 
-Ichimi Server は、プロセス設定の永続化に [KDL (Cuddly Data Language)](https://kdl.dev/) フォーマットを使用します。設定ファイルは `.ichimi/processes.kdl` に自動的に保存されます。
+Vantage Server は、プロセス設定の永続化に [KDL (Cuddly Data Language)](https://kdl.dev/) フォーマットを使用します。設定ファイルは `.vantage/processes.kdl` に自動的に保存されます。
 
 #### KDL設定ファイルの例
 
 ```kdl
-// Ichimi Server Process Configuration
+// Vantage Server Process Configuration
 meta {
     version "1.0.0"
 }
@@ -214,12 +214,12 @@ process "worker" {
 
 ```bash
 # プロセスをJSONファイルにエクスポート
-curl http://127.0.0.1:12700/api/export > ichimi_export.json
+curl http://127.0.0.1:12700/api/export > vantage_export.json
 
 # JSONファイルからプロセスをインポート
 curl -X POST http://127.0.0.1:12700/api/import \
   -H "Content-Type: application/json" \
-  -d @ichimi_export.json
+  -d @vantage_export.json
 ```
 
 ## 🌐 Webダッシュボード
@@ -228,13 +228,13 @@ curl -X POST http://127.0.0.1:12700/api/import \
 
 ```bash
 # Webダッシュボードで起動（デフォルトポート 12700）
-ichimi --web
+vantage --web
 
 # カスタムポートを指定
-ichimi --web --web-port 8080
+vantage --web --web-port 8080
 
 # Webダッシュボードのみ（MCPサーバーなし）
-ichimi --web-only
+vantage --web-only
 ```
 
 ブラウザで `http://localhost:12700` を開きます。
@@ -275,13 +275,13 @@ ichimi --web-only
 ## 🏗️ プロジェクト構造
 
 ```
-ichimi-server/
+vantage-server/
 ├── crates/
-│   ├── ichimi/                 # メインサーバークレート
+│   ├── vantage/                 # メインサーバークレート
 │   │   ├── src/
 │   │   │   ├── lib.rs          # コアサーバー実装
 │   │   │   ├── bin/
-│   │   │   │   └── ichimi_server.rs  # バイナリエントリーポイント
+│   │   │   │   └── vantage_server.rs  # バイナリエントリーポイント
 │   │   │   ├── process/        # プロセス管理
 │   │   │   │   ├── mod.rs
 │   │   │   │   ├── manager.rs
@@ -295,7 +295,7 @@ ichimi-server/
 │   │   │   ├── ci/             # CI/CD監視
 │   │   │   └── events/         # イベントシステム
 │   │   └── tests/
-│   └── ichimi-persistence/     # 永続化レイヤー
+│   └── vantage-persistence/     # 永続化レイヤー
 │       ├── src/
 │       │   ├── lib.rs          # 永続化インターフェース
 │       │   ├── kdl/            # KDL形式の永続化
@@ -318,7 +318,7 @@ ichimi-server/
 │   │   ├── tsconfig.json
 │   │   └── vite.config.ts
 │       ├── dist/               # 本番ビルド
-├── .ichimi/                     # データディレクトリ
+├── .vantage/                     # データディレクトリ
 │   └── processes.kdl           # プロセス設定ファイル
 └── examples/                    # 使用例
 ```
@@ -328,11 +328,11 @@ ichimi-server/
 | 変数 | 説明 | デフォルト |
 |------|------|----------|
 | `RUST_LOG` | ログレベル (error, warn, info, debug, trace) | info |
-| `ICHIMI_DATA_DIR` | データファイル用ディレクトリ | ~/.ichimi/data |
-| `ICHIMI_IMPORT_FILE` | 起動時にインポートするファイル | ~/.ichimi/data/processes.yaml |
-| `ICHIMI_EXPORT_FILE` | シャットダウン時のエクスポート先 | ~/.ichimi/data/processes.yaml |
-| `ICHIMI_STOP_ON_SHUTDOWN` | ichimi終了時にプロセスを停止するか（true/false） | false（継続） |
-| `ICHIMI_AUTO_EXPORT_INTERVAL` | 自動エクスポート間隔（秒） | なし |
+| `VANTAGE_DATA_DIR` | データファイル用ディレクトリ | ~/.vantage/data |
+| `VANTAGE_IMPORT_FILE` | 起動時にインポートするファイル | ~/.vantage/data/processes.yaml |
+| `VANTAGE_EXPORT_FILE` | シャットダウン時のエクスポート先 | ~/.vantage/data/processes.yaml |
+| `VANTAGE_STOP_ON_SHUTDOWN` | vantage終了時にプロセスを停止するか（true/false） | false（継続） |
+| `VANTAGE_AUTO_EXPORT_INTERVAL` | 自動エクスポート間隔（秒） | なし |
 
 ## 🚧 開発
 
@@ -393,11 +393,11 @@ cargo install --path .
 ## 📞 サポート
 
 問題、質問、提案については:
-- [GitHub Issues](https://github.com/chronista-club/ichimi-server/issues) で Issue を開く
-- [Discussions](https://github.com/chronista-club/ichimi-server/discussions) で議論
+- [GitHub Issues](https://github.com/chronista-club/vantage-server/issues) で Issue を開く
+- [Discussions](https://github.com/chronista-club/vantage-server/discussions) で議論
 
 ---
 
-*Ichimi Server - Claude Code のためのシンプルかつ強力なプロセス管理。一味が支えます。*
+*Vantage Server - Claude Code のためのシンプルかつ強力なプロセス管理。一味が支えます。*
 
 **Latest Release:** v0.1.0-beta7 🎉

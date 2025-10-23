@@ -1,4 +1,4 @@
-# Ichimi Server API リファレンス
+# Vantage Server API リファレンス
 
 ## MCP ツール API
 

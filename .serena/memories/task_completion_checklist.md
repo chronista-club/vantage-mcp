@@ -1,6 +1,6 @@
 # Task Completion Checklist
 
-When completing a task in the Ichimi Server project, ensure you follow these steps:
+When completing a task in the Vantage Server project, ensure you follow these steps:
 
 ## Before Marking Task Complete
 

@@ -11,7 +11,7 @@
         "ide-assistant"
       ]
     },
-    "SurrealDB": {
+    "surrealdb-mcp": {
       "command": "docker",
       "args": [
         "run",
@@ -25,9 +25,9 @@
       "disabled": false,
       "autoApprove": []
     },
-    "ichimi": {
+    "vantage-mcp": {
       "type": "stdio",
-      "command": "./target/release/ichimi",
+      "command": "./target/release/vantagemcp",
       "args": [
         "--web",
         "--web-port",

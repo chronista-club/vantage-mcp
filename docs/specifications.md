@@ -1,4 +1,4 @@
-# Ichimi Server 技術仕様書
+# Vantage Server 技術仕様書
 
 ## プロジェクト概要
 
@@ -6,9 +6,9 @@
 
 | 項目 | 内容 |
 |------|------|
-| プロジェクト名 | Ichimi Server（一味サーバー） |
+| プロジェクト名 | Vantage Server（一味サーバー） |
 | バージョン | 0.2.3 |
-| リポジトリ | https://github.com/chronista-club/ichimi-server |
+| リポジトリ | https://github.com/chronista-club/vantage-server |
 | ライセンス | MIT OR Apache-2.0 |
 | 作者 | mito@chronista.club |
 | 言語 | Rust 2024 Edition |
@@ -17,7 +17,7 @@
 
 **"Process as a Resource"** - プロセスをリソースとして管理する
 
-Ichimi Serverは、Model Context Protocol (MCP) を介してClaude Codeと連携し、プロセスの起動・監視・管理を行う統合プロセス管理サーバーです。開発者がClaude Codeとの対話を通じて、ローカルプロセスを自然言語で制御できる環境を提供します。
+Vantage Serverは、Model Context Protocol (MCP) を介してClaude Codeと連携し、プロセスの起動・監視・管理を行う統合プロセス管理サーバーです。開発者がClaude Codeとの対話を通じて、ローカルプロセスを自然言語で制御できる環境を提供します。
 
 ### 主要機能
 
@@ -93,7 +93,7 @@ Ichimi Serverは、Model Context Protocol (MCP) を介してClaude Codeと連携
 └─────────────┬───────────────────────────────┘
               │ MCP Protocol (stdio)
 ┌─────────────┴───────────────────────────────┐
-│         Ichimi Server (Rust)                │
+│         Vantage Server (Rust)                │
 ├─────────────────────────────────────────────┤
 │ ┌─────────────────────────────────────────┐ │
 │ │     MCP Server (rmcp)                   │ │
@@ -120,7 +120,7 @@ Ichimi Serverは、Model Context Protocol (MCP) を介してClaude Codeと連携
               ▼
     ┌──────────────────┐
     │  File System     │
-    │  ~/.ichimi/      │
+    │  ~/.vantage/      │
     │   └─ data/       │
     │      └─ snapshot.yaml │
     └──────────────────┘
@@ -136,7 +136,7 @@ Claude Code
   ├─ MCP Request: start_process(id)
   │
   ▼
-Ichimi Server (MCP Handler)
+Vantage Server (MCP Handler)
   │
   ├─ ProcessManager::start_process()
   │   │
@@ -289,7 +289,7 @@ Arc<RwLock<HashMap<String, ProcessConfig>>>
 #### エクスポート
 
 ```yaml
-# ~/.ichimi/data/snapshot.yaml
+# ~/.vantage/data/snapshot.yaml
 processes:
   example-process:
     id: example-process
@@ -303,14 +303,14 @@ processes:
 ```
 
 **自動エクスポート:**
-- 環境変数 `ICHIMI_AUTO_EXPORT_INTERVAL`: 自動エクスポート間隔（秒）
+- 環境変数 `VANTAGE_AUTO_EXPORT_INTERVAL`: 自動エクスポート間隔（秒）
 - シャットダウン時の自動エクスポート
 
 #### インポート
 
 起動時オプション:
 ```bash
-ichimi --import ~/.ichimi/data/snapshot.yaml
+vantage --import ~/.vantage/data/snapshot.yaml
 ```
 
 **auto_start_on_restore:**
@@ -536,7 +536,7 @@ fn sanitize_env(env: &HashMap<String, String>) -> HashMap<String, String> {
 ### 起動オプション
 
 ```bash
-ichimi [OPTIONS]
+vantage [OPTIONS]
 ```
 
 **オプション:**
@@ -550,9 +550,9 @@ ichimi [OPTIONS]
 | 変数 | 説明 | デフォルト |
 |------|------|------------|
 | `RUST_LOG` | ログレベル | `info` |
-| `ICHIMI_AUTO_EXPORT_INTERVAL` | 自動エクスポート間隔（秒） | なし |
-| `ICHIMI_DATA_DIR` | データディレクトリ | `~/.ichimi/data` |
-| `ICHIMI_STOP_ON_SHUTDOWN` | 終了時のプロセス停止 | `false` |
+| `VANTAGE_AUTO_EXPORT_INTERVAL` | 自動エクスポート間隔（秒） | なし |
+| `VANTAGE_DATA_DIR` | データディレクトリ | `~/.vantage/data` |
+| `VANTAGE_STOP_ON_SHUTDOWN` | 終了時のプロセス停止 | `false` |
 
 ### ログ出力
 
@@ -571,7 +571,7 @@ ichimi [OPTIONS]
 **グレースフルシャットダウン:**
 1. SIGTERM/SIGINT受信
 2. 自動エクスポート実行
-3. オプション: 全プロセス停止（`ICHIMI_STOP_ON_SHUTDOWN=true`）
+3. オプション: 全プロセス停止（`VANTAGE_STOP_ON_SHUTDOWN=true`）
 4. クリーンアップ
 5. 終了
 

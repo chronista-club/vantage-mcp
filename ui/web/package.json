@@ -1,8 +1,8 @@
 {
-  "name": "ichimi-web-vue",
+  "name": "vantage-web-vue",
   "private": true,
   "version": "0.1.0-beta20",
-  "description": "Vue 3 + TypeScript Web Dashboard for Ichimi Server - Process Management MCP Server",
+  "description": "Vue 3 + TypeScript Web Dashboard for Vantage Server - Process Management MCP Server",
   "type": "module",
   "scripts": {
     "dev": "vite",

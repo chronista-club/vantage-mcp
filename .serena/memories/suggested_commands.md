@@ -1,4 +1,4 @@
-# Suggested Commands for Ichimi Server Development
+# Suggested Commands for Vantage Server Development
 
 ## Build Commands
 ```bash
@@ -42,19 +42,19 @@ cargo clippy -- -D warnings
 ## Running the Server
 ```bash
 # Run debug build
-cargo run --bin ichimi
+cargo run --bin vantage
 
 # Run with web dashboard
-cargo run --bin ichimi -- --web
+cargo run --bin vantage -- --web
 
 # Run with custom port
-cargo run --bin ichimi -- --web --web-port 8080
+cargo run --bin vantage -- --web --web-port 8080
 
 # Run web-only mode (no MCP)
-cargo run --bin ichimi -- --web-only
+cargo run --bin vantage -- --web-only
 
 # Run release build
-./target/release/ichimi
+./target/release/vantage
 ```
 
 ## Environment Variables
@@ -66,7 +66,7 @@ RUST_LOG=debug cargo run
 RUST_LOG=info cargo run
 
 # Run with auto-export
-ICHIMI_AUTO_EXPORT_INTERVAL=300 cargo run
+VANTAGE_AUTO_EXPORT_INTERVAL=300 cargo run
 ```
 
 ## Frontend Development (Vue 3)
@@ -151,7 +151,7 @@ find . -name "*.rs"
 rg "pattern"
 
 # Process management
-ps aux | grep ichimi
+ps aux | grep vantage
 kill -TERM <pid>
 
 # Port checking
