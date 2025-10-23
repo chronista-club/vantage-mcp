@@ -11,7 +11,7 @@ NC='\033[0m' # No Color
 
 # Configuration
 INSTALL_DIR="$HOME/.local/bin"
-BINARY_NAME="vantage"
+BINARY_NAME="vantagemcp"
 BUILD_MODE="${1:-release}"
 
 echo -e "${YELLOW}🚀 Installing vantage-server locally...${NC}"
