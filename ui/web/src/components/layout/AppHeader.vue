@@ -38,10 +38,10 @@
           <button
             @click="toggleLanguage"
             class="header-action-btn header-action-btn-lang"
-            :title="currentLanguage === 'ja' ? 'Switch to English' : '日本語に切り替え'"
-            :aria-label="currentLanguage === 'ja' ? 'Switch to English' : '日本語に切り替え'"
+            :title="currentLocale === 'ja' ? 'Switch to English' : '日本語に切り替え'"
+            :aria-label="currentLocale === 'ja' ? 'Switch to English' : '日本語に切り替え'"
           >
-            <span class="lang-text">{{ currentLanguage === 'ja' ? 'EN' : 'JA' }}</span>
+            <span class="lang-text">{{ currentLocale === 'ja' ? 'EN' : 'JA' }}</span>
           </button>
 
           <button
@@ -73,12 +73,13 @@ import { IconSun, IconMoon, IconSettings } from '@tabler/icons-vue';
 import { useSettingsStore } from '@/stores/settings';
 import { useI18n } from 'vue-i18n';
 import { computed } from 'vue';
+import { storeToRefs } from 'pinia';
 
 const settingsStore = useSettingsStore();
+const { locale: currentLocale } = storeToRefs(settingsStore);
 const { t, locale } = useI18n();
 
 const isDarkMode = computed(() => settingsStore.isDarkMode);
-const currentLanguage = computed(() => settingsStore.locale);
 
 const themeToggleTitle = computed(() => {
   const mode = isDarkMode.value ? t('theme.light') : t('theme.dark');
@@ -90,7 +91,7 @@ function toggleTheme() {
 }
 
 function toggleLanguage() {
-  const newLocale = currentLanguage.value === 'ja' ? 'en' : 'ja';
+  const newLocale = currentLocale.value === 'ja' ? 'en' : 'ja';
   locale.value = newLocale;
   settingsStore.setLocale(newLocale);
 }

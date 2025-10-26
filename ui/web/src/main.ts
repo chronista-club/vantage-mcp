@@ -16,10 +16,12 @@ app.use(i18n);
 
 // Initialize settings store and sync locale
 import { useSettingsStore } from './stores/settings';
+import { storeToRefs } from 'pinia';
 const settingsStore = useSettingsStore();
 settingsStore.initializeSettings();
 
 // Sync i18n locale with settings store
-i18n.global.locale.value = settingsStore.locale;
+const { locale } = storeToRefs(settingsStore);
+i18n.global.locale.value = locale.value;
 
 app.mount('#app');
