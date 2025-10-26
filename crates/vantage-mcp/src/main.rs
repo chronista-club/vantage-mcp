@@ -25,9 +25,6 @@ async fn main() -> Result<()> {
 
     // CLI引数から設定を導出
     let auto_open = !cli.no_open;
-
-    // デフォルトでMCP + Web両方を起動
-    let web_enabled = true;
     let web_port = 12700; // デフォルトポート（衝突時は自動変更）
 
     // 環境に基づいてロギングをセットアップ
@@ -210,9 +207,9 @@ async fn main() -> Result<()> {
         std::process::exit(0);
     });
 
-    // 有効化されている場合、Webサーバーを起動
+    // Webサーバーを起動
     #[cfg(feature = "web")]
-    if web_enabled {
+    {
         tracing::info!("Web dashboard enabled on port {}", web_port);
 
         let web_manager = process_manager.clone();
@@ -287,8 +284,7 @@ async fn main() -> Result<()> {
             // Webサーバーのためプロセスを維持
             // シグナルハンドラーは上記で既にセットアップ済み、永久に待機
             loop {
-                tokio::time::sleep(tokio::time::Duration::from_secs(KEEPALIVE_INTERVAL_SECS))
-                    .await;
+                tokio::time::sleep(tokio::time::Duration::from_secs(KEEPALIVE_INTERVAL_SECS)).await;
             }
         }
     }
