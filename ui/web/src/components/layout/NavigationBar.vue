@@ -28,6 +28,8 @@
 
 <script setup lang="ts">
 import { useRoute } from 'vue-router';
+import { useI18n } from 'vue-i18n';
+import { computed } from 'vue';
 import {
   IconActivity,
   IconTemplate,
@@ -35,27 +37,28 @@ import {
 } from '@tabler/icons-vue';
 
 const route = useRoute();
+const { t } = useI18n();
 
-const navigationItems = [
+const navigationItems = computed(() => [
   {
     name: 'processes',
     route: 'processes',
-    label: 'Processes',
+    label: t('navigation.processes'),
     icon: IconActivity,
   },
   {
     name: 'templates',
     route: 'templates',
-    label: 'Templates',
+    label: t('navigation.templates'),
     icon: IconTemplate,
   },
   {
     name: 'clipboard',
     route: 'clipboard',
-    label: 'Clipboard',
+    label: t('navigation.clipboard'),
     icon: IconClipboard,
   },
-];
+]);
 </script>
 
 <style scoped lang="scss">

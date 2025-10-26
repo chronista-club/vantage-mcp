@@ -1,0 +1,49 @@
+{
+  "header": {
+    "brandName": "Vantage",
+    "brandSubtitle": "MCP Server",
+    "themeSwitch": "Switch to {mode} mode",
+    "settings": "Settings"
+  },
+  "navigation": {
+    "processes": "Processes",
+    "templates": "Templates",
+    "clipboard": "Clipboard"
+  },
+  "stats": {
+    "total": "Total",
+    "running": "Running",
+    "stopped": "Stopped",
+    "failed": "Failed",
+    "refresh": "Refresh",
+    "addTest": "Add Test",
+    "newProcess": "New Process"
+  },
+  "process": {
+    "card": {
+      "pid": "PID",
+      "envVars": "{count} env var | {count} env vars"
+    },
+    "actions": {
+      "start": "Start",
+      "stop": "Stop",
+      "remove": "Remove",
+      "showOutput": "Show Output",
+      "output": "Output",
+      "starting": "Starting...",
+      "stopping": "Stopping...",
+      "removing": "Removing...",
+      "alreadyRunning": "Process is already running",
+      "notRunning": "Process is not running",
+      "cannotRemoveRunning": "Cannot remove running process",
+      "startProcess": "Start Process",
+      "stopProcess": "Stop Process",
+      "removeProcess": "Remove Process",
+      "confirmRemove": "Are you sure you want to remove process \"{id}\"?"
+    }
+  },
+  "theme": {
+    "light": "light",
+    "dark": "dark"
+  }
+}

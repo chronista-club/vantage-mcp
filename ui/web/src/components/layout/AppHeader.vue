@@ -28,18 +28,27 @@
             </svg>
           </div>
           <div class="brand-text">
-            <span class="brand-name">Vantage</span>
-            <span class="brand-subtitle">MCP Server</span>
+            <span class="brand-name">{{ t('header.brandName') }}</span>
+            <span class="brand-subtitle">{{ t('header.brandSubtitle') }}</span>
           </div>
         </router-link>
 
         <!-- Actions -->
         <nav class="header-actions">
           <button
+            @click="toggleLanguage"
+            class="header-action-btn header-action-btn-lang"
+            :title="currentLocale === 'ja' ? 'Switch to English' : '日本語に切り替え'"
+            :aria-label="currentLocale === 'ja' ? 'Switch to English' : '日本語に切り替え'"
+          >
+            <span class="lang-text">{{ currentLocale === 'ja' ? 'EN' : 'JA' }}</span>
+          </button>
+
+          <button
             @click="toggleTheme"
             class="header-action-btn"
-            :title="`Switch to ${isDarkMode ? 'light' : 'dark'} mode`"
-            :aria-label="`Switch to ${isDarkMode ? 'light' : 'dark'} mode`"
+            :title="themeToggleTitle"
+            :aria-label="themeToggleTitle"
           >
             <IconSun v-if="isDarkMode" :size="20" :stroke-width="2" />
             <IconMoon v-else :size="20" :stroke-width="2" />
@@ -48,8 +57,8 @@
           <button
             @click="showSettings"
             class="header-action-btn"
-            title="Settings"
-            aria-label="Settings"
+            :title="t('header.settings')"
+            :aria-label="t('header.settings')"
           >
             <IconSettings :size="20" :stroke-width="2" />
           </button>
@@ -62,14 +71,29 @@
 <script setup lang="ts">
 import { IconSun, IconMoon, IconSettings } from '@tabler/icons-vue';
 import { useSettingsStore } from '@/stores/settings';
+import { useI18n } from 'vue-i18n';
 import { computed } from 'vue';
+import { storeToRefs } from 'pinia';
 
 const settingsStore = useSettingsStore();
+const { locale: currentLocale } = storeToRefs(settingsStore);
+const { t, locale } = useI18n();
 
 const isDarkMode = computed(() => settingsStore.isDarkMode);
 
+const themeToggleTitle = computed(() => {
+  const mode = isDarkMode.value ? t('theme.light') : t('theme.dark');
+  return t('header.themeSwitch', { mode });
+});
+
 function toggleTheme() {
   settingsStore.toggleTheme();
+}
+
+function toggleLanguage() {
+  const newLocale = currentLocale.value === 'ja' ? 'en' : 'ja';
+  locale.value = newLocale;
+  settingsStore.setLocale(newLocale);
 }
 
 function showSettings() {
@@ -217,6 +241,15 @@ function showSettings() {
   &:focus-visible {
     outline: 2px solid var(--vantage-btn-primary-bg);
     outline-offset: 2px;
+  }
+}
+
+.header-action-btn-lang {
+  .lang-text {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    line-height: 1;
   }
 }
 
