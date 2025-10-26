@@ -48,12 +48,11 @@ cargo clippy         # リンターを実行
 cargo clippy -- -D warnings # 警告でエラーにする
 
 # サーバーの実行
-cargo run --bin vantage
-./target/release/vantage # リリースビルドを実行
+cargo run --bin vantagemcp
+./target/release/vantagemcp # リリースビルドを実行
 
-# Webダッシュボード付きで実行
-cargo run --bin vantage -- --web
-cargo run --bin vantage -- --web --web-port 8080  # カスタムポート
+# ブラウザを自動的に開かない
+cargo run --bin vantagemcp -- --no-open
 
 # 環境変数を設定して実行
 RUST_LOG=debug cargo run

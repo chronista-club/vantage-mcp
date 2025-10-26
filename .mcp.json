@@ -28,11 +28,7 @@
     "vantage-mcp": {
       "type": "stdio",
       "command": "./target/release/vantagemcp",
-      "args": [
-        "--web",
-        "--web-port",
-        "8080"
-      ]
+      "args": []
     }
   }
 }

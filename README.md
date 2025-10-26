@@ -245,17 +245,14 @@ curl -X POST http://127.0.0.1:12700/api/import \
 ### Starting the Dashboard
 
 ```bash
-# Start with web dashboard (default port 12700)
-vantage --web
+# Start server (Web dashboard automatically enabled on port 12700)
+vantagemcp
 
-# Specify custom port
-vantage --web --web-port 8080
-
-# Web dashboard only (no MCP server)
-vantage --web-only
+# Don't open browser automatically
+vantagemcp --no-open
 ```
 
-Open your browser to `http://localhost:12700`
+The web dashboard will be available at `http://localhost:12700` (or another port if 12700 is in use)
 
 ### Dashboard Features
 

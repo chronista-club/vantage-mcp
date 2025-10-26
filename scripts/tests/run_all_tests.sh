@@ -39,7 +39,7 @@ run_test() {
     fi
     
     # クリーンアップ
-    pkill -f "vantagemcp.*--web" 2>/dev/null || true
+    pkill -f "vantagemcp" 2>/dev/null || true
     pkill -f "sleep 9999" 2>/dev/null || true
     rm -f /tmp/test_*.txt /tmp/test_*.sh 2>/dev/null || true
     sleep 1
