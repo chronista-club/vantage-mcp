@@ -1,81 +1,79 @@
 <template>
-  <div>
-    <div class="page-header d-print-none">
+  <div class="processes-view">
+    <div class="page-header">
       <div class="container-xl">
-        <div class="row g-2 align-items-center">
-          <div class="col">
-            <h2 class="page-title">Processes</h2>
-            <!-- Statistics Summary -->
-            <div class="text-muted mt-1">
-              <span class="me-3">
-                <span class="badge bg-success-lt">{{ stats.running }}</span> Running
+        <div class="header-row">
+          <div class="header-title">
+            <h1 class="page-title">
+              Processes
+              <span v-if="processStore.processCount > 0" class="stats-inline">
+                · {{ stats.running }} running, {{ stats.stopped }} stopped<template v-if="stats.failed > 0">, {{ stats.failed }} failed</template>
               </span>
-              <span class="me-3">
-                <span class="badge bg-secondary-lt">{{ stats.stopped }}</span> Stopped
-              </span>
-              <span v-if="stats.failed > 0">
-                <span class="badge bg-danger-lt">{{ stats.failed }}</span> Failed
-              </span>
-            </div>
+            </h1>
           </div>
-          <div class="col-auto ms-auto d-print-none">
-            <div class="d-flex gap-2">
-              <!-- State Filter -->
-              <div class="btn-group" role="group">
-                <button
-                  @click="filterState = 'all'"
-                  class="btn btn-sm"
-                  :class="filterState === 'all' ? 'btn-primary' : 'btn-outline-primary'"
-                >
-                  All
-                </button>
-                <button
-                  @click="filterState = 'running'"
-                  class="btn btn-sm"
-                  :class="filterState === 'running' ? 'btn-success' : 'btn-outline-success'"
-                >
-                  Running
-                </button>
-                <button
-                  @click="filterState = 'stopped'"
-                  class="btn btn-sm"
-                  :class="filterState === 'stopped' ? 'btn-secondary' : 'btn-outline-secondary'"
-                >
-                  Stopped
-                </button>
-                <button
-                  @click="filterState = 'failed'"
-                  class="btn btn-sm"
-                  :class="filterState === 'failed' ? 'btn-danger' : 'btn-outline-danger'"
-                >
-                  Failed
-                </button>
-              </div>
-              <!-- View Mode Toggle -->
-              <div class="btn-group" role="group">
-                <button
-                  @click="settingsStore.setViewMode('card')"
-                  class="btn btn-sm btn-icon"
-                  :class="settingsStore.viewMode === 'card' ? 'btn-primary' : 'btn-outline-primary'"
-                  title="Card View"
-                >
-                  <IconLayoutGrid />
-                </button>
-                <button
-                  @click="settingsStore.setViewMode('table')"
-                  class="btn btn-sm btn-icon"
-                  :class="settingsStore.viewMode === 'table' ? 'btn-primary' : 'btn-outline-primary'"
-                  title="Table View"
-                >
-                  <IconTable />
-                </button>
-              </div>
-              <button @click="processStore.loadProcesses()" class="btn btn-sm btn-primary">
-                <IconRefresh class="icon" />
-                <span class="d-none d-lg-inline ms-1">Refresh</span>
-              </button>
-            </div>
+          <div class="header-actions">
+            <!-- View Mode Toggle -->
+            <button
+              @click="settingsStore.setViewMode('card')"
+              class="action-btn"
+              :class="{ active: settingsStore.viewMode === 'card' }"
+              :title="t('views.card')"
+              :aria-label="t('views.card')"
+            >
+              <IconLayoutGrid :size="16" />
+            </button>
+            <button
+              @click="settingsStore.setViewMode('table')"
+              class="action-btn"
+              :class="{ active: settingsStore.viewMode === 'table' }"
+              :title="t('views.table')"
+              :aria-label="t('views.table')"
+            >
+              <IconTable :size="16" />
+            </button>
+            <button
+              @click="processStore.loadProcesses()"
+              class="action-btn"
+              :disabled="processStore.loading"
+              :title="t('actions.refresh')"
+              :aria-label="t('actions.refresh')"
+            >
+              <IconRefresh :size="16" />
+            </button>
           </div>
+        </div>
+
+        <!-- Filter Pills -->
+        <div v-if="processStore.processCount > 0" class="filter-pills">
+          <button
+            @click="filterState = 'all'"
+            class="filter-pill"
+            :class="{ active: filterState === 'all' }"
+          >
+            All
+          </button>
+          <button
+            @click="filterState = 'running'"
+            class="filter-pill"
+            :class="{ active: filterState === 'running' }"
+          >
+            Running
+          </button>
+          <button
+            @click="filterState = 'stopped'"
+            class="filter-pill"
+            :class="{ active: filterState === 'stopped' }"
+          >
+            Stopped
+          </button>
+          <button
+            v-if="stats.failed > 0"
+            @click="filterState = 'failed'"
+            class="filter-pill"
+            :class="{ active: filterState === 'failed' }"
+          >
+            Failed
+          </button>
         </div>
       </div>
     </div>
@@ -141,6 +139,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { useI18n } from 'vue-i18n';
 import {
   IconPlus,
   IconRefresh,
@@ -153,6 +152,7 @@ import { useProcessStore } from '@/stores/process';
 import { useSettingsStore } from '@/stores/settings';
 import { isRunning, isStopped, isFailed, isNotStarted } from '@/types';
 
+const { t } = useI18n();
 const processStore = useProcessStore();
 const settingsStore = useSettingsStore();
 
@@ -204,36 +204,138 @@ onUnmounted(() => {
 });
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+.processes-view {
+  flex: 1;
+}
+
 .page-header {
-  background: white;
-  border-bottom: 1px solid var(--tblr-border-color);
-  padding: 1.5rem 0;
-  margin-bottom: 1.5rem;
+  background: oklch(1 0 0);
+  border-bottom: 1px solid oklch(0.92 0 0);
+  padding: 1.25rem 0;
+
+  @media (prefers-color-scheme: dark) {
+    background: oklch(0.18 0 0);
+    border-bottom-color: oklch(0.25 0 0);
+  }
+}
+
+.header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.header-title {
+  flex: 1;
 }
 
 .page-title {
-  font-weight: 600;
-  margin-bottom: 0.5rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+  color: oklch(0.2 0 0);
+
+  @media (prefers-color-scheme: dark) {
+    color: oklch(0.95 0 0);
+  }
+
+  .stats-inline {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: oklch(0.5 0 0);
+
+    @media (prefers-color-scheme: dark) {
+      color: oklch(0.6 0 0);
+    }
+  }
 }
 
-.btn-group .btn {
-  transition: all 0.2s ease;
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.btn-group .btn:hover {
-  transform: translateY(-1px);
-}
-
-.btn-icon {
+.action-btn {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: oklch(0.5 0 0);
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  @media (prefers-color-scheme: dark) {
+    color: oklch(0.65 0 0);
+  }
+
+  &:hover:not(:disabled) {
+    background: oklch(0.96 0 0);
+    color: oklch(0.2 0 0);
+
+    @media (prefers-color-scheme: dark) {
+      background: oklch(0.22 0 0);
+      color: oklch(0.9 0 0);
+    }
+  }
+
+  &.active {
+    background: var(--vantage-btn-primary-bg);
+    color: oklch(1 0 0);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 }
 
-.icon {
-  width: 1.125rem;
-  height: 1.125rem;
+.filter-pills {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.filter-pill {
+  padding: 0.375rem 0.875rem;
+  border: none;
+  border-radius: 999px;
+  background: oklch(0.96 0 0);
+  color: oklch(0.4 0 0);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  @media (prefers-color-scheme: dark) {
+    background: oklch(0.22 0 0);
+    color: oklch(0.7 0 0);
+  }
+
+  &:hover:not(.active) {
+    background: oklch(0.94 0 0);
+
+    @media (prefers-color-scheme: dark) {
+      background: oklch(0.24 0 0);
+    }
+  }
+
+  &.active {
+    background: var(--vantage-btn-primary-bg);
+    color: oklch(1 0 0);
+  }
+}
+
+.page-body {
+  padding: 1.5rem 0;
 }
 
 .row-cards {
@@ -247,30 +349,37 @@ onUnmounted(() => {
   margin-bottom: 1rem;
 }
 
-/* Empty state */
 .empty {
   padding: 3rem 1rem;
   text-align: center;
 }
 
 .empty-title {
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   font-weight: 600;
   margin-bottom: 0.5rem;
+  color: oklch(0.3 0 0);
+
+  @media (prefers-color-scheme: dark) {
+    color: oklch(0.8 0 0);
+  }
 }
 
 .empty-subtitle {
   font-size: 0.875rem;
   margin-bottom: 1.5rem;
+  color: oklch(0.5 0 0);
+
+  @media (prefers-color-scheme: dark) {
+    color: oklch(0.6 0 0);
+  }
 }
 
-/* Loading state */
 .spinner-border {
   margin: 3rem auto;
   display: block;
 }
 
-/* Process list transitions */
 .process-list-move,
 .process-list-enter-active,
 .process-list-leave-active {
@@ -291,15 +400,27 @@ onUnmounted(() => {
   position: absolute;
 }
 
-/* Responsive adjustments */
 @media (max-width: 768px) {
   .page-header {
     padding: 1rem 0;
-    margin-bottom: 1rem;
   }
 
-  .btn-group {
-    flex-wrap: nowrap;
+  .header-row {
+    margin-bottom: 0.75rem;
+  }
+
+  .page-title {
+    font-size: 1.25rem;
+
+    .stats-inline {
+      display: block;
+      font-size: 0.8125rem;
+      margin-top: 0.25rem;
+    }
+  }
+
+  .page-body {
+    padding: 1rem 0;
   }
 }
 </style>
