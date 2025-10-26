@@ -1,4 +1,4 @@
-# Vantage Server
+# Vantage MCP
 
 [English](../README.md) | **日本語**
 
@@ -40,7 +40,7 @@ Model Context Protocol (MCP) を介した Claude Code 用の強力なプロセ�
 ### Cargoを使用（推奨）
 
 ```bash
-cargo install vantage-server
+cargo install vantage-mcp
 # コマンドは 'vantage' として利用可能になります
 ```
 
@@ -48,8 +48,8 @@ cargo install vantage-server
 
 ```bash
 # リポジトリをクローン
-git clone https://github.com/chronista-club/vantage-server
-cd vantage-server
+git clone https://github.com/chronista-club/vantage-mcp
+cd vantage-mcp
 
 # リリースビルド
 cargo build --release
@@ -172,12 +172,12 @@ for process in list_processes(filter={"name_pattern": "worker"}):
 
 ### KDL設定ファイル
 
-Vantage Server は、プロセス設定の永続化に [KDL (Cuddly Data Language)](https://kdl.dev/) フォーマットを使用します。設定ファイルは `.vantage/processes.kdl` に自動的に保存されます。
+Vantage MCP は、プロセス設定の永続化に [KDL (Cuddly Data Language)](https://kdl.dev/) フォーマットを使用します。設定ファイルは `.vantage/processes.kdl` に自動的に保存されます。
 
 #### KDL設定ファイルの例
 
 ```kdl
-// Vantage Server Process Configuration
+// Vantage MCP Process Configuration
 meta {
     version "1.0.0"
 }
@@ -275,7 +275,7 @@ vantage --web-only
 ## 🏗️ プロジェクト構造
 
 ```
-vantage-server/
+vantage-mcp/
 ├── crates/
 │   ├── vantage/                 # メインサーバークレート
 │   │   ├── src/
@@ -393,11 +393,11 @@ cargo install --path .
 ## 📞 サポート
 
 問題、質問、提案については:
-- [GitHub Issues](https://github.com/chronista-club/vantage-server/issues) で Issue を開く
-- [Discussions](https://github.com/chronista-club/vantage-server/discussions) で議論
+- [GitHub Issues](https://github.com/chronista-club/vantage-mcp/issues) で Issue を開く
+- [Discussions](https://github.com/chronista-club/vantage-mcp/discussions) で議論
 
 ---
 
-*Vantage Server - Claude Code のためのシンプルかつ強力なプロセス管理。一味が支えます。*
+*Vantage MCP - Claude Code のためのシンプルかつ強力なプロセス管理。一味が支えます。*
 
 **Latest Release:** v0.1.0-beta7 🎉

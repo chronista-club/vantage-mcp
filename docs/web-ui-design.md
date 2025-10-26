@@ -1,8 +1,8 @@
-# Vantage Server Web UI 設計ドキュメント
+# Vantage MCP Web UI 設計ドキュメント
 
 ## 概要
 
-Vantage ServerのWebダッシュボードは、プロセス管理のための直感的なユーザーインターフェースを提供します。Vue 3 + TypeScript + Viteをベースとした、モダンでレスポンシブなシングルページアプリケーション（SPA）です。
+Vantage MCPのWebダッシュボードは、プロセス管理のための直感的なユーザーインターフェースを提供します。Vue 3 + TypeScript + Viteをベースとした、モダンでレスポンシブなシングルページアプリケーション（SPA）です。
 
 ### 目的
 

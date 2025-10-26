@@ -1,4 +1,4 @@
-# Vantage Server 環境変数
+# Vantage MCP 環境変数
 
 ## ロギング
 - `RUST_LOG`: ログレベル設定

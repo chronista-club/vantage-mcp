@@ -1,4 +1,4 @@
-# Vantage Server API リファレンス
+# Vantage MCP API リファレンス
 
 ## MCP ツール API
 

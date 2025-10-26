@@ -1,6 +1,6 @@
-# Vantage Server ドキュメント
+# Vantage MCP ドキュメント
 
-Vantage Server の公式ドキュメントへようこそ。
+Vantage MCP の公式ドキュメントへようこそ。
 
 ## 📚 ドキュメント構成
 
@@ -20,7 +20,7 @@ Vantage Server の公式ドキュメントへようこそ。
 ### 1. インストール
 
 ```bash
-cargo install --git https://github.com/chronista-club/vantage-server --tag v0.2.0
+cargo install --git https://github.com/chronista-club/vantage-mcp --tag v0.2.0
 ```
 
 ### 2. Claude Code 設定
@@ -72,7 +72,7 @@ Start the hello process
 
 ## 🤝 コントリビューション
 
-Issues や Pull Requests は [GitHub リポジトリ](https://github.com/chronista-club/vantage-server) で歓迎します。
+Issues や Pull Requests は [GitHub リポジトリ](https://github.com/chronista-club/vantage-mcp) で歓迎します。
 
 ## 📄 ライセンス
 
@@ -80,6 +80,6 @@ MIT OR Apache-2.0
 
 ## 🔗 関連リンク
 
-- [GitHub リポジトリ](https://github.com/chronista-club/vantage-server)
+- [GitHub リポジトリ](https://github.com/chronista-club/vantage-mcp)
 - [Model Context Protocol](https://modelcontextprotocol.io/)
 - [Claude Code](https://claude.ai/code)

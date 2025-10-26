@@ -38,7 +38,7 @@ cargo test --test test_web_api --features web
 
 ### その他の改善
 
-- ✅ ページタイトルを「Vantage Server」に変更
+- ✅ ページタイトルを「Vantage MCP」に変更
 - ✅ コードフォーマットの統一（rustfmt）
 - ✅ CI/CD パイプライン全て成功
 
@@ -46,10 +46,10 @@ cargo test --test test_web_api --features web
 
 ```bash
 # GitHubから直接インストール
-cargo install --git https://github.com/chronista-club/vantage-server --tag v0.2.3
+cargo install --git https://github.com/chronista-club/vantage-mcp --tag v0.2.3
 
 # または最新のmainブランチから
-cargo install --git https://github.com/chronista-club/vantage-server
+cargo install --git https://github.com/chronista-club/vantage-mcp
 ```
 
 ## 🚀 使い方
@@ -81,10 +81,10 @@ cargo test --test test_web_api --features web
 
 ## 🔗 関連リンク
 
-- [リポジトリ](https://github.com/chronista-club/vantage-server)
-- [テストドキュメント](https://github.com/chronista-club/vantage-server/blob/main/docs/testing.md)
-- [Chrome MCP E2Eテスト結果](https://github.com/chronista-club/vantage-server/blob/main/docs/testing-chrome-mcp.md)
+- [リポジトリ](https://github.com/chronista-club/vantage-mcp)
+- [テストドキュメント](https://github.com/chronista-club/vantage-mcp/blob/main/docs/testing.md)
+- [Chrome MCP E2Eテスト結果](https://github.com/chronista-club/vantage-mcp/blob/main/docs/testing-chrome-mcp.md)
 
 ---
 
-**Full Changelog**: https://github.com/chronista-club/vantage-server/compare/v0.2.2...v0.2.3
+**Full Changelog**: https://github.com/chronista-club/vantage-mcp/compare/v0.2.2...v0.2.3

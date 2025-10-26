@@ -1,8 +1,8 @@
-# Vantage Server コードベース構造
+# Vantage MCP コードベース構造
 
 ## ディレクトリ構造
 ```
-vantage-server/
+vantage-mcp/
 ├── src/
 │   ├── lib.rs              # メインサーバー実装、MCPツールハンドラー
 │   ├── bin/

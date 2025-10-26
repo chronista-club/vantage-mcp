@@ -1,8 +1,8 @@
-# Vantage Server Project Structure
+# Vantage MCP Project Structure
 
 ## Repository Layout
 ```
-vantage-server/
+vantage-mcp/
 ├── crates/                     # Rust workspace crates
 │   ├── vantage/                 # Main server crate
 │   │   ├── src/

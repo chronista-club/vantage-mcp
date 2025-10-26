@@ -1,7 +1,7 @@
-# Vantage Server Project Overview
+# Vantage MCP Project Overview
 
 ## Project Purpose
-Vantage Server is a powerful process management server for Claude Code via the Model Context Protocol (MCP). It enables Claude to manage processes as resources, providing capabilities for starting, stopping, monitoring processes, and capturing their outputs.
+Vantage MCP is a powerful process management server for Claude Code via the Model Context Protocol (MCP). It enables Claude to manage processes as resources, providing capabilities for starting, stopping, monitoring processes, and capturing their outputs.
 
 ## Tech Stack
 

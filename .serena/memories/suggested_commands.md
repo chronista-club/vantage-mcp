@@ -1,4 +1,4 @@
-# Suggested Commands for Vantage Server Development
+# Suggested Commands for Vantage MCP Development
 
 ## Build Commands
 ```bash

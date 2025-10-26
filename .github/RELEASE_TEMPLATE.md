@@ -1,4 +1,4 @@
-# Release Template for Vantage Server
+# Release Template for Vantage MCP
 
 以下のテンプレートを使用してGitHubリリースを作成してください。
 
@@ -12,20 +12,20 @@
 ## リリースノートテンプレート
 
 ```markdown
-## 🎉 Vantage Server vX.X.X-betaXX
+## 🎉 Vantage MCP vX.X.X-betaXX
 
 ### 📦 インストール方法
 
 ```bash
 # cargo installを使用（推奨）
-cargo install --git https://github.com/chronista-club/vantage-server --tag vX.X.X-betaXX
+cargo install --git https://github.com/chronista-club/vantage-mcp --tag vX.X.X-betaXX
 
 # または最新版をインストール
-cargo install --git https://github.com/chronista-club/vantage-server
+cargo install --git https://github.com/chronista-club/vantage-mcp
 
 # ソースからビルド
-git clone https://github.com/chronista-club/vantage-server.git
-cd vantage-server
+git clone https://github.com/chronista-club/vantage-mcp.git
+cd vantage-mcp
 git checkout vX.X.X-betaXX
 cargo build --release
 ```
@@ -68,7 +68,7 @@ cargo build --release
 
 ---
 
-**Full Changelog**: https://github.com/chronista-club/vantage-server/compare/vX.X.X-betaXX...vX.X.X-betaXX
+**Full Changelog**: https://github.com/chronista-club/vantage-mcp/compare/vX.X.X-betaXX...vX.X.X-betaXX
 ```
 
 ## リリース作成手順
