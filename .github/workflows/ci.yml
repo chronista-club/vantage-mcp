@@ -30,7 +30,7 @@ jobs:
         bun-version: latest
     - name: Build Web UI
       run: |
-        cd ui/web-vue
+        cd ui/web
         bun install
         bun run build
     - name: Cache dependencies
@@ -67,7 +67,7 @@ jobs:
         bun-version: latest
     - name: Build Web UI
       run: |
-        cd ui/web-vue
+        cd ui/web
         bun install
         bun run build
     - name: Check formatting
@@ -87,7 +87,7 @@ jobs:
         bun-version: latest
     - name: Build Web UI
       run: |
-        cd ui/web-vue
+        cd ui/web
         bun install
         bun run build
     - name: Clean build
@@ -117,7 +117,7 @@ jobs:
         bun-version: latest
     - name: Build Web UI
       run: |
-        cd ui/web-vue
+        cd ui/web
         bun install
         bun run build
     - name: Cache dependencies
