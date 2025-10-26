@@ -10,7 +10,7 @@ mkdir -p "$TEST_DIR"
 
 cleanup() {
     echo "Cleaning up..."
-    pkill -f "vantagemcp.*--web" 2>/dev/null
+    pkill -f "vantagemcp" 2>/dev/null
     rm -rf "$TEST_DIR"
 }
 trap cleanup EXIT
@@ -19,12 +19,12 @@ trap cleanup EXIT
 EXPORT_FILE="$TEST_DIR/test_export.surql"
 
 echo "1. Starting vantage server..."
-VANTAGE_EXPORT_FILE="$EXPORT_FILE" RUST_LOG=info ./target/release/vantagemcp --web-only --no-open --web-port 12720 &
+VANTAGE_EXPORT_FILE="$EXPORT_FILE" RUST_LOG=info ./target/release/vantagemcp --no-open &
 VANTAGE_PID=$!
 sleep 2
 
 echo "2. Creating test process..."
-curl -s -X POST http://localhost:12720/api/processes \
+curl -s -X POST http://localhost:12700/api/processes \
     -H "Content-Type: application/json" \
     -d '{"id": "test-db-process", "command": "echo", "args": ["Database Test"], "env": {"TEST": "123"}}' | jq
 
@@ -42,12 +42,12 @@ else
 fi
 
 echo "4. Re-importing database..."
-VANTAGE_IMPORT_FILE="$EXPORT_FILE" RUST_LOG=info ./target/release/vantagemcp --web-only --no-open --web-port 12721 &
+VANTAGE_IMPORT_FILE="$EXPORT_FILE" RUST_LOG=info ./target/release/vantagemcp --no-open &
 VANTAGE_PID=$!
 sleep 2
 
 echo "5. Verifying imported data..."
-PROCESSES=$(curl -s http://localhost:12721/api/processes | jq)
+PROCESSES=$(curl -s http://localhost:12700/api/processes | jq)
 echo "Imported processes: $PROCESSES"
 
 if echo "$PROCESSES" | grep -q "test-db-process"; then

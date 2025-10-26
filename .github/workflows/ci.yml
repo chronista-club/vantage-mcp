@@ -24,6 +24,15 @@ jobs:
       uses: dtolnay/rust-toolchain@master
       with:
         toolchain: ${{ matrix.rust }}
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: latest
+    - name: Build Web UI
+      run: |
+        cd ui/web
+        bun install
+        bun run build
     - name: Cache dependencies
       uses: actions/cache@v4
       with:
@@ -52,6 +61,15 @@ jobs:
     - uses: dtolnay/rust-toolchain@stable
       with:
         components: rustfmt
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: latest
+    - name: Build Web UI
+      run: |
+        cd ui/web
+        bun install
+        bun run build
     - name: Check formatting
       run: cargo fmt -- --check
 
@@ -63,6 +81,15 @@ jobs:
     - uses: dtolnay/rust-toolchain@stable
       with:
         components: clippy
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: latest
+    - name: Build Web UI
+      run: |
+        cd ui/web
+        bun install
+        bun run build
     - name: Clean build
       run: cargo clean
     - name: Run clippy
@@ -84,6 +111,15 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - uses: dtolnay/rust-toolchain@stable
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: latest
+    - name: Build Web UI
+      run: |
+        cd ui/web
+        bun install
+        bun run build
     - name: Cache dependencies
       uses: actions/cache@v4
       with:
@@ -102,7 +138,7 @@ jobs:
         ./target/release/vantagemcp --help
     - name: Test web server mode
       run: |
-        ./target/release/vantagemcp --web-only &
+        ./target/release/vantagemcp --no-open &
         SERVER_PID=$!
         sleep 5
         curl -f http://localhost:12700/api/status || exit 1

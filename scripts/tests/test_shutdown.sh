@@ -18,7 +18,7 @@ cargo build --release
 
 echo ""
 echo "Starting vantage with web dashboard..."
-RUST_LOG=info ./target/release/vantagemcp --web-only --no-open &
+RUST_LOG=info ./target/release/vantagemcp --no-open &
 VANTAGE_PID=$!
 
 # Wait for server to start
