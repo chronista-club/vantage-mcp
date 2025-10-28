@@ -1,7 +1,7 @@
 <template>
   <div class="settings-dropdown" ref="dropdownRef">
     <button
-      @click="toggleDropdown"
+      @click.stop="toggleDropdown"
       class="settings-btn"
       :aria-label="t('header.settings')"
       :aria-expanded="isOpen"
@@ -67,17 +67,24 @@ function toggleLanguage() {
 }
 
 function handleClickOutside(event: MouseEvent) {
-  if (dropdownRef.value && !dropdownRef.value.contains(event.target as Node)) {
+  if (!isOpen.value) return;
+
+  const target = event.target as Node;
+  if (dropdownRef.value && !dropdownRef.value.contains(target)) {
     isOpen.value = false;
   }
 }
 
 onMounted(() => {
-  document.addEventListener('click', handleClickOutside);
+  // Use mousedown instead of click to detect outside clicks
+  // and add it on next tick to avoid immediate closure
+  setTimeout(() => {
+    document.addEventListener('mousedown', handleClickOutside);
+  }, 100);
 });
 
 onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside);
+  document.removeEventListener('mousedown', handleClickOutside);
 });
 </script>
 

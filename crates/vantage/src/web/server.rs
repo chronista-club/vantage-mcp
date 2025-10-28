@@ -133,9 +133,25 @@ async fn static_handler(uri: axum::http::Uri) -> impl IntoResponse {
             .unwrap();
     }
 
-    // ファイルが見つからない場合は404を返す
-    Response::builder()
-        .status(StatusCode::NOT_FOUND)
-        .body(axum::body::Body::from("404 Not Found"))
-        .unwrap()
+    // ファイルが見つからない場合、SPAルーティングのためにindex.htmlを返す
+    // (ただし、/api パスの場合は404を返す)
+    if uri.path().starts_with("/api/") {
+        return Response::builder()
+            .status(StatusCode::NOT_FOUND)
+            .body(axum::body::Body::from("404 Not Found"))
+            .unwrap();
+    }
+
+    // SPAルーティング: index.htmlを返す
+    match Asset::get("ui/web/dist/index.html") {
+        Some(content) => Response::builder()
+            .status(StatusCode::OK)
+            .header("Content-Type", "text/html")
+            .body(axum::body::Body::from(content.data))
+            .unwrap(),
+        None => Response::builder()
+            .status(StatusCode::NOT_FOUND)
+            .body(axum::body::Body::from("index.html not found"))
+            .unwrap(),
+    }
 }

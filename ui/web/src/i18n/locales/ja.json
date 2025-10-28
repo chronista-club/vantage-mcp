@@ -6,9 +6,18 @@
     "settings": "設定"
   },
   "navigation": {
+    "dashboard": "ダッシュボード",
     "processes": "プロセス",
     "templates": "テンプレート",
     "clipboard": "クリップボード"
+  },
+  "dashboard": {
+    "quickActions": "クイックアクション",
+    "recentProcesses": "最近のプロセス",
+    "viewAll": "すべて表示",
+    "noProcesses": "プロセスがありません",
+    "noProcessesDescription": "テンプレートから最初のプロセスを作成しましょう",
+    "createFromTemplate": "テンプレートから作成"
   },
   "stats": {
     "total": "合計",
@@ -45,5 +54,15 @@
   "theme": {
     "light": "ライト",
     "dark": "ダーク"
+  },
+  "status": {
+    "running": "実行中",
+    "stopped": "停止中",
+    "failed": "失敗",
+    "notstarted": "未開始"
+  },
+  "settings": {
+    "theme": "テーマ",
+    "language": "言語"
   }
 }

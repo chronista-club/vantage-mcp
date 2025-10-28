@@ -6,9 +6,18 @@
     "settings": "Settings"
   },
   "navigation": {
+    "dashboard": "Dashboard",
     "processes": "Processes",
     "templates": "Templates",
     "clipboard": "Clipboard"
+  },
+  "dashboard": {
+    "quickActions": "Quick Actions",
+    "recentProcesses": "Recent Processes",
+    "viewAll": "View All",
+    "noProcesses": "No processes found",
+    "noProcessesDescription": "Create your first process from a template",
+    "createFromTemplate": "Create from Template"
   },
   "stats": {
     "total": "Total",
@@ -45,5 +54,15 @@
   "theme": {
     "light": "light",
     "dark": "dark"
+  },
+  "status": {
+    "running": "Running",
+    "stopped": "Stopped",
+    "failed": "Failed",
+    "notstarted": "Not Started"
+  },
+  "settings": {
+    "theme": "Theme",
+    "language": "Language"
   }
 }

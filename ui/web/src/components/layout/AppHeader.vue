@@ -55,13 +55,19 @@
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { IconActivity, IconTemplate, IconClipboard } from '@tabler/icons-vue';
+import { IconDashboard, IconActivity, IconTemplate, IconClipboard } from '@tabler/icons-vue';
 import SettingsDropdown from './SettingsDropdown.vue';
 
 const route = useRoute();
 const { t } = useI18n();
 
 const navigationItems = computed(() => [
+  {
+    name: 'dashboard',
+    route: 'dashboard',
+    label: t('navigation.dashboard'),
+    icon: IconDashboard,
+  },
   {
     name: 'processes',
     route: 'processes',
