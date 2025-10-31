@@ -5,7 +5,7 @@
         <h1 class="page-title">{{ t('navigation.dashboard') }}</h1>
       </div>
 
-      <!-- 統計カード -->
+      <!-- Statistics Cards -->
       <div class="stats-grid">
         <div class="stat-card">
           <div class="stat-icon total">
@@ -48,7 +48,7 @@
         </div>
       </div>
 
-      <!-- クイックアクション -->
+      <!-- Quick Actions -->
       <div class="quick-actions">
         <h2 class="section-title">{{ t('dashboard.quickActions') }}</h2>
         <div class="action-grid">
@@ -67,7 +67,7 @@
         </div>
       </div>
 
-      <!-- 最近のプロセス -->
+      <!-- Recent Processes -->
       <div v-if="recentProcesses.length > 0" class="recent-section">
         <div class="section-header">
           <h2 class="section-title">{{ t('dashboard.recentProcesses') }}</h2>
@@ -93,7 +93,7 @@
         </div>
       </div>
 
-      <!-- 空の状態 -->
+      <!-- Empty State -->
       <div v-else class="empty-state">
         <IconActivity :size="48" :stroke-width="1.5" />
         <h3>{{ t('dashboard.noProcesses') }}</h3>
@@ -164,7 +164,7 @@ function getProcessStateClass(state: any): string {
   }
 }
 
-// 統計グリッド
+// Statistics grid
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -274,7 +274,7 @@ function getProcessStateClass(state: any): string {
   }
 }
 
-// セクション
+// Sections
 .quick-actions,
 .recent-section {
   margin-bottom: 2rem;
@@ -313,7 +313,7 @@ function getProcessStateClass(state: any): string {
   }
 }
 
-// クイックアクション
+// Quick actions
 .action-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -351,7 +351,7 @@ function getProcessStateClass(state: any): string {
   }
 }
 
-// プロセスリスト
+// Process list
 .process-list {
   display: flex;
   flex-direction: column;
@@ -448,7 +448,7 @@ function getProcessStateClass(state: any): string {
   }
 }
 
-// 空の状態
+// Empty state
 .empty-state {
   display: flex;
   flex-direction: column;
