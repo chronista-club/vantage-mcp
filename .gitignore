@@ -33,6 +33,7 @@ test-output/
 history.txt
 *.backup
 *.tmp
+.serena
 
 # Web UI build outputs
 ui/web/dist/
