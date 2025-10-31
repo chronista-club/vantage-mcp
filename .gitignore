@@ -29,10 +29,8 @@ test-output/
 *.local.*
 
 # Project specific
-.diarkis/
 .vantage/
 history.txt
-data/
 *.backup
 *.tmp
 
