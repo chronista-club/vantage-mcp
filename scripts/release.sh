@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Release helper script for Vantage Server
+# Release helper script for Vantage MCP
 # Usage: ./scripts/release.sh [patch|minor|major|beta]
 
 set -e

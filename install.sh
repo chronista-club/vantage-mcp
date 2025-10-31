@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Vantage Server Installation Script
+# Vantage MCP Installation Script
 # Usage: curl -fsSL https://raw.githubusercontent.com/chronista-club/vantage-mcp/main/install.sh | bash
 
 REPO="chronista-club/vantage-mcp"
@@ -128,7 +128,7 @@ install_with_homebrew() {
 
 # Main installation flow
 main() {
-    echo "Installing Vantage Server..."
+    echo "Installing Vantage MCP..."
     echo ""
     
     # Try binary release

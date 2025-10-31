@@ -90,7 +90,7 @@ vantage --web --web-port 8080
 Claude Code で以下のコマンドを実行：
 
 1. サーバーステータスの確認：
-   - "Check Vantage server status"
+   - "Check Vantage MCP status"
 
 2. テストプロセスの作成：
    - "Create a test process that echoes hello world"

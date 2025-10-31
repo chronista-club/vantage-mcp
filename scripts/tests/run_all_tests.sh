@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Vantage Server 統合テストスイート
+# Vantage MCP 統合テストスイート
 # すべてのテストを順番に実行
 
 set -e  # エラーが発生したら停止

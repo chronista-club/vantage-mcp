@@ -20,7 +20,7 @@
 
 ## プロジェクト概要
 
-Vantage (一味・いちみ) Server は Model Context Protocol (MCP) を介した Claude Code 用のプロセス管理サーバーです。Claude がプロセスの起動、停止、監視、および MCP ツールを通じた出力のキャプチャを可能にします。
+Vantage MCP は Model Context Protocol (MCP) を介した Claude Code 用のプロセス管理サーバーです。Claude がプロセスの起動、停止、監視、および MCP ツールを通じた出力のキャプチャを可能にします。
 
 ### 主な機能
 - プロセスのライフサイクル管理（作成、起動、停止、削除）

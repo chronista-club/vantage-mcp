@@ -1,7 +1,7 @@
 use std::io;
 use thiserror::Error;
 
-/// Vantage Server の統一エラー型
+/// Vantage MCP の統一エラー型
 #[derive(Debug, Error)]
 pub enum VantageError {
     // プロセス管理エラー

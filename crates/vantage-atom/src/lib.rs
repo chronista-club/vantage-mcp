@@ -887,12 +887,12 @@ impl ServerHandler for VantageServer {
             server_info: Implementation {
                 name: "vantage-mcp".to_string(),
                 version: env!("CARGO_PKG_VERSION").to_string(),
-                title: Some("Vantage Server".to_string()),
+                title: Some("Vantage MCP".to_string()),
                 website_url: Some("https://github.com/chronista-club/vantage-mcp".to_string()),
                 icons: None,
             },
             instructions: Some(
-                "Vantage Server - A powerful process management server for Claude Code via MCP."
+                "Vantage MCP - A powerful process management server for Claude Code via MCP."
                     .to_string(),
             ),
         };

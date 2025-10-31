@@ -9,7 +9,7 @@ use vantage::VantageServer;
 const BROWSER_STARTUP_DELAY_MS: u64 = 500;
 const KEEPALIVE_INTERVAL_SECS: u64 = 3600;
 
-/// Vantage Server - MCP経由のClaude Code用プロセス管理サーバー
+/// Vantage MCP - MCP経由のClaude Code用プロセス管理サーバー
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
@@ -54,7 +54,7 @@ async fn main() -> Result<()> {
         .with_ansi(false)
         .init();
 
-    tracing::info!("Starting Vantage Server (MCP + Web mode)");
+    tracing::info!("Starting Vantage MCP (MCP + Web mode)");
 
     // 共有プロセスマネージャーを作成
     let process_manager = vantage::atom::process::ProcessManager::new().await;
@@ -286,6 +286,6 @@ async fn main() -> Result<()> {
         }
     }
 
-    tracing::info!("Vantage server shutdown complete");
+    tracing::info!("Vantage MCP shutdown complete");
     Ok(())
 }
