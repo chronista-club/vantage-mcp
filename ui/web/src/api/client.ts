@@ -94,6 +94,18 @@ class ApiClient {
     return data;
   }
 
+  async createTemplate(template: any): Promise<void> {
+    await this.client.post('/templates', template);
+  }
+
+  async updateTemplate(templateId: string, template: any): Promise<void> {
+    await this.client.put(`/templates/${encodeURIComponent(templateId)}`, template);
+  }
+
+  async deleteTemplate(templateId: string): Promise<void> {
+    await this.client.delete(`/templates/${encodeURIComponent(templateId)}`);
+  }
+
   // Clipboard API
   async getClipboard(): Promise<ClipboardItem | null> {
     try {

@@ -31,12 +31,20 @@ export interface TemplateVariable {
 }
 
 export interface ProcessTemplate {
+  id?: string;
   template_id: string;
   name: string;
   description?: string;
   category?: string;
+  command: string;
+  args?: string[];
+  env?: Record<string, string>;
+  default_cwd?: string;
+  default_auto_start?: boolean;
   tags?: string[];
   variables?: TemplateVariable[];
+  created_at?: string;
+  updated_at?: string;
 }
 
 // Settings types
