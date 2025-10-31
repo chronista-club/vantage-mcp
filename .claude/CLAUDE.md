@@ -19,15 +19,15 @@ Vantage (一味・いちみ) Server は Model Context Protocol (MCP) を介し�
 
 ```bash
 # GitHubから特定のバージョンを直接インストール（推奨）
-cargo install --git https://github.com/chronista-club/vantage-mcp --tag v0.1.0-beta20
+cargo install --git https://github.com/chronista-club/vantage-mcp --tag v0.1.0-beta20 vantage-mcp
 
 # 最新のmainブランチからインストール
-cargo install --git https://github.com/chronista-club/vantage-mcp
+cargo install --git https://github.com/chronista-club/vantage-mcp vantage-mcp
 
 # ローカルでビルドしてインストール
 git clone https://github.com/chronista-club/vantage-mcp.git
 cd vantage-mcp
-cargo install --path crates/vantage-atom
+cargo install --path crates/vantage-mcp
 ```
 
 ## ビルド・開発コマンド
