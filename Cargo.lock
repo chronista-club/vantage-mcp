@@ -2942,7 +2942,6 @@ dependencies = [
  "tower-http",
  "tracing",
  "tracing-subscriber",
- "vantage",
  "vantage-persistence",
 ]
 

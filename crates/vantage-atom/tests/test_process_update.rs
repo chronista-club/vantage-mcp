@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 use tempfile::tempdir;
-use vantage::atom::{messages::CreateProcessRequest, process::ProcessManager};
+use vantage_atom::{messages::CreateProcessRequest, process::ProcessManager};
 
 #[tokio::test]
 async fn test_update_process_attributes() {
