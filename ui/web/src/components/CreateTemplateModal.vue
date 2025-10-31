@@ -298,11 +298,11 @@ async function handleSubmit() {
       description: form.value.description || undefined,
       category: form.value.category || undefined,
       command: form.value.command,
-      args: form.value.args.length > 0 ? form.value.args : undefined,
-      env: Object.keys(form.value.env).length > 0 ? form.value.env : undefined,
+      args: form.value.args.length > 0 ? form.value.args : [],
+      env: Object.keys(form.value.env).length > 0 ? form.value.env : {},
       default_cwd: form.value.default_cwd || undefined,
       tags: form.value.tags.length > 0 ? form.value.tags : undefined,
-      variables: validVariables.length > 0 ? validVariables : undefined,
+      variables: validVariables.length > 0 ? validVariables : [],
       default_auto_start: form.value.default_auto_start,
     };
 
