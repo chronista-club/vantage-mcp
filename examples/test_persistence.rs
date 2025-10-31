@@ -1,5 +1,5 @@
-use vantage_atom::persistence::PersistenceManager;
-use vantage_atom::process::types::{ProcessInfo, ProcessState};
+use vantage::atom::persistence::PersistenceManager;
+use vantage::atom::process::types::{ProcessInfo, ProcessState};
 use std::collections::HashMap;
 
 #[tokio::main]

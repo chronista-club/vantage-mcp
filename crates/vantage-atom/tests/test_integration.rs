@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::time::Duration;
-use vantage_atom::process::{OutputStream, ProcessFilter, ProcessManager, ProcessStateFilter};
+use vantage::atom::process::{OutputStream, ProcessFilter, ProcessManager, ProcessStateFilter};
 
 #[tokio::test]
 async fn test_process_basic_lifecycle() {

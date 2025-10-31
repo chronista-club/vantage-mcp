@@ -67,3 +67,4 @@ browser-test = ["dep:headless_chrome"]
 
 [dev-dependencies]
 tempfile = "3.8"
+vantage = { path = "../vantage", features = ["web"] }
