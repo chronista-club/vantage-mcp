@@ -12,9 +12,9 @@ mod browser_tests {
     use headless_chrome::{Browser, LaunchOptions};
     use std::sync::Arc;
     use std::time::Duration;
-    use vantage::process::ProcessManager;
-    use vantage::web::api::create_api_routes;
-    use vantage::web::server::AppState;
+    use vantage_atom::process::ProcessManager;
+    use vantage_atom::web::api::create_api_routes;
+    use vantage_atom::web::server::AppState;
     use vantage_persistence::PersistenceManager;
 
     #[tokio::test]

@@ -27,7 +27,7 @@ cargo install --git https://github.com/chronista-club/vantage-mcp
 # ローカルでビルドしてインストール
 git clone https://github.com/chronista-club/vantage-mcp.git
 cd vantage-mcp
-cargo install --path crates/vantage
+cargo install --path crates/vantage-atom
 ```
 
 ## ビルド・開発コマンド
@@ -65,7 +65,7 @@ VANTAGE_AUTO_EXPORT_INTERVAL=300 cargo run  # 5分ごとに自動エクスポー
 
 プロジェクトはワークスペース構造で整理されています：
 
-### crates/vantage - メインサーバークレート
+### crates/vantage-atom - メインサーバークレート
 
 - **`src/lib.rs`**: MCP ツールハンドラーを持つメインサーバー実装。各ツールメソッドは `#[tool]` 属性で装飾され、Claude に公開される MCP ツールにマッピングされます。
 
@@ -91,7 +91,7 @@ VANTAGE_AUTO_EXPORT_INTERVAL=300 cargo run  # 5分ごとに自動エクスポー
   - `api.rs`: APIルーティング
   - デフォルトポート 12700、占有時は自動で別ポートを選択
 
-### crates/vantage-persistence - 永続化レイヤー
+### crates/vantage-atom-persistence - 永続化レイヤー
 
 - **`src/lib.rs`**: 永続化インターフェース定義
 - **`src/persistence/`**: インメモリストレージとYAML永続化実装
@@ -182,16 +182,16 @@ cargo test test_export_import # 特定のテストを実行
 ## 開発のヒント
 
 1. **新しいMCPツールを追加する場合**：
-   - `crates/vantage/src/messages/` にリクエスト型を定義
-   - `crates/vantage/src/lib.rs` の `VantageServer` impl ブロックにツールメソッドを追加
+   - `crates/vantage-atom/src/messages/` にリクエスト型を定義
+   - `crates/vantage-atom/src/lib.rs` の `VantageServer` impl ブロックにツールメソッドを追加
    - `#[tool]` 属性でメソッドを装飾
 
 2. **プロセス管理ロジックを変更する場合**：
-   - `crates/vantage/src/process/manager.rs` の `ProcessManager` を更新
-   - 内部型は `crates/vantage/src/messages/process.rs` で定義
+   - `crates/vantage-atom/src/process/manager.rs` の `ProcessManager` を更新
+   - 内部型は `crates/vantage-atom/src/messages/process.rs` で定義
 
 3. **永続化を変更する場合**：
-   - `crates/vantage-persistence/src/` の該当モジュールを更新
+   - `crates/vantage-atom-persistence/src/` の該当モジュールを更新
    - YAML形式でのスナップショット機能
 
 4. **WebUI開発**：

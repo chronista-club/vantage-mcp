@@ -78,24 +78,24 @@ vantage-mcp/
 
 ## Key Architectural Components
 
-### 1. MCP Server Layer (`crates/vantage/src/lib.rs`)
+### 1. MCP Server Layer (`crates/vantage-atom/src/lib.rs`)
 - Implements `VantageServer` struct
 - Defines all MCP tools with `#[tool]` attributes
 - Routes tool calls to appropriate handlers
 
-### 2. Process Management (`crates/vantage/src/process/`)
+### 2. Process Management (`crates/vantage-atom/src/process/`)
 - `ProcessManager`: Core process lifecycle management
 - Thread-safe with `Arc<RwLock<HashMap>>`
 - Circular buffer for efficient log storage
 - Graceful shutdown with configurable timeout
 
-### 3. Web Dashboard (`crates/vantage/src/web/`)
+### 3. Web Dashboard (`crates/vantage-atom/src/web/`)
 - Axum-based HTTP server
 - RESTful API endpoints
 - Static file serving for Vue SPA
 - Auto port selection if default port busy
 
-### 4. Persistence Layer (`crates/vantage-persistence/`)
+### 4. Persistence Layer (`crates/vantage-atom-persistence/`)
 - Abstraction over multiple storage backends
 - KDL format for human-readable configs
 - SurrealDB for advanced queries

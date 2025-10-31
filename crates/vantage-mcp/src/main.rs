@@ -3,7 +3,7 @@ use clap::Parser;
 use rmcp::{ServiceExt, transport::stdio};
 use std::env;
 use tracing_subscriber::{self, EnvFilter};
-use vantage::VantageServer;
+use vantage_atom::VantageServer;
 
 // メンテナビリティ向上のための定数
 const BROWSER_STARTUP_DELAY_MS: u64 = 500;
@@ -57,7 +57,7 @@ async fn main() -> Result<()> {
     tracing::info!("Starting Vantage Server (MCP + Web mode)");
 
     // 共有プロセスマネージャーを作成
-    let process_manager = vantage::process::ProcessManager::new().await;
+    let process_manager = vantage_atom::process::ProcessManager::new().await;
 
     // 設定されている場合、起動時にプロセスを自動インポート
     // まず自動起動プロセス用のYAMLスナップショットを試行
@@ -217,7 +217,7 @@ async fn main() -> Result<()> {
 
         // Webサーバーを起動し、実際のポートを取得
         let actual_port =
-            match vantage::web::start_web_server(web_manager, web_persistence, web_port).await {
+            match vantage_atom::web::start_web_server(web_manager, web_persistence, web_port).await {
                 Ok(port) => {
                     tracing::debug!("Web server started on actual port {}", port);
                     port

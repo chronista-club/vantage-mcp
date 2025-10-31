@@ -1,5 +1,5 @@
 [package]
-name = "vantage"
+name = "vantage-atom"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

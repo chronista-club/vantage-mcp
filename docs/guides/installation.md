@@ -31,7 +31,7 @@ cd vantage-mcp
 cargo build --release
 
 # インストール
-cargo install --path crates/vantage
+cargo install --path crates/vantage-atom
 ```
 
 ### 方法3: ローカルインストールスクリプト

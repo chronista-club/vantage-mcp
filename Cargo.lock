@@ -2906,7 +2906,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba73ea9cf16a25df0c8caa16c51acb937d5712a8429db78a3ee29d5dcacd3a65"
 
 [[package]]
-name = "vantage"
+name = "vantage-atom"
 version = "0.2.3"
 dependencies = [
  "anyhow",
@@ -2956,7 +2956,7 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
- "vantage",
+ "vantage-atom",
  "vantage-persistence",
 ]
 
