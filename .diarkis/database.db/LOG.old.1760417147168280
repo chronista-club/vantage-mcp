@@ -1,1 +1,0 @@
-2025/10/14-13:45:47.169543 8569440256 [WARN] [db/db_impl/db_impl_open.cc:2313] DB::Open() failed: Corruption: Corruption: IO error: No such file or directory: While open a file for random read: .diarkis/database.db/000016.sst: No such file or directory  The file .diarkis/database.db/MANIFEST-000019 may be corrupted.

@@ -26,10 +26,11 @@ test-output/
 # Environment
 .env
 .env.local
+*.local.*
 
 # Project specific
 .vantage/
-data/
+history.txt
 *.backup
 *.tmp
 

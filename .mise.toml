@@ -2,27 +2,27 @@
 bun = "latest"
 
 [tasks."web:install"]
-description = "Install Web UI dependencies"
+description = "Web UIの依存関係をインストール"
 dir = "ui/web"
 run = "bun install"
 
 [tasks.build-web]
-description = "Build web UI with Bun"
+description = "BunでWeb UIをビルド"
 depends = ["web:install"]
 dir = "ui/web"
 run = "bun run build"
 
 [tasks.web]
-description = "Run Vantage server with web dashboard"
+description = "Webダッシュボード付きでVantageサーバーを実行"
 run = "RUST_LOG=info cargo run --bin vantagemcp -- --web-only"
 
 [tasks.dev]
-description = "Build web console and run Vantage server"
+description = "Webコンソールをビルド後、Vantageサーバーを実行"
 depends = ["build-web"]
 run = "RUST_LOG=info cargo run --bin vantagemcp -- --web-only"
 
 [tasks.dev-watch]
-description = "Development server with auto-reload (Rust + Web)"
+description = "自動リロード付き開発サーバー（Rust + Web）"
 run = """
     # Kill any existing processes
     pkill -f 'cargo run.*vantagemcp' || true
@@ -37,13 +37,13 @@ run = """
 """
 
 [tasks.web-watch]
-description = "Watch and build web assets only"
+description = "Webアセットのみを監視してビルド"
 dir = "ui/web"
 run = "bun run build --watch"
 
 # ローカルインストールタスク
 [tasks.install]
-description = "Build release and install to ~/.local/bin"
+description = "リリースビルド後、~/.local/binにインストール"
 depends = ["build"]
 run = """
     mkdir -p ~/.local/bin
@@ -54,7 +54,7 @@ run = """
 """
 
 [tasks.install-debug]
-description = "Build debug and install to ~/.local/bin (fast)"
+description = "デバッグビルドを~/.local/binにインストール（高速）"
 depends = ["build-debug"]
 run = """
     mkdir -p ~/.local/bin
@@ -65,29 +65,29 @@ run = """
 """
 
 [tasks.build]
-description = "Build release version"
+description = "リリースバージョンをビルド"
 depends = ["build-web"]
 run = "cargo build --release"
 
 [tasks.build-debug]
-description = "Build debug version"
+description = "デバッグバージョンをビルド"
 depends = ["build-web"]
 run = "cargo build"
 
 [tasks.test]
-description = "Run all tests"
+description = "全テストを実行"
 run = "cargo test"
 
 [tasks.check]
-description = "Check code without building"
+description = "ビルドせずにコードをチェック"
 run = "cargo check"
 
 [tasks.clean]
-description = "Clean build artifacts"
+description = "ビルド成果物をクリーン"
 run = "cargo clean"
 
 [tasks.uninstall]
-description = "Remove vantagemcp from ~/.local/bin"
+description = "~/.local/binからvantagemcpを削除"
 run = """
     if [ -f ~/.local/bin/vantagemcp ]; then
         rm -f ~/.local/bin/vantagemcp
