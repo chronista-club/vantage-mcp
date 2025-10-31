@@ -208,40 +208,37 @@ async fn main() -> Result<()> {
     });
 
     // Webサーバーを起動
-    #[cfg(feature = "web")]
-    {
-        tracing::info!("Web dashboard enabled on port {}", web_port);
+    tracing::info!("Web dashboard enabled on port {}", web_port);
 
-        let web_manager = process_manager.clone();
-        let web_persistence = process_manager.persistence_manager();
+    let web_manager = process_manager.clone();
+    let web_persistence = process_manager.persistence_manager();
 
-        // Webサーバーを起動し、実際のポートを取得
-        let actual_port =
-            match vantage::atom::web::start_web_server(web_manager, web_persistence, web_port).await {
-                Ok(port) => {
-                    tracing::debug!("Web server started on actual port {}", port);
-                    port
-                }
-                Err(e) => {
-                    tracing::error!("Failed to start web server: {:?}", e);
-                    web_port // リクエストされたポートにフォールバック
-                }
-            };
+    // Webサーバーを起動し、実際のポートを取得
+    let actual_port =
+        match vantage::atom::web::start_web_server(web_manager, web_persistence, web_port).await {
+            Ok(port) => {
+                tracing::debug!("Web server started on actual port {}", port);
+                port
+            }
+            Err(e) => {
+                tracing::error!("Failed to start web server: {:?}", e);
+                web_port // リクエストされたポートにフォールバック
+            }
+        };
 
-        // 実際のポートでブラウザを開く
-        if auto_open {
-            let url = format!("http://localhost:{actual_port}");
-            tokio::spawn(async move {
-                tokio::time::sleep(tokio::time::Duration::from_millis(BROWSER_STARTUP_DELAY_MS))
-                    .await;
+    // 実際のポートでブラウザを開く
+    if auto_open {
+        let url = format!("http://localhost:{actual_port}");
+        tokio::spawn(async move {
+            tokio::time::sleep(tokio::time::Duration::from_millis(BROWSER_STARTUP_DELAY_MS))
+                .await;
 
-                if let Err(e) = open::that(&url) {
-                    tracing::warn!("Failed to open browser: {}", e);
-                } else {
-                    tracing::info!("Opening browser at {}", url);
-                }
-            });
-        }
+            if let Err(e) = open::that(&url) {
+                tracing::warn!("Failed to open browser: {}", e);
+            } else {
+                tracing::info!("Opening browser at {}", url);
+            }
+        });
     }
 
     // MCPサーバーを起動

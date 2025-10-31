@@ -14,7 +14,6 @@ pub mod learning;
 pub mod messages;
 pub mod process;
 pub mod security;
-#[cfg(feature = "web")]
 pub mod web;
 
 pub use error::{VantageError, VantageResult};

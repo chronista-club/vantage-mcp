@@ -57,11 +57,9 @@ pub enum VantageError {
     DirectoryNotFound(String),
 
     // Webサーバーエラー
-    #[cfg(feature = "web")]
     #[error("Web server error: {0}")]
     WebServer(String),
 
-    #[cfg(feature = "web")]
     #[error("Port already in use: {0}")]
     PortInUse(u16),
 

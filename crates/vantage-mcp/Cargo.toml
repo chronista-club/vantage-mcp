@@ -15,7 +15,7 @@ path = "src/main.rs"
 
 [dependencies]
 # Core library
-vantage = { path = "../vantage", features = ["web"] }
+vantage = { path = "../vantage" }
 vantage-persistence = { path = "../vantage-persistence" }
 
 # MCP SDK
@@ -48,8 +48,7 @@ clap = { version = "4.5", features = ["derive"] }
 nix = { version = "0.29", features = ["signal"] }
 
 [features]
-default = ["web"]
-web = ["vantage/web"]
+default = []
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["test-util"] }

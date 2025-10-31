@@ -4,6 +4,20 @@
 
 **重要**: このプロジェクトのメイン言語は日本語です。コミットメッセージ、ドキュメント、コメント、UI文言は日本語で記述してください。
 
+## 🎯 必須スキルの使用
+
+**重要**: このプロジェクトはMCPサーバーであるため、新しいMCPツールの追加や既存ツールの改善を行う際は、必ず`.claude/skills/mcp-builder`スキルを参照して使用してください。このスキルには以下が含まれています：
+
+- **エージェント中心設計原則**: APIエンドポイントではなくワークフロー重視のツール設計
+- **MCPベストプラクティス**: 限られたコンテキストの最適化、アクション可能なエラーメッセージ
+- **実装ガイド**: Rust (Tokio) での具体的な実装パターン
+- **評価基準**: MCPサーバーの品質評価方法
+
+特に新しいツールを追加する際は、必ず以下を確認してください：
+1. `.claude/skills/mcp-builder/SKILL.md` - 設計原則
+2. `.claude/skills/mcp-builder/reference/rust_mcp_server.md` - Rust実装パターン
+3. `.claude/skills/mcp-builder/reference/mcp_best_practices.md` - ベストプラクティス
+
 ## プロジェクト概要
 
 Vantage (一味・いちみ) Server は Model Context Protocol (MCP) を介した Claude Code 用のプロセス管理サーバーです。Claude がプロセスの起動、停止、監視、および MCP ツールを通じた出力のキャプチャを可能にします。
@@ -182,9 +196,12 @@ cargo test test_export_import # 特定のテストを実行
 ## 開発のヒント
 
 1. **新しいMCPツールを追加する場合**：
+   - **必須**: まず `.claude/skills/mcp-builder` スキルの設計原則を確認
+   - エージェント中心のワークフローツールとして設計（単純なAPIラッパーは避ける）
    - `crates/vantage-atom/src/messages/` にリクエスト型を定義
    - `crates/vantage-atom/src/lib.rs` の `VantageServer` impl ブロックにツールメソッドを追加
    - `#[tool]` 属性でメソッドを装飾
+   - エラーメッセージは具体的な次のステップを含める
 
 2. **プロセス管理ロジックを変更する場合**：
    - `crates/vantage-atom/src/process/manager.rs` の `ProcessManager` を更新

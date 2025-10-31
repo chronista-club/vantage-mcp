@@ -14,7 +14,6 @@ pub mod process {
     pub use crate::atom::process::*;
 }
 
-#[cfg(feature = "web")]
 pub mod web {
     pub use crate::atom::web::*;
 }

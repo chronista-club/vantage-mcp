@@ -11,8 +11,7 @@ categories = ["command-line-utilities", "development-tools"]
 
 [dependencies]
 # Core atom library
-vantage-atom = { path = "../vantage-atom", features = [] }
+vantage-atom = { path = "../vantage-atom" }
 
 [features]
 default = []
-web = ["vantage-atom/web"]
