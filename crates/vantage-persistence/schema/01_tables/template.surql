@@ -27,12 +27,9 @@ DEFINE FIELD IF NOT EXISTS env ON TABLE template TYPE object
 DEFINE FIELD IF NOT EXISTS cwd ON TABLE template TYPE option<string>;
 
 -- メタデータ
-DEFINE FIELD IF NOT EXISTS created_at ON TABLE template TYPE datetime
-  DEFAULT time::now();
+DEFINE FIELD IF NOT EXISTS created_at ON TABLE template TYPE option<string>;
 
-DEFINE FIELD IF NOT EXISTS updated_at ON TABLE template TYPE datetime
-  DEFAULT time::now()
-  VALUE time::now();
+DEFINE FIELD IF NOT EXISTS updated_at ON TABLE template TYPE option<string>;
 
 DEFINE FIELD IF NOT EXISTS created_by ON TABLE template TYPE option<string>;
 
@@ -40,4 +37,4 @@ DEFINE FIELD IF NOT EXISTS created_by ON TABLE template TYPE option<string>;
 DEFINE FIELD IF NOT EXISTS use_count ON TABLE template TYPE int
   DEFAULT 0;
 
-DEFINE FIELD IF NOT EXISTS last_used_at ON TABLE template TYPE option<datetime>;
+DEFINE FIELD IF NOT EXISTS last_used_at ON TABLE template TYPE option<string>;

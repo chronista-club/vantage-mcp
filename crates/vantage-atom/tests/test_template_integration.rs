@@ -21,6 +21,9 @@ async fn setup_test_db() -> DbConnection {
         .await
         .expect("Failed to connect to test database");
 
+    // 既存のtemplateテーブルをクリーンアップ
+    let _ = conn.db().query("DELETE FROM template;").await;
+
     // スキーマを適用
     let schema_manager = SchemaManager::new(conn.db());
     schema_manager
@@ -52,8 +55,16 @@ async fn test_template_crud_operations() {
     println!("✓ テンプレート作成成功: ID = {:?}", created.id);
 
     // 2. テンプレート取得（ID）
-    let template_id = created.id.as_ref().unwrap().to_string();
-    let fetched = repo.get(&template_id).await.expect("Failed to get template");
+    let record_id = created.id.as_ref().unwrap();
+    let template_id_string = record_id.to_string();
+    println!("  RecordId文字列: {}", template_id_string);
+
+    // RecordIdから"template:"プレフィックスを除去してID部分だけを抽出
+    let id_part = template_id_string.strip_prefix("template:").unwrap_or(&template_id_string);
+    println!("  ID部分: {}", id_part);
+
+    let fetched = repo.get(id_part).await.expect("Failed to get template");
+    println!("  取得結果: {:?}", fetched.as_ref().map(|t| &t.name));
     assert!(fetched.is_some());
     assert_eq!(fetched.as_ref().unwrap().name, "test-server");
     println!("✓ テンプレート取得成功（ID）: name = {}", fetched.as_ref().unwrap().name);
@@ -71,13 +82,13 @@ async fn test_template_crud_operations() {
     // 5. テンプレート更新
     let mut updated_template = fetched.unwrap();
     updated_template.description = Some("更新されたHTTPサーバーテンプレート".to_string());
-    let updated = repo.update(&template_id, updated_template).await.expect("Failed to update template");
+    let updated = repo.update(id_part, updated_template).await.expect("Failed to update template");
     assert_eq!(updated.description, Some("更新されたHTTPサーバーテンプレート".to_string()));
     println!("✓ テンプレート更新成功");
 
     // 6. 使用回数のインクリメント
-    repo.increment_use_count(&template_id).await.expect("Failed to increment use count");
-    let after_increment = repo.get(&template_id).await.expect("Failed to get after increment").unwrap();
+    repo.increment_use_count(id_part).await.expect("Failed to increment use count");
+    let after_increment = repo.get(id_part).await.expect("Failed to get after increment").unwrap();
     assert_eq!(after_increment.use_count, 1);
     println!("✓ 使用回数インクリメント成功: use_count = {}", after_increment.use_count);
 
@@ -94,8 +105,8 @@ async fn test_template_crud_operations() {
     println!("✓ タグ検索成功: {} 件", python_templates.len());
 
     // 9. テンプレート削除
-    repo.delete(&template_id).await.expect("Failed to delete template");
-    let after_delete = repo.get(&template_id).await.expect("Failed to get after delete");
+    repo.delete(id_part).await.expect("Failed to delete template");
+    let after_delete = repo.get(id_part).await.expect("Failed to get after delete");
     assert!(after_delete.is_none());
     println!("✓ テンプレート削除成功");
 
