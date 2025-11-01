@@ -858,6 +858,385 @@ impl VantageServer {
         Ok(CallToolResult::success(vec![Content::text(json)]))
     }
 
+    // ========================================
+    // Template Management Tools
+    // ========================================
+
+    #[tool(description = "Create a new process template for reusable configurations")]
+    async fn create_template(
+        &self,
+        Parameters(request): Parameters<messages::template::CreateTemplateRequest>,
+    ) -> std::result::Result<CallToolResult, McpError> {
+        tracing::info!("Creating template: {}", request.name);
+
+        // DB接続の確認
+        let db = self.db_connection.as_ref().ok_or_else(|| McpError {
+            message: "Database connection not available. Please ensure SurrealDB is running.".into(),
+            code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+            data: None,
+        })?;
+
+        // テンプレートリポジトリを作成
+        let repo = vantage_persistence::TemplateRepository::new(db.db());
+
+        // 名前の重複チェック
+        if let Ok(Some(_)) = repo.get_by_name(&request.name).await {
+            return Err(McpError {
+                message: format!("Template with name '{}' already exists. Please use a different name or update the existing template.", request.name).into(),
+                code: rmcp::model::ErrorCode::INVALID_PARAMS,
+                data: None,
+            });
+        }
+
+        // カテゴリの変換
+        let category = request.category.as_ref().and_then(|c| {
+            match c.to_lowercase().as_str() {
+                "database" => Some(vantage_persistence::TemplateCategory::Database),
+                "web_server" | "webserver" => Some(vantage_persistence::TemplateCategory::WebServer),
+                "build_tool" | "buildtool" => Some(vantage_persistence::TemplateCategory::BuildTool),
+                "script" => Some(vantage_persistence::TemplateCategory::Script),
+                _ => Some(vantage_persistence::TemplateCategory::Other),
+            }
+        }).unwrap_or(vantage_persistence::TemplateCategory::Other);
+
+        // Templateオブジェクトを作成
+        let mut template = vantage_persistence::Template::new(request.name.clone(), request.command.clone());
+        template.description = request.description;
+        template.category = category;
+        template.args = request.args.unwrap_or_default();
+        template.env = request.env.unwrap_or_default();
+        template.cwd = request.cwd;
+        template.tags = request.tags.unwrap_or_default();
+
+        // データベースに保存
+        let created = repo.create(template).await.map_err(|e| McpError {
+            message: format!("Failed to create template: {}", e).into(),
+            code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+            data: None,
+        })?;
+
+        let response = serde_json::json!({
+            "success": true,
+            "template_id": created.id.as_ref().map(|id| id.to_string()),
+            "name": created.name,
+            "message": format!("Template '{}' created successfully", created.name)
+        });
+
+        Ok(CallToolResult::success(vec![Content::text(
+            serde_json::to_string_pretty(&response).unwrap()
+        )]))
+    }
+
+    #[tool(description = "List all process templates, optionally filtered by category or tag")]
+    async fn list_templates(
+        &self,
+        Parameters(request): Parameters<messages::template::ListTemplatesRequest>,
+    ) -> std::result::Result<CallToolResult, McpError> {
+        tracing::info!("Listing templates");
+
+        let db = self.db_connection.as_ref().ok_or_else(|| McpError {
+            message: "Database connection not available".into(),
+            code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+            data: None,
+        })?;
+
+        let repo = vantage_persistence::TemplateRepository::new(db.db());
+
+        let templates = if let Some(category_str) = request.category {
+            let category = match category_str.to_lowercase().as_str() {
+                "database" => vantage_persistence::TemplateCategory::Database,
+                "web_server" | "webserver" => vantage_persistence::TemplateCategory::WebServer,
+                "build_tool" | "buildtool" => vantage_persistence::TemplateCategory::BuildTool,
+                "script" => vantage_persistence::TemplateCategory::Script,
+                _ => vantage_persistence::TemplateCategory::Other,
+            };
+            repo.list_by_category(category).await
+        } else if let Some(tag) = request.tag {
+            repo.search_by_tag(&tag).await
+        } else {
+            repo.list().await
+        }.map_err(|e| McpError {
+            message: format!("Failed to list templates: {}", e).into(),
+            code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+            data: None,
+        })?;
+
+        let template_list: Vec<_> = templates.iter().map(|t| {
+            serde_json::json!({
+                "id": t.id.as_ref().map(|id| id.to_string()),
+                "name": t.name,
+                "description": t.description,
+                "category": format!("{:?}", t.category),
+                "command": t.command,
+                "tags": t.tags,
+                "use_count": t.use_count,
+            })
+        }).collect();
+
+        let response = serde_json::json!({
+            "templates": template_list,
+            "count": templates.len(),
+        });
+
+        Ok(CallToolResult::success(vec![Content::text(
+            serde_json::to_string_pretty(&response).unwrap()
+        )]))
+    }
+
+    #[tool(description = "Get detailed information about a specific template by ID or name")]
+    async fn get_template(
+        &self,
+        Parameters(request): Parameters<messages::template::GetTemplateRequest>,
+    ) -> std::result::Result<CallToolResult, McpError> {
+        let db = self.db_connection.as_ref().ok_or_else(|| McpError {
+            message: "Database connection not available".into(),
+            code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+            data: None,
+        })?;
+
+        let repo = vantage_persistence::TemplateRepository::new(db.db());
+
+        let template = if let Some(id) = request.id {
+            tracing::info!("Getting template by ID: {}", id);
+            repo.get(&id).await
+        } else if let Some(name) = request.name {
+            tracing::info!("Getting template by name: {}", name);
+            repo.get_by_name(&name).await
+        } else {
+            return Err(McpError {
+                message: "Either 'id' or 'name' must be provided".into(),
+                code: rmcp::model::ErrorCode::INVALID_PARAMS,
+                data: None,
+            });
+        }.map_err(|e| McpError {
+            message: format!("Failed to get template: {}", e).into(),
+            code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+            data: None,
+        })?.ok_or_else(|| McpError {
+            message: "Template not found".into(),
+            code: rmcp::model::ErrorCode::INVALID_PARAMS,
+            data: None,
+        })?;
+
+        let response = serde_json::json!({
+            "id": template.id.as_ref().map(|id| id.to_string()),
+            "name": template.name,
+            "description": template.description,
+            "category": format!("{:?}", template.category),
+            "command": template.command,
+            "args": template.args,
+            "env": template.env,
+            "cwd": template.cwd,
+            "tags": template.tags,
+            "use_count": template.use_count,
+            "created_at": template.created_at,
+            "updated_at": template.updated_at,
+        });
+
+        Ok(CallToolResult::success(vec![Content::text(
+            serde_json::to_string_pretty(&response).unwrap()
+        )]))
+    }
+
+    #[tool(description = "Update an existing template")]
+    async fn update_template(
+        &self,
+        Parameters(request): Parameters<messages::template::UpdateTemplateRequest>,
+    ) -> std::result::Result<CallToolResult, McpError> {
+        tracing::info!("Updating template: {}", request.id);
+
+        let db = self.db_connection.as_ref().ok_or_else(|| McpError {
+            message: "Database connection not available".into(),
+            code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+            data: None,
+        })?;
+
+        let repo = vantage_persistence::TemplateRepository::new(db.db());
+
+        // 既存のテンプレートを取得
+        let mut template = repo.get(&request.id).await.map_err(|e| McpError {
+            message: format!("Failed to get template: {}", e).into(),
+            code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+            data: None,
+        })?.ok_or_else(|| McpError {
+            message: format!("Template with ID '{}' not found", request.id).into(),
+            code: rmcp::model::ErrorCode::INVALID_PARAMS,
+            data: None,
+        })?;
+
+        // 更新
+        if let Some(name) = request.name { template.name = name; }
+        if let Some(command) = request.command { template.command = command; }
+        if let Some(description) = request.description { template.description = Some(description); }
+        if let Some(category_str) = request.category {
+            template.category = match category_str.to_lowercase().as_str() {
+                "database" => vantage_persistence::TemplateCategory::Database,
+                "web_server" | "webserver" => vantage_persistence::TemplateCategory::WebServer,
+                "build_tool" | "buildtool" => vantage_persistence::TemplateCategory::BuildTool,
+                "script" => vantage_persistence::TemplateCategory::Script,
+                _ => vantage_persistence::TemplateCategory::Other,
+            };
+        }
+        if let Some(tags) = request.tags { template.tags = tags; }
+        if let Some(args) = request.args { template.args = args; }
+        if let Some(env) = request.env { template.env = env; }
+        if let Some(cwd) = request.cwd { template.cwd = Some(cwd); }
+
+        let updated = repo.update(&request.id, template).await.map_err(|e| McpError {
+            message: format!("Failed to update template: {}", e).into(),
+            code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+            data: None,
+        })?;
+
+        let response = serde_json::json!({
+            "success": true,
+            "template_id": updated.id.as_ref().map(|id| id.to_string()),
+            "name": updated.name,
+            "message": "Template updated successfully"
+        });
+
+        Ok(CallToolResult::success(vec![Content::text(
+            serde_json::to_string_pretty(&response).unwrap()
+        )]))
+    }
+
+    #[tool(description = "Delete a template by ID or name")]
+    async fn delete_template(
+        &self,
+        Parameters(request): Parameters<messages::template::DeleteTemplateRequest>,
+    ) -> std::result::Result<CallToolResult, McpError> {
+        let db = self.db_connection.as_ref().ok_or_else(|| McpError {
+            message: "Database connection not available".into(),
+            code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+            data: None,
+        })?;
+
+        let repo = vantage_persistence::TemplateRepository::new(db.db());
+
+        let (id, name) = if let Some(id) = request.id {
+            tracing::info!("Deleting template by ID: {}", id);
+            (id, None)
+        } else if let Some(name) = request.name.clone() {
+            tracing::info!("Deleting template by name: {}", name);
+            // 名前からIDを取得
+            let template = repo.get_by_name(&name).await.map_err(|e| McpError {
+                message: format!("Failed to get template: {}", e).into(),
+                code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+                data: None,
+            })?.ok_or_else(|| McpError {
+                message: format!("Template '{}' not found", name).into(),
+                code: rmcp::model::ErrorCode::INVALID_PARAMS,
+                data: None,
+            })?;
+            let id = template.id.as_ref().ok_or_else(|| McpError {
+                message: "Template has no ID".into(),
+                code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+                data: None,
+            })?.to_string();
+            (id, Some(name))
+        } else {
+            return Err(McpError {
+                message: "Either 'id' or 'name' must be provided".into(),
+                code: rmcp::model::ErrorCode::INVALID_PARAMS,
+                data: None,
+            });
+        };
+
+        repo.delete(&id).await.map_err(|e| McpError {
+            message: format!("Failed to delete template: {}", e).into(),
+            code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+            data: None,
+        })?;
+
+        let response = serde_json::json!({
+            "success": true,
+            "message": format!("Template '{}' deleted successfully", name.unwrap_or_else(|| id.clone()))
+        });
+
+        Ok(CallToolResult::success(vec![Content::text(
+            serde_json::to_string_pretty(&response).unwrap()
+        )]))
+    }
+
+    #[tool(description = "Create a new process from a template with optional overrides")]
+    async fn create_process_from_template(
+        &self,
+        Parameters(request): Parameters<messages::template::CreateProcessFromTemplateRequest>,
+    ) -> std::result::Result<CallToolResult, McpError> {
+        let db = self.db_connection.as_ref().ok_or_else(|| McpError {
+            message: "Database connection not available".into(),
+            code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+            data: None,
+        })?;
+
+        let repo = vantage_persistence::TemplateRepository::new(db.db());
+
+        // テンプレートを取得
+        let template = if let Some(id) = request.template_id {
+            tracing::info!("Getting template by ID: {}", id);
+            repo.get(&id).await
+        } else if let Some(name) = request.template_name {
+            tracing::info!("Getting template by name: {}", name);
+            repo.get_by_name(&name).await
+        } else {
+            return Err(McpError {
+                message: "Either 'template_id' or 'template_name' must be provided".into(),
+                code: rmcp::model::ErrorCode::INVALID_PARAMS,
+                data: None,
+            });
+        }.map_err(|e| McpError {
+            message: format!("Failed to get template: {}", e).into(),
+            code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+            data: None,
+        })?.ok_or_else(|| McpError {
+            message: "Template not found".into(),
+            code: rmcp::model::ErrorCode::INVALID_PARAMS,
+            data: None,
+        })?;
+
+        // プロセスを作成（オーバーライドを適用）
+        let command = template.command.clone();
+        let args = request.override_args.unwrap_or(template.args.clone());
+        let env = request.override_env.unwrap_or(template.env.clone());
+        let cwd = request.override_cwd.or(template.cwd.clone()).map(std::path::PathBuf::from);
+
+        // ProcessManager経由でプロセスを作成
+        self.process_manager.create_process(
+            request.process_id.clone(),
+            command,
+            args,
+            env,
+            cwd,
+            request.auto_start.unwrap_or(false),
+        ).await.map_err(|e| McpError {
+            message: format!("Failed to create process: {}", e).into(),
+            code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+            data: None,
+        })?;
+
+        // 使用回数を更新
+        let template_id = template.id.as_ref().ok_or_else(|| McpError {
+            message: "Template has no ID".into(),
+            code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+            data: None,
+        })?.to_string();
+
+        if let Err(e) = repo.increment_use_count(&template_id).await {
+            tracing::warn!("Failed to increment template use count: {}", e);
+        }
+
+        let response = serde_json::json!({
+            "success": true,
+            "process_id": request.process_id,
+            "template_name": template.name,
+            "message": format!("Process '{}' created from template '{}'", request.process_id, template.name)
+        });
+
+        Ok(CallToolResult::success(vec![Content::text(
+            serde_json::to_string_pretty(&response).unwrap()
+        )]))
+    }
+
     #[tool(description = "Open the Vantage web console in your browser")]
     async fn open_web_console(
         &self,
