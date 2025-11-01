@@ -1,38 +1,42 @@
-// Vantage Design System - プロセスフロー準拠カラーシステム
+// Vantage Design System - Contrastデザインシステムベース
 // OKLCH色空間を使用した色定義
 
-// Creative: 実行・開始 (プロセス開始) - 青色系テーマカラー (薄めの色)
-$btn-green-bg: oklch(0.65 0.06 240);
-$btn-green-hover: oklch(0.6 0.08 240);
-$btn-green-active: oklch(0.55 0.1 240);
+// Creative: 実行・開始 (プロセス開始) - マゼンタ系 #F609AF相当
+$btn-green-bg: oklch(0.65 0.25 330);
+$btn-green-hover: oklch(0.6 0.27 330);
+$btn-green-active: oklch(0.55 0.29 330);
 
-// Provision: 配備・停止 (プロセス停止) (薄めの色)
-$btn-yellow-bg: oklch(0.65 0.06 45);
-$btn-yellow-hover: oklch(0.6 0.08 45);
-$btn-yellow-active: oklch(0.55 0.1 45);
+// Provision: 配備・停止 (プロセス停止) - シアン系 #7DECF2相当
+$btn-yellow-bg: oklch(0.85 0.1 195);
+$btn-yellow-hover: oklch(0.8 0.12 195);
+$btn-yellow-active: oklch(0.75 0.14 195);
 
-// Broadcast: 削除・終了 (プロセス削除) (薄めの色)
-$btn-red-bg: oklch(0.72 0.1 351.47);
-$btn-red-hover: oklch(0.68 0.12 351.47);
-$btn-red-active: oklch(0.64 0.14 351.47);
+// Bradcast: 削除・終了 (プロセス削除) - ピンク系 #EF6CDB相当
+$btn-red-bg: oklch(0.7 0.2 320);
+$btn-red-hover: oklch(0.66 0.22 320);
+$btn-red-active: oklch(0.62 0.24 320);
 
-// Develop: メイン開発機能 (プライマリアクション)
-$btn-primary-bg: oklch(0.4823 0.0922 308.37);
-$btn-primary-hover: oklch(0.4323 0.1122 308.37);
-$btn-primary-active: oklch(0.3823 0.1322 308.37);
+// Develop: メイン開発機能 (プライマリアクション) - 青紫系 #465BB9相当
+$btn-primary-bg: oklch(0.48 0.13 280);
+$btn-primary-hover: oklch(0.43 0.15 280);
+$btn-primary-active: oklch(0.38 0.17 280);
 
-// Research: セカンダリ・調査 (サポート機能)
-$btn-secondary-bg: oklch(0.2627 0.0977 311.87);
-$btn-secondary-hover: oklch(0.2627 0.0977 311.87 / 0.1);
-$btn-secondary-active: oklch(0.2627 0.0977 311.87 / 0.15);
+// Research: セカンダリ・調査 (サポート機能) - ディープブルー系 #12126D相当
+$btn-secondary-bg: oklch(0.28 0.15 285);
+$btn-secondary-hover: oklch(0.33 0.17 285);
+$btn-secondary-active: oklch(0.38 0.19 285);
 
 // Finished: 完了・終了 (完了済み状態)
-$btn-gray-bg: oklch(0.5547 0.0134 258.34);
-$btn-gray-hover: oklch(0.5047 0.0234 258.34);
-$btn-gray-active: oklch(0.4547 0.0334 258.34);
+$btn-gray-bg: oklch(0.6 0.015 280);
+$btn-gray-hover: oklch(0.55 0.02 280);
+$btn-gray-active: oklch(0.5 0.025 280);
 
 // CSS Custom Properties for runtime theming
 :root {
+    // ========================================
+    // ボタンカラー（プロセスフロー準拠）
+    // ========================================
+
     // Creative button (Start)
     --vantage-btn-green-bg: #{$btn-green-bg};
     --vantage-btn-green-hover: #{$btn-green-hover};
@@ -62,15 +66,65 @@ $btn-gray-active: oklch(0.4547 0.0334 258.34);
     --vantage-btn-gray-bg: #{$btn-gray-bg};
     --vantage-btn-gray-hover: #{$btn-gray-hover};
     --vantage-btn-gray-active: #{$btn-gray-active};
+
+    // ========================================
+    // テーマシステム統合
+    // ========================================
+    // これらの変数は themes.ts の applyTheme() で動的に設定されます
+    // 以下はフォールバック値です
+
+    // カラーパレット
+    --vantage-color-primary: oklch(0.4823 0.0922 308.37);
+    --vantage-color-primary-hover: oklch(0.4323 0.1122 308.37);
+    --vantage-color-primary-active: oklch(0.3823 0.1322 308.37);
+
+    --vantage-color-secondary: oklch(0.2627 0.0977 311.87);
+    --vantage-color-secondary-hover: oklch(0.2127 0.1177 311.87);
+    --vantage-color-secondary-active: oklch(0.1627 0.1377 311.87);
+
+    --vantage-color-accent: oklch(0.65 0.15 305);
+    --vantage-color-success: oklch(0.65 0.06 240);
+    --vantage-color-warning: oklch(0.65 0.06 45);
+    --vantage-color-error: oklch(0.72 0.1 351.47);
+    --vantage-color-info: oklch(0.6 0.12 220);
+    --vantage-color-gray: oklch(0.5547 0.0134 258.34);
+
+    // 背景・前景・ボーダー
+    --vantage-color-background: oklch(0.98 0.005 280);
+    --vantage-color-foreground: oklch(0.2 0.01 280);
+    --vantage-color-border: oklch(0.85 0.01 280);
+
+    // テーマモード
+    --vantage-theme-mode: light;
 }
 
-// Dark mode overrides
+// Dark mode overrides - Contrastデザインシステムベース
 .dark {
-    // Adjust lightness for dark mode (薄めの色)
-    --vantage-btn-green-bg: oklch(0.6 0.06 240);
-    --vantage-btn-yellow-bg: oklch(0.6 0.06 45);
-    --vantage-btn-red-bg: oklch(0.68 0.1 351.47);
-    --vantage-btn-primary-bg: oklch(0.5823 0.0922 308.37);
-    --vantage-btn-secondary-bg: oklch(0.3627 0.0977 311.87);
-    --vantage-btn-gray-bg: oklch(0.6547 0.0134 258.34);
+    // ボタンカラー調整
+    --vantage-btn-green-bg: oklch(0.7 0.23 330); // Creative (マゼンタ)
+    --vantage-btn-yellow-bg: oklch(0.8 0.12 195); // Provision (シアン)
+    --vantage-btn-red-bg: oklch(0.75 0.2 320); // Bradcast (ピンク)
+    --vantage-btn-primary-bg: oklch(0.58 0.13 280); // Develop (青紫)
+    --vantage-btn-secondary-bg: oklch(
+        0.38 0.15 285
+    ); // Research (ディープブルー)
+    --vantage-btn-gray-bg: oklch(0.65 0.015 280); // Finished (グレー)
+
+    // テーマカラー調整
+    --vantage-color-primary: oklch(0.58 0.13 280); // Develop
+    --vantage-color-secondary: oklch(0.38 0.15 285); // Research
+    --vantage-color-accent: oklch(0.75 0.2 320); // Bradcast
+    --vantage-color-success: oklch(0.8 0.12 195); // Provision
+    --vantage-color-warning: oklch(0.7 0.15 85); // Gold
+    --vantage-color-error: oklch(0.7 0.23 330); // Creative
+    --vantage-color-info: oklch(0.7 0.12 240); // Blue
+    --vantage-color-gray: oklch(0.65 0.015 280);
+
+    // 背景・前景・ボーダー
+    --vantage-color-background: oklch(0.15 0.01 280);
+    --vantage-color-foreground: oklch(0.92 0.01 280);
+    --vantage-color-border: oklch(0.3 0.01 280);
+
+    // テーマモード
+    --vantage-theme-mode: dark;
 }

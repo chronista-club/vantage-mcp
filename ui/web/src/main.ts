@@ -1,11 +1,22 @@
-import { createApp } from 'vue';
-import { createPinia } from 'pinia';
-import router from './router';
-import i18n from './i18n';
-import App from './App.vue';
+import { createApp } from "vue";
+import { createPinia } from "pinia";
+import router from "./router";
+import i18n from "./i18n";
+import App from "./App.vue";
 
-// Import CSS files
-import '@tabler/core/dist/css/tabler.min.css';
+// Import CSS files (order matters: Tabler first, then our custom styles)
+import "@tabler/core/dist/css/tabler.min.css";
+import "./styles/main.scss";
+
+// Import and initialize theme system
+import { initializeTheme } from "./themes";
+import { watchSystemTheme } from "./composables/useTheme";
+
+// Initialize theme before creating the app
+initializeTheme();
+
+// Watch for system theme changes
+watchSystemTheme();
 
 const app = createApp(App);
 const pinia = createPinia();
@@ -15,8 +26,8 @@ app.use(router);
 app.use(i18n);
 
 // Initialize settings store and sync locale
-import { useSettingsStore } from './stores/settings';
-import { storeToRefs } from 'pinia';
+import { useSettingsStore } from "./stores/settings";
+import { storeToRefs } from "pinia";
 const settingsStore = useSettingsStore();
 settingsStore.initializeSettings();
 
@@ -24,4 +35,4 @@ settingsStore.initializeSettings();
 const { locale } = storeToRefs(settingsStore);
 i18n.global.locale.value = locale.value;
 
-app.mount('#app');
+app.mount("#app");
