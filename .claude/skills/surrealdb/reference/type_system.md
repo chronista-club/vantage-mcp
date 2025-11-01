@@ -25,20 +25,20 @@ CREATE user SET name = 'Alice';
 CREATE user:⟨01HQKM9YN7⟩ SET name = 'Bob';
 ```
 
-### Rust: Thing型
+### Rust: RecordId型（edition="2024"）
 ```rust
-use surrealdb::sql::Thing;
+use surrealdb::RecordId;
 
-// Thing作成
-let user_id = Thing::from(("user", "john"));
+// RecordId作成
+let user_id = RecordId::from(("user", "john"));
 
 // 文字列からパース
-let thing: Thing = "user:john".parse()?;
+let record_id: RecordId = "user:john".parse()?;
 
 // 構造体で使用
 #[derive(Serialize, Deserialize)]
 struct User {
-    id: Option<Thing>,
+    id: Option<RecordId>,
     name: String,
 }
 
@@ -96,17 +96,19 @@ SELECT *, tags.* FROM post;
 
 ### Rust実装
 ```rust
+use surrealdb::RecordId;
+
 #[derive(Serialize, Deserialize)]
 struct Post {
-    id: Option<Thing>,
+    id: Option<RecordId>,
     title: String,
-    author: Thing,  // レコードリンク
+    author: RecordId,  // レコードリンク
 }
 
 // フェッチ後の型
 #[derive(Serialize, Deserialize)]
 struct PostWithAuthor {
-    id: Option<Thing>,
+    id: Option<RecordId>,
     title: String,
     author: User,  // 完全なUserオブジェクト
 }

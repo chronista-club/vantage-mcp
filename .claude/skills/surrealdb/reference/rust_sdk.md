@@ -62,18 +62,16 @@ let db = Surreal::new::<Mem>(()).await?;
 ### 型定義
 ```rust
 use serde::{Deserialize, Serialize};
+use surrealdb::RecordId; // edition="2024"ではRecordIdを使用
 
 #[derive(Debug, Serialize, Deserialize)]
 struct User {
-    #[serde(skip_serializing_if = "Option::is::none")]
-    id: Option<Thing>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    id: Option<RecordId>,
     name: String,
     email: String,
     age: u32,
 }
-
-// Thing型はレコードID
-use surrealdb::sql::Thing;
 ```
 
 ### CREATE
