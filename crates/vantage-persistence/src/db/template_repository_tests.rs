@@ -65,7 +65,7 @@ mod tests {
         let id = id_string.split(':').nth(1).unwrap();
 
         // IDで取得
-        let retrieved = repo.get(&id).await.unwrap();
+        let retrieved = repo.get(id).await.unwrap();
         assert!(retrieved.is_some());
         assert_eq!(retrieved.unwrap().name, "test_get");
     }
@@ -103,7 +103,7 @@ mod tests {
         updated_template.description = Some("Updated description".to_string());
         updated_template.command = "ls".to_string();
 
-        let updated = repo.update(&id, updated_template).await.unwrap();
+        let updated = repo.update(id, updated_template).await.unwrap();
         assert_eq!(updated.command, "ls");
         assert_eq!(updated.description, Some("Updated description".to_string()));
     }
@@ -121,10 +121,10 @@ mod tests {
         let id = id_string.split(':').nth(1).unwrap();
 
         // 削除
-        repo.delete(&id).await.unwrap();
+        repo.delete(id).await.unwrap();
 
         // 削除されたことを確認
-        let retrieved = repo.get(&id).await.unwrap();
+        let retrieved = repo.get(id).await.unwrap();
         assert!(retrieved.is_none());
     }
 
