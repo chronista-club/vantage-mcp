@@ -35,7 +35,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { IconSettings, IconSun, IconMoon, IconLanguage } from '@tabler/icons-vue';
 import { useSettingsStore } from '@/stores/settings';
 import { useI18n } from 'vue-i18n';
@@ -78,9 +78,9 @@ function handleClickOutside(event: MouseEvent) {
 onMounted(() => {
   // Use mousedown instead of click to detect outside clicks
   // and add it on next tick to avoid immediate closure
-  setTimeout(() => {
+  nextTick(() => {
     document.addEventListener('mousedown', handleClickOutside);
-  }, 100);
+  });
 });
 
 onUnmounted(() => {
