@@ -24,7 +24,7 @@ impl<'a> SchemaManager<'a> {
 
     /// 全スキーマを適用
     ///
-    /// テーブル定義とインデックスを順番に適用します。
+    /// ネームスペース/データベースの初期化、テーブル定義、インデックスを順番に適用します。
     /// OVERWRITE戦略を使用しているため、何度実行しても安全です。
     ///
     /// # エラー
@@ -33,10 +33,25 @@ impl<'a> SchemaManager<'a> {
     pub async fn apply_all(&self) -> Result<()> {
         info!("Applying all schemas");
 
+        self.apply_init().await?;
         self.apply_tables().await?;
         self.apply_indexes().await?;
 
         info!("All schemas applied successfully");
+        Ok(())
+    }
+
+    /// 初期化スクリプトを適用
+    ///
+    /// 00_init/以下の全初期化スクリプトを適用します。
+    /// ネームスペースとデータベースの作成を行います。
+    async fn apply_init(&self) -> Result<()> {
+        debug!("Applying initialization scripts");
+
+        // ネームスペースとデータベース
+        let init_script = include_str!("../../schema/00_init/namespace_and_databases.surql");
+        self.execute_schema(init_script, "namespace and databases").await?;
+
         Ok(())
     }
 

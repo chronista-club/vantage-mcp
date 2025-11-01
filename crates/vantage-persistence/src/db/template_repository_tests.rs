@@ -8,8 +8,8 @@ mod tests {
     async fn setup_test_db() -> DbConnection {
         let config = DbConfig {
             endpoint: "127.0.0.1:30300".to_string(),
-            namespace: "vantage_test".to_string(),
-            database: format!("test_{}", nanoid::nanoid!(8)),
+            namespace: "vantage".to_string(),
+            database: "test".to_string(),
             username: "vtg-local".to_string(),
             password: "vtg-local".to_string(),
         };
