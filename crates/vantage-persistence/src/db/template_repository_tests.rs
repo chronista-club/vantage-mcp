@@ -2,7 +2,6 @@
 mod tests {
     use super::super::template_repository::{Template, TemplateCategory, TemplateRepository};
     use crate::db::{DbConfig, DbConnection, SchemaManager};
-    use chrono::Utc;
 
     /// テスト用のDB接続を作成
     async fn setup_test_db() -> DbConnection {
@@ -30,20 +29,12 @@ mod tests {
 
     /// テスト用のテンプレートを作成
     fn create_test_template(name: &str) -> Template {
-        Template {
-            id: None,
-            name: name.to_string(),
-            description: Some(format!("Test template: {}", name)),
-            category: Some(TemplateCategory::Development),
-            command: "echo".to_string(),
-            args: vec!["hello".to_string()],
-            env: std::collections::HashMap::new(),
-            default_cwd: None,
-            default_auto_start: false,
-            tags: vec!["test".to_string()],
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
-        }
+        let mut template = Template::new(name.to_string(), "echo".to_string());
+        template.description = Some(format!("Test template: {}", name));
+        template.category = TemplateCategory::BuildTool;
+        template.args = vec!["hello".to_string()];
+        template.tags = vec!["test".to_string()];
+        template
     }
 
     #[tokio::test]

@@ -71,7 +71,7 @@ async fn test_template_crud_operations() {
     // 5. テンプレート更新
     let mut updated_template = fetched.unwrap();
     updated_template.description = Some("更新されたHTTPサーバーテンプレート".to_string());
-    let updated = repo.update(updated_template).await.expect("Failed to update template");
+    let updated = repo.update(&template_id, updated_template).await.expect("Failed to update template");
     assert_eq!(updated.description, Some("更新されたHTTPサーバーテンプレート".to_string()));
     println!("✓ テンプレート更新成功");
 
@@ -82,7 +82,7 @@ async fn test_template_crud_operations() {
     println!("✓ 使用回数インクリメント成功: use_count = {}", after_increment.use_count);
 
     // 7. カテゴリ検索
-    let server_templates = repo.list_by_category(vantage_persistence::TemplateCategory::Server)
+    let server_templates = repo.list_by_category(TemplateCategory::WebServer)
         .await
         .expect("Failed to list by category");
     assert_eq!(server_templates.len(), 1);

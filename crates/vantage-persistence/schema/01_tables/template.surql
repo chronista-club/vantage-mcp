@@ -1,43 +1,43 @@
 -- プロセステンプレートテーブル
-DEFINE TABLE template SCHEMAFULL OVERWRITE;
+DEFINE TABLE IF NOT EXISTS template SCHEMAFULL;
 
 -- 基本フィールド
-DEFINE FIELD name ON TABLE template TYPE string OVERWRITE
+DEFINE FIELD IF NOT EXISTS name ON TABLE template TYPE string
   ASSERT $value != NONE AND string::len($value) >= 1;
 
-DEFINE FIELD description ON TABLE template TYPE option<string> OVERWRITE;
+DEFINE FIELD IF NOT EXISTS description ON TABLE template TYPE option<string>;
 
-DEFINE FIELD category ON TABLE template TYPE string OVERWRITE
+DEFINE FIELD IF NOT EXISTS category ON TABLE template TYPE string
   ASSERT $value IN ["database", "web_server", "build_tool", "script", "other"]
   DEFAULT "other";
 
-DEFINE FIELD tags ON TABLE template TYPE array<string> OVERWRITE
+DEFINE FIELD IF NOT EXISTS tags ON TABLE template TYPE array<string>
   DEFAULT [];
 
 -- プロセス設定
-DEFINE FIELD command ON TABLE template TYPE string OVERWRITE
+DEFINE FIELD IF NOT EXISTS command ON TABLE template TYPE string
   ASSERT $value != NONE AND string::len($value) >= 1;
 
-DEFINE FIELD args ON TABLE template TYPE array<string> OVERWRITE
+DEFINE FIELD IF NOT EXISTS args ON TABLE template TYPE array<string>
   DEFAULT [];
 
-DEFINE FIELD env ON TABLE template TYPE object OVERWRITE
+DEFINE FIELD IF NOT EXISTS env ON TABLE template TYPE object
   DEFAULT {};
 
-DEFINE FIELD cwd ON TABLE template TYPE option<string> OVERWRITE;
+DEFINE FIELD IF NOT EXISTS cwd ON TABLE template TYPE option<string>;
 
 -- メタデータ
-DEFINE FIELD created_at ON TABLE template TYPE datetime OVERWRITE
+DEFINE FIELD IF NOT EXISTS created_at ON TABLE template TYPE datetime
   DEFAULT time::now();
 
-DEFINE FIELD updated_at ON TABLE template TYPE datetime OVERWRITE
+DEFINE FIELD IF NOT EXISTS updated_at ON TABLE template TYPE datetime
   DEFAULT time::now()
   VALUE time::now();
 
-DEFINE FIELD created_by ON TABLE template TYPE option<string> OVERWRITE;
+DEFINE FIELD IF NOT EXISTS created_by ON TABLE template TYPE option<string>;
 
 -- 使用統計
-DEFINE FIELD use_count ON TABLE template TYPE int OVERWRITE
+DEFINE FIELD IF NOT EXISTS use_count ON TABLE template TYPE int
   DEFAULT 0;
 
-DEFINE FIELD last_used_at ON TABLE template TYPE option<datetime> OVERWRITE;
+DEFINE FIELD IF NOT EXISTS last_used_at ON TABLE template TYPE option<datetime>;
