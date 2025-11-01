@@ -12,9 +12,8 @@
 /// Claude Codeのセッション内で以下を実行：
 /// 1. cargo build --release
 /// 2. このテストファイルの指示に従ってMCPツールを使用
-use std::time::Duration;
-
-/// テスト手順ドキュメント
+///
+/// # テスト手順ドキュメント
 ///
 /// このテストはClaude Codeのセッション内でMCPツールを使って実行します。
 ///
@@ -98,9 +97,11 @@ fn test_browser_mcp_instructions() {
 }
 
 // 自動化テスト用のヘルパー関数（将来の拡張用）
-#[cfg(feature = "mcp-test-automation")]
+#[allow(dead_code)]
+#[allow(unused_imports)]
 mod mcp_automation {
     use super::*;
+    use std::time::Duration;
 
     /// MCP Chrome DevToolsを使った自動テスト
     ///

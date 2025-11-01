@@ -1,6 +1,6 @@
 // Process state types matching Rust enum structure
-export type ProcessState = 
-  | 'NotStarted'
+export type ProcessState =
+  | "NotStarted"
   | { Running: { pid: number; started_at: string } }
   | { Stopped: { exit_code?: number; stopped_at: string } }
   | { Failed: { error: string; failed_at: string } };
@@ -17,13 +17,16 @@ export interface ProcessInfo {
   auto_start_on_restore?: boolean;
 }
 
+// Alias for backward compatibility
+export type Process = ProcessInfo;
+
 // Template types
 export interface TemplateVariable {
   name: string;
   description?: string;
   default_value?: any;
   required?: boolean;
-  var_type?: 'string' | 'number' | 'boolean' | 'path';
+  var_type?: "string" | "number" | "boolean" | "path";
   validation?: {
     min?: number;
     max?: number;
@@ -49,7 +52,7 @@ export interface ProcessTemplate {
 
 // Settings types
 export interface Settings {
-  theme: 'light' | 'dark';
+  theme: "light" | "dark";
   auto_refresh: boolean;
   refresh_interval: number;
 }
@@ -78,33 +81,33 @@ export interface ApiResponse<T> {
 
 // Helper functions for state checking
 export function isRunning(state: ProcessState): boolean {
-  return typeof state === 'object' && 'Running' in state;
+  return typeof state === "object" && "Running" in state;
 }
 
 export function isStopped(state: ProcessState): boolean {
-  return typeof state === 'object' && 'Stopped' in state;
+  return typeof state === "object" && "Stopped" in state;
 }
 
 export function isFailed(state: ProcessState): boolean {
-  return typeof state === 'object' && 'Failed' in state;
+  return typeof state === "object" && "Failed" in state;
 }
 
 export function isNotStarted(state: ProcessState): boolean {
-  return state === 'NotStarted';
+  return state === "NotStarted";
 }
 
 export function getStateLabel(state: ProcessState): string {
-  if (isRunning(state)) return 'Running';
-  if (isStopped(state)) return 'Stopped';
-  if (isFailed(state)) return 'Failed';
-  if (isNotStarted(state)) return 'Not Started';
-  return 'Unknown';
+  if (isRunning(state)) return "Running";
+  if (isStopped(state)) return "Stopped";
+  if (isFailed(state)) return "Failed";
+  if (isNotStarted(state)) return "Not Started";
+  return "Unknown";
 }
 
 export function getStateColor(state: ProcessState): string {
-  if (isRunning(state)) return 'green';
-  if (isStopped(state)) return 'yellow';
-  if (isFailed(state)) return 'red';
-  if (isNotStarted(state)) return 'secondary';
-  return 'gray';
+  if (isRunning(state)) return "green";
+  if (isStopped(state)) return "yellow";
+  if (isFailed(state)) return "red";
+  if (isNotStarted(state)) return "secondary";
+  return "gray";
 }

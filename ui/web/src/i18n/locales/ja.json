@@ -9,7 +9,8 @@
     "dashboard": "ダッシュボード",
     "processes": "プロセス",
     "templates": "テンプレート",
-    "clipboard": "クリップボード"
+    "clipboard": "クリップボード",
+    "settings": "設定"
   },
   "dashboard": {
     "quickActions": "クイックアクション",
@@ -62,8 +63,29 @@
     "notstarted": "未開始"
   },
   "settings": {
-    "theme": "テーマ",
-    "language": "言語"
+    "title": "設定",
+    "description": "アプリケーションの表示とテーマをカスタマイズ",
+    "theme": {
+      "title": "テーマ設定",
+      "mode": "表示モード",
+      "light": "ライト",
+      "dark": "ダーク",
+      "colorPalette": "カラーパレット"
+    },
+    "display": {
+      "title": "表示設定",
+      "language": "言語",
+      "viewMode": "表示モード",
+      "cardView": "カード",
+      "tableView": "テーブル"
+    },
+    "colorDemo": {
+      "title": "OKLCH色操作デモ",
+      "description": "OKLCH色空間のパラメータを調整して、色の変化をリアルタイムで確認できます。",
+      "lightness": "明度 (Lightness)",
+      "chroma": "彩度 (Chroma)",
+      "hue": "色相 (Hue)"
+    }
   },
   "templates": {
     "title": "テンプレート",
@@ -117,6 +139,21 @@
   "common": {
     "cancel": "キャンセル",
     "delete": "削除",
-    "enabled": "有効"
+    "enabled": "有効",
+    "refresh": "更新"
+  },
+  "views": {
+    "card": "カード表示",
+    "table": "テーブル表示"
+  },
+  "actions": {
+    "refresh": "更新"
+  },
+  "clipboard": {
+    "title": "クリップボード",
+    "clearAll": "すべてクリア"
+  },
+  "errors": {
+    "occurred": "エラーが発生しました"
   }
 }

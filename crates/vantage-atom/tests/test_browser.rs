@@ -6,7 +6,6 @@
 /// 注意：このテストはheadless_chromeクレートに依存します
 /// Cargo.tomlのdev-dependenciesに以下を追加してください：
 /// headless_chrome = "1.0"
-
 #[cfg(feature = "browser-test")]
 mod browser_tests {
     use headless_chrome::{Browser, LaunchOptions};
