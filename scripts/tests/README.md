@@ -1,4 +1,4 @@
-# Vantage Server テストスイート
+# Vantage MCP テストスイート
 
 ## テストの実行方法
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# MCP Protocol Test for Vantage Server
+# MCP Protocol Test for Vantage MCP
 
 echo "=== MCP Protocol Test ==="
 

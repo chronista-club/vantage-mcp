@@ -10,7 +10,7 @@ Chrome DevTools MCPサーバーを使用したVantage Webダッシュボード�
 
 ## テスト環境
 
-- Vantage Server バージョン: 0.2.2
+- Vantage MCP バージョン: 0.2.2
 - Chrome DevTools MCP: 利用可能
 - ポート: 12700
 
@@ -54,7 +54,7 @@ MCPツール: `mcp__chrome-devtools__new_page`
 MCPツール: `mcp__chrome-devtools__take_snapshot`
 
 確認できた要素:
-- ✅ ヘッダー: "🚀 Vantage Server"
+- ✅ ヘッダー: "🚀 Vantage MCP"
 - ✅ ナビゲーション: Dashboard, Processes, Templates, Clipboard
 - ✅ 統計情報: TOTAL 3, RUNNING 1, STOPPED 0, FAILED 0
 - ✅ プロセス一覧（既存プロセス3つ）

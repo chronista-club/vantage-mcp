@@ -18,7 +18,7 @@ trap cleanup EXIT
 # エクスポートファイル
 EXPORT_FILE="$TEST_DIR/test_export.surql"
 
-echo "1. Starting vantage server..."
+echo "1. Starting Vantage MCP..."
 VANTAGE_EXPORT_FILE="$EXPORT_FILE" RUST_LOG=info ./target/release/vantagemcp --no-open &
 VANTAGE_PID=$!
 sleep 2

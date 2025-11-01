@@ -6,9 +6,18 @@
     "settings": "Settings"
   },
   "navigation": {
+    "dashboard": "Dashboard",
     "processes": "Processes",
     "templates": "Templates",
     "clipboard": "Clipboard"
+  },
+  "dashboard": {
+    "quickActions": "Quick Actions",
+    "recentProcesses": "Recent Processes",
+    "viewAll": "View All",
+    "noProcesses": "No processes found",
+    "noProcessesDescription": "Create your first process from a template",
+    "createFromTemplate": "Create from Template"
   },
   "stats": {
     "total": "Total",
@@ -45,5 +54,69 @@
   "theme": {
     "light": "light",
     "dark": "dark"
+  },
+  "status": {
+    "running": "Running",
+    "stopped": "Stopped",
+    "failed": "Failed",
+    "notstarted": "Not Started"
+  },
+  "settings": {
+    "theme": "Theme",
+    "language": "Language"
+  },
+  "templates": {
+    "title": "Templates",
+    "noTemplates": "No templates available",
+    "noTemplatesDescription": "Templates will appear here when configured",
+    "createTemplate": "Create Template",
+    "createFirstTemplate": "Create your first template",
+    "useTemplate": "Use Template",
+    "templateId": "Template ID",
+    "templateIdPlaceholder": "my-template",
+    "templateIdHint": "Unique identifier (alphanumeric and hyphens)",
+    "name": "Name",
+    "namePlaceholder": "My Template",
+    "description": "Description",
+    "descriptionPlaceholder": "Description of this template",
+    "category": "Category",
+    "categoryPlaceholder": "Development",
+    "command": "Command",
+    "commandPlaceholder": "python",
+    "arguments": "Arguments",
+    "argumentsPlaceholder": "-m http.server 8000",
+    "argumentsHint": "Enter arguments separated by spaces",
+    "workingDirectory": "Working Directory",
+    "workingDirectoryPlaceholder": "/path/to/directory",
+    "tags": "Tags",
+    "tagsPlaceholder": "python, web, server",
+    "tagsHint": "Enter tags separated by commas",
+    "variables": "Variables",
+    "noVariables": "No variables defined",
+    "addVariable": "Add Variable",
+    "variableName": "Variable Name",
+    "variableDescription": "Description",
+    "defaultValue": "Default Value",
+    "required": "Required",
+    "create": "Create",
+    "createSuccess": "Template created successfully",
+    "createError": "Failed to create template: {error}",
+    "deleteSuccess": "Template deleted successfully",
+    "deleteError": "Failed to delete template: {error}",
+    "confirmDelete": "Are you sure you want to delete template \"{name}\"?",
+    "processId": "Process ID",
+    "processIdPlaceholder": "my-process",
+    "processIdHint": "Unique identifier for the process",
+    "configureVariables": "Configure Variables",
+    "preview": "Preview",
+    "environment": "Environment Variables",
+    "createProcess": "Create Process",
+    "processCreated": "Process \"{id}\" created successfully",
+    "createProcessError": "Failed to create process: {error}"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "enabled": "Enabled"
   }
 }

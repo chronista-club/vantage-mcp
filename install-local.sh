@@ -1,5 +1,5 @@
 #!/bin/bash
-# Local install script for vantage-server
+# Local install script for vantage-mcp
 
 set -e
 
@@ -14,7 +14,7 @@ INSTALL_DIR="$HOME/.local/bin"
 BINARY_NAME="vantagemcp"
 BUILD_MODE="${1:-release}"
 
-echo -e "${YELLOW}🚀 Installing vantage-server locally...${NC}"
+echo -e "${YELLOW}🚀 Installing vantage-mcp locally...${NC}"
 
 # Create install directory if it doesn't exist
 if [ ! -d "$INSTALL_DIR" ]; then
@@ -58,7 +58,7 @@ if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
     echo -e "${GREEN}export PATH=\"\$PATH:$INSTALL_DIR\"${NC}"
 fi
 
-echo -e "${GREEN}✅ Successfully installed vantage-server!${NC}"
+echo -e "${GREEN}✅ Successfully installed vantage-mcp!${NC}"
 echo -e "Version: $VERSION"
 echo -e "Location: $INSTALL_DIR/$BINARY_NAME"
 echo -e ""

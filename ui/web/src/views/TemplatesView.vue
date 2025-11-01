@@ -4,7 +4,15 @@
       <div class="container-xl">
         <div class="row g-2 align-items-center">
           <div class="col">
-            <h2 class="page-title">Templates</h2>
+            <h2 class="page-title">{{ $t('templates.title') }}</h2>
+          </div>
+          <div class="col-auto">
+            <button
+              @click="showCreateModal = true"
+              class="btn btn-primary"
+            >
+              <i class="ti ti-plus"></i> {{ $t('templates.createTemplate') }}
+            </button>
           </div>
         </div>
       </div>
@@ -23,18 +31,23 @@
         </div>
 
         <!-- Empty State -->
-        <div 
-          v-else-if="templateStore.templateCount === 0" 
+        <div
+          v-else-if="templateStore.templateCount === 0"
           class="empty"
         >
-          <p class="empty-title">No templates available</p>
-          <p class="empty-subtitle text-muted">Templates will appear here when configured</p>
+          <p class="empty-title">{{ $t('templates.noTemplates') }}</p>
+          <p class="empty-subtitle text-muted">{{ $t('templates.noTemplatesDescription') }}</p>
+          <div class="empty-action">
+            <button @click="showCreateModal = true" class="btn btn-primary">
+              <i class="ti ti-plus"></i> {{ $t('templates.createFirstTemplate') }}
+            </button>
+          </div>
         </div>
 
         <!-- Template Grid -->
         <div v-else class="row row-cards">
-          <div 
-            v-for="template in templateStore.templates" 
+          <div
+            v-for="template in templateStore.templates"
             :key="template.template_id"
             class="col-md-6 col-lg-4"
           >
@@ -43,43 +56,100 @@
                 <h3 class="card-title">{{ template.name }}</h3>
                 <p class="text-muted">{{ template.description }}</p>
                 <div v-if="template.tags && template.tags.length > 0" class="mb-3">
-                  <span 
-                    v-for="tag in template.tags" 
+                  <span
+                    v-for="tag in template.tags"
                     :key="tag"
                     class="badge bg-secondary me-1"
                   >
                     {{ tag }}
                   </span>
                 </div>
-                <button 
-                  @click="useTemplate(template)"
-                  class="btn btn-primary w-100"
-                >
-                  Use Template
-                </button>
+                <div class="d-flex gap-2">
+                  <button
+                    @click="useTemplate(template)"
+                    class="btn btn-primary flex-fill"
+                  >
+                    {{ $t('templates.useTemplate') }}
+                  </button>
+                  <button
+                    @click="deleteTemplate(template)"
+                    class="btn btn-ghost-danger"
+                    :title="$t('common.delete')"
+                  >
+                    <i class="ti ti-trash"></i>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- Create Template Modal -->
+    <CreateTemplateModal
+      v-model="showCreateModal"
+      @created="onTemplateCreated"
+    />
+
+    <!-- Use Template Modal -->
+    <UseTemplateModal
+      v-model="showUseModal"
+      :template="selectedTemplate"
+      @created="onProcessCreated"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue';
-import type { ProcessTemplate } from '@/types';
+import { ref, onMounted } from 'vue';
+import type { ProcessTemplate, ProcessInfo } from '@/types';
 import { useTemplateStore } from '@/stores/template';
+import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
+import { useToast } from '@/composables/useToast';
+import CreateTemplateModal from '@/components/CreateTemplateModal.vue';
+import UseTemplateModal from '@/components/UseTemplateModal.vue';
+import apiClient from '@/api/client';
 
+const { t } = useI18n();
+const router = useRouter();
+const { showSuccess, showError } = useToast();
 const templateStore = useTemplateStore();
+
+const showCreateModal = ref(false);
+const showUseModal = ref(false);
+const selectedTemplate = ref<ProcessTemplate | null>(null);
 
 onMounted(async () => {
   await templateStore.loadTemplates();
 });
 
 function useTemplate(template: ProcessTemplate) {
-  // TODO: Implement template instantiation modal
-  templateStore.selectTemplate(template);
-  console.log('Use template:', template);
+  selectedTemplate.value = template;
+  showUseModal.value = true;
+}
+
+async function deleteTemplate(template: ProcessTemplate) {
+  if (!confirm(t('templates.confirmDelete', { name: template.name }))) {
+    return;
+  }
+
+  try {
+    await apiClient.deleteTemplate(template.template_id);
+    showSuccess(t('templates.deleteSuccess'));
+    await templateStore.loadTemplates();
+  } catch (error: any) {
+    showError(t('templates.deleteError', { error: error.message }));
+  }
+}
+
+async function onTemplateCreated() {
+  await templateStore.loadTemplates();
+}
+
+function onProcessCreated(process: ProcessInfo) {
+  showSuccess(t('templates.processCreated', { id: process.id }));
+  router.push('/processes');
 }
 </script>

@@ -1,0 +1,68 @@
+[package]
+name = "vantage-atom"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Core library for Vantage - A powerful process management server for Claude Code via Model Context Protocol (MCP)"
+license.workspace = true
+repository.workspace = true
+keywords = ["mcp", "process-management", "claude", "server", "orchestration"]
+categories = ["command-line-utilities", "development-tools"]
+
+[dependencies]
+# MCP SDK
+rmcp = { workspace = true }
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Error handling
+anyhow = "1.0"
+thiserror = "2.0.16"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Persistence layer
+vantage-persistence = { path = "../vantage-persistence" }
+
+# Utils
+chrono = { version = "0.4", features = ["serde"] }
+schemars = "1.0"
+dirs = "5.0"
+open = "5.3"
+isatty = "0.1"
+reqwest = { version = "0.12", features = ["json"] }
+
+# Web server
+axum = { version = "0.7" }
+tower = { version = "0.5" }
+tower-http = { version = "0.6", features = ["cors", "fs"] }
+axum-extra = { version = "0.9", features = ["typed-header"] }
+futures = { version = "0.3" }
+
+# Static file embedding
+rust-embed = { version = "8.5", features = ["include-exclude"] }
+tokio-stream = { version = "0.1" }
+tera = { version = "1.20" }
+regex = "1.11.2"
+
+# Browser testing
+headless_chrome = { version = "1.0", optional = true }
+
+# Unix-specific dependencies
+[target.'cfg(unix)'.dependencies]
+nix = { version = "0.29", features = ["signal"] }
+
+[features]
+default = []
+browser-test = ["dep:headless_chrome"]
+
+
+[dev-dependencies]
+tempfile = "3.8"

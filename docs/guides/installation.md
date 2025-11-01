@@ -12,26 +12,26 @@
 
 最新リリースをインストール：
 ```bash
-cargo install --git https://github.com/chronista-club/vantage-server --tag v0.2.0
+cargo install --git https://github.com/chronista-club/vantage-mcp --tag v0.2.0
 ```
 
 または最新の開発版：
 ```bash
-cargo install --git https://github.com/chronista-club/vantage-server
+cargo install --git https://github.com/chronista-club/vantage-mcp
 ```
 
 ### 方法2: ソースからビルド
 
 ```bash
 # リポジトリをクローン
-git clone https://github.com/chronista-club/vantage-server.git
-cd vantage-server
+git clone https://github.com/chronista-club/vantage-mcp.git
+cd vantage-mcp
 
 # リリースビルド
 cargo build --release
 
 # インストール
-cargo install --path crates/vantage
+cargo install --path crates/vantage-atom
 ```
 
 ### 方法3: ローカルインストールスクリプト
@@ -90,7 +90,7 @@ vantage --web --web-port 8080
 Claude Code で以下のコマンドを実行：
 
 1. サーバーステータスの確認：
-   - "Check Vantage server status"
+   - "Check Vantage MCP status"
 
 2. テストプロセスの作成：
    - "Create a test process that echoes hello world"
@@ -132,7 +132,7 @@ vantage --web --web-port 12701
 ## アンインストール
 
 ```bash
-cargo uninstall vantage-server
+cargo uninstall vantage-mcp
 ```
 
 設定ファイルとデータを削除：

@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Verify Vantage Server Installation
+# Verify Vantage MCP Installation
 
-echo "Checking Vantage Server installation..."
+echo "Checking Vantage MCP installation..."
 echo ""
 
 # Check if vantagemcp is in PATH

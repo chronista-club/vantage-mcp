@@ -1,4 +1,4 @@
-# Vantage Server
+# Vantage MCP
 
 **English** | [日本語](./docs/README.ja.md)
 
@@ -41,18 +41,18 @@ A powerful process management server for Claude Code via the Model Context Proto
 
 ```bash
 # Install from GitHub repository
-cargo install --git https://github.com/chronista-club/vantage-server --tag v0.2.0
+cargo install --git https://github.com/chronista-club/vantage-mcp --tag v0.2.0
 
 # Or install latest from main branch
-cargo install --git https://github.com/chronista-club/vantage-server
+cargo install --git https://github.com/chronista-club/vantage-mcp
 ```
 
 ### From Source
 
 ```bash
 # Clone the repository
-git clone https://github.com/chronista-club/vantage-server
-cd vantage-server
+git clone https://github.com/chronista-club/vantage-mcp
+cd vantage-mcp
 
 # Release build
 cargo build --release
@@ -190,12 +190,12 @@ for process in list_processes(filter={"name_pattern": "worker"}):
 
 ### KDL Configuration Files
 
-Vantage Server uses [KDL (Cuddly Data Language)](https://kdl.dev/) format for process persistence. Configuration files are automatically saved to `.vantage/processes.kdl`.
+Vantage MCP uses [KDL (Cuddly Data Language)](https://kdl.dev/) format for process persistence. Configuration files are automatically saved to `.vantage/processes.kdl`.
 
 #### Example KDL Configuration
 
 ```kdl
-// Vantage Server Process Configuration
+// Vantage MCP Process Configuration
 meta {
     version "1.0.0"
 }
@@ -308,7 +308,7 @@ RUST_LOG=debug cargo run
 ### Project Structure
 
 ```
-vantage-server/
+vantage-mcp/
 ├── crates/
 │   ├── vantage/                 # Main server crate
 │   │   ├── src/
@@ -398,9 +398,9 @@ at your option.
 ## Support
 
 For issues, questions, or suggestions:
-- Open an issue on [GitHub](https://github.com/chronista-club/vantage-server/issues)
-- Check the [documentation](https://github.com/chronista-club/vantage-server/wiki)
+- Open an issue on [GitHub](https://github.com/chronista-club/vantage-mcp/issues)
+- Check the [documentation](https://github.com/chronista-club/vantage-mcp/wiki)
 
 ---
 
-*Vantage Server - Making process management simple and powerful for Claude Code*
+*Vantage MCP - Making process management simple and powerful for Claude Code*

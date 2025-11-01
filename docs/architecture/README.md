@@ -1,13 +1,13 @@
-# Vantage Server アーキテクチャ
+# Vantage MCP アーキテクチャ
 
 ## 概要
 
-Vantage Server は Model Context Protocol (MCP) を介して Claude Code と連携するプロセス管理サーバーです。
+Vantage MCP は Model Context Protocol (MCP) を介して Claude Code と連携するプロセス管理サーバーです。
 
 ## システム構成
 
 ```
-vantage-server/
+vantage-mcp/
 ├── crates/
 │   ├── vantage/              # メインサーバークレート
 │   │   ├── src/

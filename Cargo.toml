@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/vantage", "crates/vantage-persistence", "crates/vantage-mcp"]
+members = ["crates/vantage", "crates/vantage-atom", "crates/vantage-persistence", "crates/vantage-mcp"]
 resolver = "2"
 
 [workspace.package]

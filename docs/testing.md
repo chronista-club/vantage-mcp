@@ -6,7 +6,7 @@ Vantageサーバーには以下のテストが実装されています：
 
 ### 1. Web APIテスト（✅ 動作確認済み）
 
-**ファイル**: `crates/vantage/tests/test_web_api.rs`
+**ファイル**: `crates/vantage-atom/tests/test_web_api.rs`
 
 **実行方法**:
 ```bash
@@ -78,7 +78,7 @@ cargo run --bin vantage -- --web --web-port 12700
 
 ### 2-alt. ブラウザテスト（headless_chrome版・非推奨）
 
-**ファイル**: `crates/vantage/tests/test_browser.rs`
+**ファイル**: `crates/vantage-atom/tests/test_browser.rs`
 
 **注意**: Chrome MCP版を推奨。この方式は制約が多い。
 
@@ -90,8 +90,8 @@ cargo run --bin vantage -- --web --web-port 12700
 ### 3. 既存のユニット・統合テスト
 
 **ファイル**:
-- `crates/vantage/tests/test_integration.rs` - プロセス管理の統合テスト
-- `crates/vantage/tests/test_process_update.rs` - プロセス更新のテスト
+- `crates/vantage-atom/tests/test_integration.rs` - プロセス管理の統合テスト
+- `crates/vantage-atom/tests/test_process_update.rs` - プロセス更新のテスト
 
 **実行方法**:
 ```bash
