@@ -32,3 +32,6 @@ uuid = { version = "1.18", features = ["v4", "serde"] }
 
 # System info
 hostname = "0.3"
+
+# Database
+surrealdb = { version = "2.2", default-features = false, features = ["protocol-ws"] }
