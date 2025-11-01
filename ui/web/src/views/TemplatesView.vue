@@ -98,6 +98,16 @@
       :template="selectedTemplate"
       @created="onProcessCreated"
     />
+
+    <!-- Confirm Delete Modal -->
+    <ConfirmModal
+      v-model="showDeleteConfirm"
+      :title="$t('common.delete')"
+      :message="deleteConfirmMessage"
+      :confirm-text="$t('common.delete')"
+      danger-mode
+      @confirm="confirmDelete"
+    />
   </div>
 </template>
 
@@ -110,6 +120,7 @@ import { useI18n } from 'vue-i18n';
 import { useToast } from '@/composables/useToast';
 import CreateTemplateModal from '@/components/CreateTemplateModal.vue';
 import UseTemplateModal from '@/components/UseTemplateModal.vue';
+import ConfirmModal from '@/components/ConfirmModal.vue';
 import apiClient from '@/api/client';
 
 const { t } = useI18n();
@@ -119,7 +130,10 @@ const templateStore = useTemplateStore();
 
 const showCreateModal = ref(false);
 const showUseModal = ref(false);
+const showDeleteConfirm = ref(false);
 const selectedTemplate = ref<ProcessTemplate | null>(null);
+const templateToDelete = ref<ProcessTemplate | null>(null);
+const deleteConfirmMessage = ref('');
 
 onMounted(async () => {
   await templateStore.loadTemplates();
@@ -130,17 +144,23 @@ function useTemplate(template: ProcessTemplate) {
   showUseModal.value = true;
 }
 
-async function deleteTemplate(template: ProcessTemplate) {
-  if (!confirm(t('templates.confirmDelete', { name: template.name }))) {
-    return;
-  }
+function deleteTemplate(template: ProcessTemplate) {
+  templateToDelete.value = template;
+  deleteConfirmMessage.value = t('templates.confirmDelete', { name: template.name });
+  showDeleteConfirm.value = true;
+}
+
+async function confirmDelete() {
+  if (!templateToDelete.value) return;
 
   try {
-    await apiClient.deleteTemplate(template.template_id);
+    await apiClient.deleteTemplate(templateToDelete.value.template_id);
     showSuccess(t('templates.deleteSuccess'));
     await templateStore.loadTemplates();
   } catch (error: any) {
     showError(t('templates.deleteError', { error: error.message }));
+  } finally {
+    templateToDelete.value = null;
   }
 }
 

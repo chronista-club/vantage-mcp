@@ -116,6 +116,7 @@
   },
   "common": {
     "cancel": "キャンセル",
+    "confirm": "確認",
     "delete": "削除",
     "enabled": "有効"
   }

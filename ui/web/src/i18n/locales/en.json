@@ -116,6 +116,7 @@
   },
   "common": {
     "cancel": "Cancel",
+    "confirm": "Confirm",
     "delete": "Delete",
     "enabled": "Enabled"
   }
