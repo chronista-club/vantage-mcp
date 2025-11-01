@@ -12,7 +12,7 @@ const toasts = ref<Toast[]>([]);
 export function useToast() {
   const showToast = (message: string, type: Toast['type'] = 'info', duration = 3000) => {
     const toast: Toast = {
-      id: Date.now().toString(),
+      id: (Date.now() + Math.random()).toString(),
       message,
       type,
       duration,
