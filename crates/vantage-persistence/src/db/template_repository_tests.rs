@@ -1,7 +1,8 @@
 #[cfg(test)]
 mod tests {
     use super::super::template_repository::{Template, TemplateCategory, TemplateRepository};
-    use crate::db::{DbConfig, DbConnection, SchemaManager};
+    use crate::db::connection::{DbConfig, DbConnection};
+    use crate::db::schema::SchemaManager;
 
     /// テスト用のDB接続を作成
     async fn setup_test_db() -> DbConnection {
@@ -60,7 +61,8 @@ mod tests {
         // テンプレートを作成
         let template = create_test_template("test_get");
         let created = repo.create(template).await.unwrap();
-        let id = created.id.as_ref().unwrap().id.to_string();
+        let id_string = created.id.as_ref().unwrap().to_string();
+        let id = id_string.split(':').nth(1).unwrap();
 
         // IDで取得
         let retrieved = repo.get(&id).await.unwrap();
@@ -93,7 +95,8 @@ mod tests {
         // テンプレートを作成
         let template = create_test_template("test_update");
         let created = repo.create(template).await.unwrap();
-        let id = created.id.as_ref().unwrap().id.to_string();
+        let id_string = created.id.as_ref().unwrap().to_string();
+        let id = id_string.split(':').nth(1).unwrap();
 
         // 更新
         let mut updated_template = created.clone();
@@ -114,7 +117,8 @@ mod tests {
         // テンプレートを作成
         let template = create_test_template("test_delete");
         let created = repo.create(template).await.unwrap();
-        let id = created.id.as_ref().unwrap().id.to_string();
+        let id_string = created.id.as_ref().unwrap().to_string();
+        let id = id_string.split(':').nth(1).unwrap();
 
         // 削除
         repo.delete(&id).await.unwrap();
@@ -142,7 +146,7 @@ mod tests {
             .unwrap();
 
         // 全件取得
-        let templates = repo.list_all().await.unwrap();
+        let templates = repo.list().await.unwrap();
         assert!(templates.len() >= 3);
     }
 
@@ -171,16 +175,16 @@ mod tests {
 
         // カテゴリ別テンプレートを作成
         let mut dev_template = create_test_template("dev_test");
-        dev_template.category = Some(TemplateCategory::Development);
+        dev_template.category = TemplateCategory::WebServer;
         repo.create(dev_template).await.unwrap();
 
         let mut monitor_template = create_test_template("monitor_test");
-        monitor_template.category = Some(TemplateCategory::Monitoring);
+        monitor_template.category = TemplateCategory::Script;
         repo.create(monitor_template).await.unwrap();
 
         // カテゴリで検索
         let dev_results = repo
-            .list_by_category(&TemplateCategory::Development)
+            .list_by_category(TemplateCategory::WebServer)
             .await
             .unwrap();
         assert!(!dev_results.is_empty());

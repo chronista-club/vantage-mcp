@@ -939,16 +939,12 @@ impl VantageServer {
         let category = request
             .category
             .as_ref()
-            .and_then(|c| match c.to_lowercase().as_str() {
-                "database" => Some(vantage_persistence::TemplateCategory::Database),
-                "web_server" | "webserver" => {
-                    Some(vantage_persistence::TemplateCategory::WebServer)
-                }
-                "build_tool" | "buildtool" => {
-                    Some(vantage_persistence::TemplateCategory::BuildTool)
-                }
-                "script" => Some(vantage_persistence::TemplateCategory::Script),
-                _ => Some(vantage_persistence::TemplateCategory::Other),
+            .map(|c| match c.to_lowercase().as_str() {
+                "database" => vantage_persistence::TemplateCategory::Database,
+                "web_server" | "webserver" => vantage_persistence::TemplateCategory::WebServer,
+                "build_tool" | "buildtool" => vantage_persistence::TemplateCategory::BuildTool,
+                "script" => vantage_persistence::TemplateCategory::Script,
+                _ => vantage_persistence::TemplateCategory::Other,
             })
             .unwrap_or(vantage_persistence::TemplateCategory::Other);
 

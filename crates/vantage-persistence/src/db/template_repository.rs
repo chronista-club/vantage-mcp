@@ -39,20 +39,15 @@ use surrealdb::engine::remote::ws::Client;
 use tracing::{debug, info};
 
 /// テンプレートカテゴリ
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum TemplateCategory {
     Database,
     WebServer,
     BuildTool,
     Script,
+    #[default]
     Other,
-}
-
-impl Default for TemplateCategory {
-    fn default() -> Self {
-        Self::Other
-    }
 }
 
 /// プロセステンプレート
@@ -313,7 +308,8 @@ mod tests {
 
         // Get by ID (RecordId経由)
         let id = created.id.as_ref().unwrap();
-        let id_str = id.to_string().split(':').nth(1).unwrap();
+        let id_string = id.to_string();
+        let id_str = id_string.split(':').nth(1).unwrap();
         let fetched_by_id = repo.get(id_str).await.unwrap();
         assert!(fetched_by_id.is_some());
 
