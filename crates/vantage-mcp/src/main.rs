@@ -230,8 +230,7 @@ async fn main() -> Result<()> {
     if auto_open {
         let url = format!("http://localhost:{actual_port}");
         tokio::spawn(async move {
-            tokio::time::sleep(tokio::time::Duration::from_millis(BROWSER_STARTUP_DELAY_MS))
-                .await;
+            tokio::time::sleep(tokio::time::Duration::from_millis(BROWSER_STARTUP_DELAY_MS)).await;
 
             if let Err(e) = open::that(&url) {
                 tracing::warn!("Failed to open browser: {}", e);
