@@ -260,9 +260,11 @@ impl<'a> TemplateRepository<'a> {
     pub async fn increment_use_count(&self, id: &str) -> Result<()> {
         debug!("Incrementing use count for template: {}", id);
 
+        let now = chrono::Utc::now().to_rfc3339();
         self.db
-            .query("UPDATE template:$id SET use_count += 1, last_used_at = time::now()")
+            .query("UPDATE type::thing('template', $id) SET use_count += 1, last_used_at = $now")
             .bind(("id", id.to_string()))
+            .bind(("now", now))
             .await
             .context("Failed to increment use count")?;
 

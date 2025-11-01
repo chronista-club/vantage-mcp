@@ -21,8 +21,8 @@ async fn setup_test_db() -> DbConnection {
         .await
         .expect("Failed to connect to test database");
 
-    // 既存のtemplateテーブルをクリーンアップ
-    let _ = conn.db().query("DELETE FROM template;").await;
+    // 既存のtemplateテーブルを完全に削除して再作成
+    let _ = conn.db().query("REMOVE TABLE template;").await;
 
     // スキーマを適用
     let schema_manager = SchemaManager::new(conn.db());
