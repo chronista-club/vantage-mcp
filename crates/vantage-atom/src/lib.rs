@@ -61,11 +61,34 @@ impl VantageServer {
         // DB接続を初期化（オプショナル）
         let db_connection = match vantage_persistence::DbConnection::new_default().await {
             Ok(conn) => {
-                tracing::info!("Successfully connected to SurrealDB");
+                tracing::info!("SurrealDBに接続しました");
+
+                // スキーマを自動適用
+                let schema_manager = vantage_persistence::SchemaManager::new(conn.db());
+                match schema_manager.apply_all().await {
+                    Ok(_) => {
+                        tracing::info!("データベーススキーマを適用しました");
+                    }
+                    Err(e) => {
+                        tracing::error!(
+                            "データベーススキーマの適用に失敗しました: {}. テンプレート機能が正常に動作しない可能性があります。\
+                             SurrealDBの権限を確認し、データベースにアクセス可能であることを確認してください。",
+                            e
+                        );
+                    }
+                }
+
                 Some(Arc::new(conn))
             }
             Err(e) => {
-                tracing::warn!("Failed to connect to SurrealDB: {}. Template features will be unavailable.", e);
+                tracing::warn!(
+                    "SurrealDBへの接続に失敗しました: {}. テンプレート機能は利用できません。\
+                     SurrealDBが起動しており、アクセス可能であることを確認してください。\
+                     接続設定は以下の環境変数で設定できます: \
+                     VANTAGE_DB_ENDPOINT, VANTAGE_DB_NAMESPACE, VANTAGE_DB_DATABASE, \
+                     VANTAGE_DB_USERNAME, VANTAGE_DB_PASSWORD",
+                    e
+                );
                 None
             }
         };
@@ -110,11 +133,34 @@ impl VantageServer {
         // DB接続を初期化（オプショナル）
         let db_connection = match vantage_persistence::DbConnection::new_default().await {
             Ok(conn) => {
-                tracing::info!("Successfully connected to SurrealDB");
+                tracing::info!("SurrealDBに接続しました");
+
+                // スキーマを自動適用
+                let schema_manager = vantage_persistence::SchemaManager::new(conn.db());
+                match schema_manager.apply_all().await {
+                    Ok(_) => {
+                        tracing::info!("データベーススキーマを適用しました");
+                    }
+                    Err(e) => {
+                        tracing::error!(
+                            "データベーススキーマの適用に失敗しました: {}. テンプレート機能が正常に動作しない可能性があります。\
+                             SurrealDBの権限を確認し、データベースにアクセス可能であることを確認してください。",
+                            e
+                        );
+                    }
+                }
+
                 Some(Arc::new(conn))
             }
             Err(e) => {
-                tracing::warn!("Failed to connect to SurrealDB: {}. Template features will be unavailable.", e);
+                tracing::warn!(
+                    "SurrealDBへの接続に失敗しました: {}. テンプレート機能は利用できません。\
+                     SurrealDBが起動しており、アクセス可能であることを確認してください。\
+                     接続設定は以下の環境変数で設定できます: \
+                     VANTAGE_DB_ENDPOINT, VANTAGE_DB_NAMESPACE, VANTAGE_DB_DATABASE, \
+                     VANTAGE_DB_USERNAME, VANTAGE_DB_PASSWORD",
+                    e
+                );
                 None
             }
         };

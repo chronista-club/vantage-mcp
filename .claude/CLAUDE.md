@@ -172,6 +172,8 @@ VANTAGE_AUTO_EXPORT_INTERVAL=300 cargo run  # 5分ごとに自動エクスポー
 
 ## 環境変数
 
+### プロセス管理関連
+
 | 変数 | 説明 | デフォルト |
 |------|------|------------|
 | `RUST_LOG` | ログレベル (error, warn, info, debug, trace) | info |
@@ -180,6 +182,18 @@ VANTAGE_AUTO_EXPORT_INTERVAL=300 cargo run  # 5分ごとに自動エクスポー
 | `VANTAGE_EXPORT_FILE` | シャットダウン時のエクスポート先 | ~/.vantage/data/processes.surql |
 | `VANTAGE_DATA_DIR` | データファイル用ディレクトリ | ~/.vantage/data |
 | `VANTAGE_STOP_ON_SHUTDOWN` | vantage終了時にプロセスを停止するか（true/false） | false（継続） |
+
+### SurrealDB接続関連
+
+| 変数 | 説明 | デフォルト |
+|------|------|------------|
+| `VANTAGE_DB_ENDPOINT` | SurrealDBエンドポイント | 127.0.0.1:30300 |
+| `VANTAGE_DB_NAMESPACE` | SurrealDB名前空間 | vantage |
+| `VANTAGE_DB_DATABASE` | SurrealDBデータベース名 | vantage |
+| `VANTAGE_DB_USERNAME` | SurrealDBユーザー名 | vtg-local |
+| `VANTAGE_DB_PASSWORD` | SurrealDBパスワード | vtg-local |
+
+**注意**: SurrealDB接続は必須ではありません。接続に失敗した場合でも、プロセス管理機能は通常通り動作します。テンプレート機能のみが利用できなくなります。
 
 ## テストに関する考慮事項
 
