@@ -5,12 +5,12 @@
       "command": "uvx",
       "args": [
         "--from",
-        "git+https://github.com/oraios/serena",
+        "serena-agent",
         "serena-mcp-server",
-        "--context",
-        "ide-assistant",
         "--project",
-        "$(pwd)"
+        "$(pwd)",
+        "--context",
+        "ide-assistant"
       ]
     },
     "surrealdb-mcp": {
@@ -27,9 +27,9 @@
       "disabled": false,
       "autoApprove": []
     },
-    "vantage-mcp": {
+    "vantage-mcp-df": {
       "type": "stdio",
-      "command": "./target/release/vantagemcp",
+      "command": "vantagemcp",
       "args": []
     }
   }

@@ -34,6 +34,7 @@ pub struct VantageServer {
     #[allow(dead_code)]
     ci_monitor: Arc<CiMonitor>,
     tool_router: ToolRouter<VantageServer>,
+    db_connection: Option<Arc<vantage_persistence::DbConnection>>,
 }
 
 #[tool_router]
@@ -57,6 +58,18 @@ impl VantageServer {
         tracing::debug!("Initializing CI monitor");
         let ci_monitor = Arc::new(CiMonitor::new(None, Some(30)));
 
+        // DB接続を初期化（オプショナル）
+        let db_connection = match vantage_persistence::DbConnection::new_default().await {
+            Ok(conn) => {
+                tracing::info!("Successfully connected to SurrealDB");
+                Some(Arc::new(conn))
+            }
+            Err(e) => {
+                tracing::warn!("Failed to connect to SurrealDB: {}. Template features will be unavailable.", e);
+                None
+            }
+        };
+
         tracing::info!("VantageServer initialization complete");
         Ok(Self {
             start_time: Arc::new(Mutex::new(chrono::Utc::now())),
@@ -65,6 +78,7 @@ impl VantageServer {
             learning_engine,
             ci_monitor,
             tool_router: Self::tool_router(),
+            db_connection,
         })
     }
 
@@ -90,10 +104,22 @@ impl VantageServer {
             tracing::info!("Learning engine started successfully");
         }
 
-        tracing::info!("VantageServer initialization complete");
-
         // CI監視を初期化（2回目の初期化）
         let ci_monitor_2 = Arc::new(CiMonitor::new(None, Some(30)));
+
+        // DB接続を初期化（オプショナル）
+        let db_connection = match vantage_persistence::DbConnection::new_default().await {
+            Ok(conn) => {
+                tracing::info!("Successfully connected to SurrealDB");
+                Some(Arc::new(conn))
+            }
+            Err(e) => {
+                tracing::warn!("Failed to connect to SurrealDB: {}. Template features will be unavailable.", e);
+                None
+            }
+        };
+
+        tracing::info!("VantageServer initialization complete");
 
         Ok(Self {
             start_time: Arc::new(Mutex::new(chrono::Utc::now())),
@@ -102,6 +128,7 @@ impl VantageServer {
             learning_engine,
             ci_monitor: ci_monitor_2,
             tool_router: Self::tool_router(),
+            db_connection,
         })
     }
 
