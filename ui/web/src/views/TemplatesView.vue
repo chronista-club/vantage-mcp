@@ -19,7 +19,7 @@
             <!-- Error State -->
             <div v-else-if="templateStore.error" class="error-state">
                 <IconAlertTriangle :size="48" :stroke-width="1.5" />
-                <h3>エラーが発生しました</h3>
+                <h3>{{ t('errors.occurred') }}</h3>
                 <p>{{ templateStore.error }}</p>
             </div>
 

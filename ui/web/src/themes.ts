@@ -233,7 +233,7 @@ export function createLightTheme(): VantageTheme {
       primary: { l: 0.48, c: 0.13, h: 280 },
       // セカンダリ: Research (ディープブルー) - #12126D相当
       secondary: { l: 0.28, c: 0.15, h: 285 },
-      // アクセント: Bradcast (ピンク) - #EF6CDB相当
+      // アクセント: Broadcast (ピンク) - #EF6CDB相当
       accent: { l: 0.7, c: 0.2, h: 320 },
       // 成功: Provision (シアン) - #7DECF2相当
       success: { l: 0.85, c: 0.1, h: 195 },
@@ -268,7 +268,7 @@ export function createDarkTheme(): VantageTheme {
       primary: { l: 0.58, c: 0.13, h: 280 },
       // セカンダリ: Research (ディープブルー・明度調整)
       secondary: { l: 0.38, c: 0.15, h: 285 },
-      // アクセント: Bradcast (ピンク・明度調整)
+      // アクセント: Broadcast (ピンク・明度調整)
       accent: { l: 0.75, c: 0.2, h: 320 },
       // 成功: Provision (シアン・彩度調整)
       success: { l: 0.8, c: 0.12, h: 195 },
@@ -403,7 +403,7 @@ export const colorPresets = {
   develop: { l: 0.48, c: 0.13, h: 280 },
   /** Research: セカンダリ・調査 (ディープブルー系) - #12126D相当 */
   research: { l: 0.28, c: 0.15, h: 285 },
-  /** Bradcast: 削除・終了 (ピンク系) - #EF6CDB相当 */
+  /** Broadcast: 削除・終了 (ピンク系) - #EF6CDB相当 */
   bradcast: { l: 0.7, c: 0.2, h: 320 },
   /** Creative: 実行・開始 (マゼンタ系) - #F609AF相当 */
   creative: { l: 0.65, c: 0.25, h: 330 },

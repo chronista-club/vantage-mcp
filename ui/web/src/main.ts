@@ -9,14 +9,21 @@ import "@tabler/core/dist/css/tabler.min.css";
 import "./styles/main.scss";
 
 // Import and initialize theme system
-import { initializeTheme } from "./themes";
-import { watchSystemTheme } from "./composables/useTheme";
+import { initializeTheme, watchSystemTheme } from "./composables/useTheme";
 
 // Initialize theme before creating the app
-initializeTheme();
+try {
+  initializeTheme();
+} catch (error) {
+  console.error("Failed to initialize theme:", error);
+}
 
 // Watch for system theme changes
-watchSystemTheme();
+try {
+  watchSystemTheme();
+} catch (error) {
+  console.error("Failed to initialize system theme watcher:", error);
+}
 
 const app = createApp(App);
 const pinia = createPinia();

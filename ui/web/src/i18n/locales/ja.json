@@ -152,5 +152,8 @@
   "clipboard": {
     "title": "クリップボード",
     "clearAll": "すべてクリア"
+  },
+  "errors": {
+    "occurred": "エラーが発生しました"
   }
 }

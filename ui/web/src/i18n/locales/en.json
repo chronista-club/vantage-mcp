@@ -136,9 +136,17 @@
     "processCreated": "Process \"{id}\" created successfully",
     "createProcessError": "Failed to create process: {error}"
   },
+  "clipboard": {
+    "title": "Clipboard",
+    "clearAll": "Clear All"
+  },
+  "errors": {
+    "occurred": "An error occurred"
+  },
   "common": {
     "cancel": "Cancel",
     "delete": "Delete",
-    "enabled": "Enabled"
+    "enabled": "Enabled",
+    "refresh": "Refresh"
   }
 }

@@ -22,9 +22,45 @@ import {
 
 /**
  * グローバルなテーマ状態
+ * 初期化はinitializeThemeで行われるため、ここではデフォルト値を設定
  */
-const currentTheme = ref<VantageTheme>(getCurrentTheme());
+const currentTheme = ref<VantageTheme>(createLightTheme());
 const isDark = computed(() => !currentTheme.value.isLight);
+
+/**
+ * テーマの初期化（main.tsから呼び出される）
+ */
+export function initializeTheme(): void {
+  const savedTheme = localStorage.getItem("vantage-theme") as
+    | "light"
+    | "dark"
+    | null;
+  let theme: VantageTheme;
+
+  if (savedTheme) {
+    theme = savedTheme === "dark" ? createDarkTheme() : createLightTheme();
+  } else {
+    // システムのカラースキームを確認
+    const prefersDark = window.matchMedia(
+      "(prefers-color-scheme: dark)",
+    ).matches;
+    theme = prefersDark ? createDarkTheme() : createLightTheme();
+  }
+
+  // refを更新してからDOMに適用
+  currentTheme.value = theme;
+  applyTheme(theme);
+
+  // HTML要素のクラスを設定
+  const html = document.documentElement;
+  if (theme.isLight) {
+    html.classList.remove("dark");
+    html.setAttribute("data-bs-theme", "light");
+  } else {
+    html.classList.add("dark");
+    html.setAttribute("data-bs-theme", "dark");
+  }
+}
 
 /**
  * テーマ管理用のComposable

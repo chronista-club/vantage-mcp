@@ -118,7 +118,7 @@ const createProcessNodes = () => {
 
 const getProcessColor = (process: Process): number => {
   if (isRunning(process.state)) return 0xdc26a0; // Creative magenta
-  if (isFailed(process.state)) return 0xef6cdb;   // Bradcast pink
+  if (isFailed(process.state)) return 0xef6cdb;   // Broadcast pink
   if (isStopped(process.state)) return 0x7decf2; // Provision cyan
   return 0x666666; // Gray for not started
 };
