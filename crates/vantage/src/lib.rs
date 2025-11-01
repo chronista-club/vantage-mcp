@@ -20,4 +20,5 @@ pub mod web {
 
 // Re-export error types
 pub use atom::VantageError;
+pub use atom::VantageResult;
 pub type Result<T> = std::result::Result<T, VantageError>;
