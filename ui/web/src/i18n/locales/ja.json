@@ -117,6 +117,18 @@
   "common": {
     "cancel": "キャンセル",
     "delete": "削除",
-    "enabled": "有効"
+    "enabled": "有効",
+    "refresh": "更新"
+  },
+  "views": {
+    "card": "カード表示",
+    "table": "テーブル表示"
+  },
+  "actions": {
+    "refresh": "更新"
+  },
+  "clipboard": {
+    "title": "クリップボード",
+    "clearAll": "すべてクリア"
   }
 }
