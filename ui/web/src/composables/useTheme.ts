@@ -2,7 +2,7 @@
  * テーマ管理用のVue Composable
  */
 
-import { ref, computed, watch } from 'vue';
+import { ref, computed } from "vue";
 import {
   type VantageTheme,
   type OklchColor,
@@ -18,7 +18,7 @@ import {
   getHoverColor,
   getActiveColor,
   colorPresets,
-} from '@/themes';
+} from "@/themes";
 
 /**
  * グローバルなテーマ状態
@@ -34,7 +34,9 @@ export function useTheme() {
    * テーマを切り替える
    */
   function toggleTheme(): void {
-    const newTheme = currentTheme.value.isLight ? createDarkTheme() : createLightTheme();
+    const newTheme = currentTheme.value.isLight
+      ? createDarkTheme()
+      : createLightTheme();
     setTheme(newTheme);
   }
 
@@ -47,17 +49,17 @@ export function useTheme() {
 
     // HTML要素のクラスとローカルストレージを更新
     const html = document.documentElement;
-    const themeMode = theme.isLight ? 'light' : 'dark';
+    const themeMode = theme.isLight ? "light" : "dark";
 
     if (theme.isLight) {
-      html.classList.remove('dark');
-      html.setAttribute('data-bs-theme', 'light');
+      html.classList.remove("dark");
+      html.setAttribute("data-bs-theme", "light");
     } else {
-      html.classList.add('dark');
-      html.setAttribute('data-bs-theme', 'dark');
+      html.classList.add("dark");
+      html.setAttribute("data-bs-theme", "dark");
     }
 
-    localStorage.setItem('vantage-theme', themeMode);
+    localStorage.setItem("vantage-theme", themeMode);
   }
 
   /**
@@ -77,21 +79,21 @@ export function useTheme() {
   /**
    * 色をCSS変数名として取得
    */
-  function getColorVar(name: keyof VantageTheme['colors']): string {
+  function getColorVar(name: keyof VantageTheme["colors"]): string {
     return `var(--vantage-color-${name})`;
   }
 
   /**
    * 色を直接取得
    */
-  function getColor(name: keyof VantageTheme['colors']): OklchColor {
+  function getColor(name: keyof VantageTheme["colors"]): OklchColor {
     return currentTheme.value.colors[name];
   }
 
   /**
    * 色をCSS文字列として取得
    */
-  function getColorString(name: keyof VantageTheme['colors']): string {
+  function getColorString(name: keyof VantageTheme["colors"]): string {
     return oklchToString(currentTheme.value.colors[name]);
   }
 
@@ -130,11 +132,11 @@ export function useTheme() {
 export function watchSystemTheme(callback?: (isDark: boolean) => void): void {
   if (!window.matchMedia) return;
 
-  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+  const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
 
   const handler = (e: MediaQueryListEvent) => {
     // ユーザーが明示的にテーマを設定している場合は無視
-    if (localStorage.getItem('vantage-theme')) return;
+    if (localStorage.getItem("vantage-theme")) return;
 
     const newTheme = e.matches ? createDarkTheme() : createLightTheme();
     currentTheme.value = newTheme;
@@ -143,5 +145,5 @@ export function watchSystemTheme(callback?: (isDark: boolean) => void): void {
     callback?.(e.matches);
   };
 
-  mediaQuery.addEventListener('change', handler);
+  mediaQuery.addEventListener("change", handler);
 }

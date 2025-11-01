@@ -84,9 +84,9 @@ export function parseOklch(str: string): OklchColor | null {
   if (!match) return null;
 
   return {
-    l: parseFloat(match[1]),
-    c: parseFloat(match[2]),
-    h: parseFloat(match[3]),
+    l: parseFloat(match[1]!),
+    c: parseFloat(match[2]!),
+    h: parseFloat(match[3]!),
     a: match[4] ? parseFloat(match[4]) : 1,
   };
 }

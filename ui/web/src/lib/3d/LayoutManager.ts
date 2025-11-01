@@ -1,7 +1,7 @@
-import * as THREE from 'three';
-import * as TWEEN from '@tweenjs/tween.js';
+import * as THREE from "three";
+import * as TWEEN from "@tweenjs/tween.js";
 
-export type ViewMode = 'list' | 'graph' | 'control' | 'edit';
+export type ViewMode = "list" | "graph" | "control" | "edit";
 
 export interface LayoutPosition {
   position: THREE.Vector3;
@@ -22,7 +22,7 @@ export interface ProcessNode {
  */
 export class LayoutManager {
   private nodes: Map<string, ProcessNode> = new Map();
-  private currentMode: ViewMode = 'list';
+  private currentMode: ViewMode = "list";
   private transitionDuration = 800; // ms
 
   /**
@@ -66,16 +66,16 @@ export class LayoutManager {
     const nodeArray = Array.from(this.nodes.values());
 
     switch (this.currentMode) {
-      case 'list':
+      case "list":
         this.calculateListLayout(nodeArray);
         break;
-      case 'graph':
+      case "graph":
         this.calculateGraphLayout(nodeArray);
         break;
-      case 'control':
+      case "control":
         this.calculateControlLayout(nodeArray);
         break;
-      case 'edit':
+      case "edit":
         this.calculateEditLayout(nodeArray);
         break;
     }
@@ -133,7 +133,7 @@ export class LayoutManager {
       node.targetLayout.position.set(
         offsetX + col * spacing,
         offsetY + row * spacing,
-        2 // 手前に
+        2, // 手前に
       );
       node.targetLayout.rotation.set(0, 0, 0);
       node.targetLayout.scale.set(3, 2.5, 0.3);
@@ -159,7 +159,7 @@ export class LayoutManager {
         node.targetLayout.position.set(
           Math.cos(angle) * radius,
           Math.sin(angle) * radius,
-          -5 // 奥に
+          -5, // 奥に
         );
         node.targetLayout.rotation.set(0, 0, 0);
         node.targetLayout.scale.set(1, 1, 0.1);
@@ -180,7 +180,7 @@ export class LayoutManager {
             y: node.targetLayout.position.y,
             z: node.targetLayout.position.z,
           },
-          this.transitionDuration
+          this.transitionDuration,
         )
         .easing(TWEEN.Easing.Cubic.InOut)
         .start();
@@ -193,7 +193,7 @@ export class LayoutManager {
             y: node.targetLayout.rotation.y,
             z: node.targetLayout.rotation.z,
           },
-          this.transitionDuration
+          this.transitionDuration,
         )
         .easing(TWEEN.Easing.Cubic.InOut)
         .start();
@@ -206,7 +206,7 @@ export class LayoutManager {
             y: node.targetLayout.scale.y,
             z: node.targetLayout.scale.z,
           },
-          this.transitionDuration
+          this.transitionDuration,
         )
         .easing(TWEEN.Easing.Cubic.InOut)
         .start();
@@ -225,13 +225,13 @@ export class LayoutManager {
    */
   getCameraPosition(mode: ViewMode): THREE.Vector3 {
     switch (mode) {
-      case 'list':
+      case "list":
         return new THREE.Vector3(10, 0, 0); // 横から
-      case 'graph':
+      case "graph":
         return new THREE.Vector3(0, 5, 15); // 斜め上から
-      case 'control':
+      case "control":
         return new THREE.Vector3(0, 0, 12); // 正面から
-      case 'edit':
+      case "edit":
         return new THREE.Vector3(0, 0, 10); // やや近くから正面
       default:
         return new THREE.Vector3(0, 0, 15);
@@ -241,7 +241,7 @@ export class LayoutManager {
   /**
    * カメラ視点を現在のモードに最適化
    */
-  getCameraLookAt(mode: ViewMode): THREE.Vector3 {
+  getCameraLookAt(_mode: ViewMode): THREE.Vector3 {
     // すべてのモードで原点を見る
     return new THREE.Vector3(0, 0, 0);
   }

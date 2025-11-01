@@ -170,11 +170,9 @@ import {
     IconRefresh,
     IconLayoutGrid,
     IconTable,
-    IconCube,
 } from "@tabler/icons-vue";
 import ProcessCard from "@/components/process/ProcessCard.vue";
 import ProcessTable from "@/components/process/ProcessTable.vue";
-import Process3DGraph from "@/components/process/Process3DGraph.vue";
 import { useProcessStore } from "@/stores/process";
 import { useSettingsStore } from "@/stores/settings";
 import { isRunning, isStopped, isFailed, isNotStarted } from "@/types";
