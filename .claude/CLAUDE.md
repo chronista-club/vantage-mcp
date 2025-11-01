@@ -282,3 +282,4 @@ cargo test test_export_import # 特定のテストを実行
 - **必ずCargo.tomlのバージョンを更新してからリリースすること**
 - バージョン番号はCargo.tomlとGitタグで一致させる
 - cargo installコマンドが正しく動作するよう、タグ名は`v`プレフィックスを付ける
+- このプロジェクトの第一言語は日本語を使用します
