@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
-use surrealdb::engine::remote::ws::Client;
 use surrealdb::Surreal;
+use surrealdb::engine::remote::ws::Client;
 use tracing::{debug, info};
 
 /// スキーママネージャー
@@ -50,7 +50,8 @@ impl<'a> SchemaManager<'a> {
 
         // ネームスペースとデータベース
         let init_script = include_str!("../../schema/00_init/namespace_and_databases.surql");
-        self.execute_schema(init_script, "namespace and databases").await?;
+        self.execute_schema(init_script, "namespace and databases")
+            .await?;
 
         Ok(())
     }
@@ -63,7 +64,8 @@ impl<'a> SchemaManager<'a> {
 
         // テンプレートテーブル
         let template_schema = include_str!("../../schema/01_tables/template.surql");
-        self.execute_schema(template_schema, "template table").await?;
+        self.execute_schema(template_schema, "template table")
+            .await?;
 
         Ok(())
     }
@@ -77,7 +79,8 @@ impl<'a> SchemaManager<'a> {
 
         // テンプレートインデックス
         let template_indexes = include_str!("../../schema/02_indexes/template_indexes.surql");
-        self.execute_schema(template_indexes, "template indexes").await?;
+        self.execute_schema(template_indexes, "template indexes")
+            .await?;
 
         Ok(())
     }

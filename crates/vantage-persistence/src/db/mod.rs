@@ -33,12 +33,12 @@
 //! ```
 
 pub mod connection;
-pub mod template_repository;
 pub mod schema;
+pub mod template_repository;
 
 #[cfg(test)]
 mod template_repository_tests;
 
 pub use connection::DbConnection;
-pub use template_repository::TemplateRepository;
 pub use schema::SchemaManager;
+pub use template_repository::TemplateRepository;

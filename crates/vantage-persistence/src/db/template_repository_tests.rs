@@ -131,9 +131,15 @@ mod tests {
         let repo = TemplateRepository::new(conn.db());
 
         // 複数のテンプレートを作成
-        repo.create(create_test_template("list_test_1")).await.unwrap();
-        repo.create(create_test_template("list_test_2")).await.unwrap();
-        repo.create(create_test_template("list_test_3")).await.unwrap();
+        repo.create(create_test_template("list_test_1"))
+            .await
+            .unwrap();
+        repo.create(create_test_template("list_test_2"))
+            .await
+            .unwrap();
+        repo.create(create_test_template("list_test_3"))
+            .await
+            .unwrap();
 
         // 全件取得
         let templates = repo.list_all().await.unwrap();
@@ -173,7 +179,10 @@ mod tests {
         repo.create(monitor_template).await.unwrap();
 
         // カテゴリで検索
-        let dev_results = repo.list_by_category(&TemplateCategory::Development).await.unwrap();
+        let dev_results = repo
+            .list_by_category(&TemplateCategory::Development)
+            .await
+            .unwrap();
         assert!(!dev_results.is_empty());
         assert!(dev_results.iter().any(|t| t.name == "dev_test"));
     }

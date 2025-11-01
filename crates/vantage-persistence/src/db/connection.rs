@@ -1,8 +1,8 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
+use surrealdb::Surreal;
 use surrealdb::engine::remote::ws::{Client, Ws};
 use surrealdb::opt::auth::Root;
-use surrealdb::Surreal;
 use tracing::{debug, info};
 
 /// SurrealDB接続設定
@@ -32,16 +32,11 @@ impl DbConfig {
         let default = Self::default();
 
         Self {
-            endpoint: std::env::var("VANTAGE_DB_ENDPOINT")
-                .unwrap_or(default.endpoint),
-            namespace: std::env::var("VANTAGE_DB_NAMESPACE")
-                .unwrap_or(default.namespace),
-            database: std::env::var("VANTAGE_DB_DATABASE")
-                .unwrap_or(default.database),
-            username: std::env::var("VANTAGE_DB_USERNAME")
-                .unwrap_or(default.username),
-            password: std::env::var("VANTAGE_DB_PASSWORD")
-                .unwrap_or(default.password),
+            endpoint: std::env::var("VANTAGE_DB_ENDPOINT").unwrap_or(default.endpoint),
+            namespace: std::env::var("VANTAGE_DB_NAMESPACE").unwrap_or(default.namespace),
+            database: std::env::var("VANTAGE_DB_DATABASE").unwrap_or(default.database),
+            username: std::env::var("VANTAGE_DB_USERNAME").unwrap_or(default.username),
+            password: std::env::var("VANTAGE_DB_PASSWORD").unwrap_or(default.password),
         }
     }
 }
@@ -85,9 +80,7 @@ impl DbConnection {
 
         let db = Surreal::new::<Ws>(&config.endpoint)
             .await
-            .with_context(|| {
-                format!("Failed to connect to SurrealDB at {}", config.endpoint)
-            })?;
+            .with_context(|| format!("Failed to connect to SurrealDB at {}", config.endpoint))?;
 
         debug!("Signing in with user: {}", config.username);
         db.signin(Root {
@@ -95,21 +88,26 @@ impl DbConnection {
             password: &config.password,
         })
         .await
-        .with_context(|| {
-            format!("Failed to sign in as user: {}", config.username)
-        })?;
+        .with_context(|| format!("Failed to sign in as user: {}", config.username))?;
 
-        debug!("Using namespace: {}, database: {}", config.namespace, config.database);
+        debug!(
+            "Using namespace: {}, database: {}",
+            config.namespace, config.database
+        );
         db.use_ns(&config.namespace)
             .use_db(&config.database)
             .await
             .with_context(|| {
-                format!("Failed to use namespace '{}' and database '{}'",
-                    config.namespace, config.database)
+                format!(
+                    "Failed to use namespace '{}' and database '{}'",
+                    config.namespace, config.database
+                )
             })?;
 
-        info!("Successfully connected to SurrealDB ({}:{})",
-            config.namespace, config.database);
+        info!(
+            "Successfully connected to SurrealDB ({}:{})",
+            config.namespace, config.database
+        );
 
         Ok(Self { db, config })
     }

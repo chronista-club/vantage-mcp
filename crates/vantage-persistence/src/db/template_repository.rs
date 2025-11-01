@@ -32,10 +32,10 @@
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use surrealdb::RecordId;
 use surrealdb::Surreal;
 use surrealdb::engine::remote::ws::Client;
-use std::collections::HashMap;
 use tracing::{debug, info};
 
 /// テンプレートカテゴリ

@@ -917,7 +917,8 @@ impl VantageServer {
 
         // DB接続の確認
         let db = self.db_connection.as_ref().ok_or_else(|| McpError {
-            message: "Database connection not available. Please ensure SurrealDB is running.".into(),
+            message: "Database connection not available. Please ensure SurrealDB is running."
+                .into(),
             code: rmcp::model::ErrorCode::INTERNAL_ERROR,
             data: None,
         })?;
@@ -935,18 +936,25 @@ impl VantageServer {
         }
 
         // カテゴリの変換
-        let category = request.category.as_ref().and_then(|c| {
-            match c.to_lowercase().as_str() {
+        let category = request
+            .category
+            .as_ref()
+            .and_then(|c| match c.to_lowercase().as_str() {
                 "database" => Some(vantage_persistence::TemplateCategory::Database),
-                "web_server" | "webserver" => Some(vantage_persistence::TemplateCategory::WebServer),
-                "build_tool" | "buildtool" => Some(vantage_persistence::TemplateCategory::BuildTool),
+                "web_server" | "webserver" => {
+                    Some(vantage_persistence::TemplateCategory::WebServer)
+                }
+                "build_tool" | "buildtool" => {
+                    Some(vantage_persistence::TemplateCategory::BuildTool)
+                }
                 "script" => Some(vantage_persistence::TemplateCategory::Script),
                 _ => Some(vantage_persistence::TemplateCategory::Other),
-            }
-        }).unwrap_or(vantage_persistence::TemplateCategory::Other);
+            })
+            .unwrap_or(vantage_persistence::TemplateCategory::Other);
 
         // Templateオブジェクトを作成
-        let mut template = vantage_persistence::Template::new(request.name.clone(), request.command.clone());
+        let mut template =
+            vantage_persistence::Template::new(request.name.clone(), request.command.clone());
         template.description = request.description;
         template.category = category;
         template.args = request.args.unwrap_or_default();
@@ -969,7 +977,7 @@ impl VantageServer {
         });
 
         Ok(CallToolResult::success(vec![Content::text(
-            serde_json::to_string_pretty(&response).unwrap()
+            serde_json::to_string_pretty(&response).unwrap(),
         )]))
     }
 
@@ -1001,23 +1009,27 @@ impl VantageServer {
             repo.search_by_tag(&tag).await
         } else {
             repo.list().await
-        }.map_err(|e| McpError {
+        }
+        .map_err(|e| McpError {
             message: format!("Failed to list templates: {}", e).into(),
             code: rmcp::model::ErrorCode::INTERNAL_ERROR,
             data: None,
         })?;
 
-        let template_list: Vec<_> = templates.iter().map(|t| {
-            serde_json::json!({
-                "id": t.id.as_ref().map(|id| id.to_string()),
-                "name": t.name,
-                "description": t.description,
-                "category": format!("{:?}", t.category),
-                "command": t.command,
-                "tags": t.tags,
-                "use_count": t.use_count,
+        let template_list: Vec<_> = templates
+            .iter()
+            .map(|t| {
+                serde_json::json!({
+                    "id": t.id.as_ref().map(|id| id.to_string()),
+                    "name": t.name,
+                    "description": t.description,
+                    "category": format!("{:?}", t.category),
+                    "command": t.command,
+                    "tags": t.tags,
+                    "use_count": t.use_count,
+                })
             })
-        }).collect();
+            .collect();
 
         let response = serde_json::json!({
             "templates": template_list,
@@ -1025,7 +1037,7 @@ impl VantageServer {
         });
 
         Ok(CallToolResult::success(vec![Content::text(
-            serde_json::to_string_pretty(&response).unwrap()
+            serde_json::to_string_pretty(&response).unwrap(),
         )]))
     }
 
@@ -1054,11 +1066,13 @@ impl VantageServer {
                 code: rmcp::model::ErrorCode::INVALID_PARAMS,
                 data: None,
             });
-        }.map_err(|e| McpError {
+        }
+        .map_err(|e| McpError {
             message: format!("Failed to get template: {}", e).into(),
             code: rmcp::model::ErrorCode::INTERNAL_ERROR,
             data: None,
-        })?.ok_or_else(|| McpError {
+        })?
+        .ok_or_else(|| McpError {
             message: "Template not found".into(),
             code: rmcp::model::ErrorCode::INVALID_PARAMS,
             data: None,
@@ -1080,7 +1094,7 @@ impl VantageServer {
         });
 
         Ok(CallToolResult::success(vec![Content::text(
-            serde_json::to_string_pretty(&response).unwrap()
+            serde_json::to_string_pretty(&response).unwrap(),
         )]))
     }
 
@@ -1100,20 +1114,30 @@ impl VantageServer {
         let repo = vantage_persistence::TemplateRepository::new(db.db());
 
         // 既存のテンプレートを取得
-        let mut template = repo.get(&request.id).await.map_err(|e| McpError {
-            message: format!("Failed to get template: {}", e).into(),
-            code: rmcp::model::ErrorCode::INTERNAL_ERROR,
-            data: None,
-        })?.ok_or_else(|| McpError {
-            message: format!("Template with ID '{}' not found", request.id).into(),
-            code: rmcp::model::ErrorCode::INVALID_PARAMS,
-            data: None,
-        })?;
+        let mut template = repo
+            .get(&request.id)
+            .await
+            .map_err(|e| McpError {
+                message: format!("Failed to get template: {}", e).into(),
+                code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+                data: None,
+            })?
+            .ok_or_else(|| McpError {
+                message: format!("Template with ID '{}' not found", request.id).into(),
+                code: rmcp::model::ErrorCode::INVALID_PARAMS,
+                data: None,
+            })?;
 
         // 更新
-        if let Some(name) = request.name { template.name = name; }
-        if let Some(command) = request.command { template.command = command; }
-        if let Some(description) = request.description { template.description = Some(description); }
+        if let Some(name) = request.name {
+            template.name = name;
+        }
+        if let Some(command) = request.command {
+            template.command = command;
+        }
+        if let Some(description) = request.description {
+            template.description = Some(description);
+        }
         if let Some(category_str) = request.category {
             template.category = match category_str.to_lowercase().as_str() {
                 "database" => vantage_persistence::TemplateCategory::Database,
@@ -1123,16 +1147,27 @@ impl VantageServer {
                 _ => vantage_persistence::TemplateCategory::Other,
             };
         }
-        if let Some(tags) = request.tags { template.tags = tags; }
-        if let Some(args) = request.args { template.args = args; }
-        if let Some(env) = request.env { template.env = env; }
-        if let Some(cwd) = request.cwd { template.cwd = Some(cwd); }
+        if let Some(tags) = request.tags {
+            template.tags = tags;
+        }
+        if let Some(args) = request.args {
+            template.args = args;
+        }
+        if let Some(env) = request.env {
+            template.env = env;
+        }
+        if let Some(cwd) = request.cwd {
+            template.cwd = Some(cwd);
+        }
 
-        let updated = repo.update(&request.id, template).await.map_err(|e| McpError {
-            message: format!("Failed to update template: {}", e).into(),
-            code: rmcp::model::ErrorCode::INTERNAL_ERROR,
-            data: None,
-        })?;
+        let updated = repo
+            .update(&request.id, template)
+            .await
+            .map_err(|e| McpError {
+                message: format!("Failed to update template: {}", e).into(),
+                code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+                data: None,
+            })?;
 
         let response = serde_json::json!({
             "success": true,
@@ -1142,7 +1177,7 @@ impl VantageServer {
         });
 
         Ok(CallToolResult::success(vec![Content::text(
-            serde_json::to_string_pretty(&response).unwrap()
+            serde_json::to_string_pretty(&response).unwrap(),
         )]))
     }
 
@@ -1165,20 +1200,28 @@ impl VantageServer {
         } else if let Some(name) = request.name.clone() {
             tracing::info!("Deleting template by name: {}", name);
             // 名前からIDを取得
-            let template = repo.get_by_name(&name).await.map_err(|e| McpError {
-                message: format!("Failed to get template: {}", e).into(),
-                code: rmcp::model::ErrorCode::INTERNAL_ERROR,
-                data: None,
-            })?.ok_or_else(|| McpError {
-                message: format!("Template '{}' not found", name).into(),
-                code: rmcp::model::ErrorCode::INVALID_PARAMS,
-                data: None,
-            })?;
-            let id = template.id.as_ref().ok_or_else(|| McpError {
-                message: "Template has no ID".into(),
-                code: rmcp::model::ErrorCode::INTERNAL_ERROR,
-                data: None,
-            })?.to_string();
+            let template = repo
+                .get_by_name(&name)
+                .await
+                .map_err(|e| McpError {
+                    message: format!("Failed to get template: {}", e).into(),
+                    code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+                    data: None,
+                })?
+                .ok_or_else(|| McpError {
+                    message: format!("Template '{}' not found", name).into(),
+                    code: rmcp::model::ErrorCode::INVALID_PARAMS,
+                    data: None,
+                })?;
+            let id = template
+                .id
+                .as_ref()
+                .ok_or_else(|| McpError {
+                    message: "Template has no ID".into(),
+                    code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+                    data: None,
+                })?
+                .to_string();
             (id, Some(name))
         } else {
             return Err(McpError {
@@ -1200,7 +1243,7 @@ impl VantageServer {
         });
 
         Ok(CallToolResult::success(vec![Content::text(
-            serde_json::to_string_pretty(&response).unwrap()
+            serde_json::to_string_pretty(&response).unwrap(),
         )]))
     }
 
@@ -1230,11 +1273,13 @@ impl VantageServer {
                 code: rmcp::model::ErrorCode::INVALID_PARAMS,
                 data: None,
             });
-        }.map_err(|e| McpError {
+        }
+        .map_err(|e| McpError {
             message: format!("Failed to get template: {}", e).into(),
             code: rmcp::model::ErrorCode::INTERNAL_ERROR,
             data: None,
-        })?.ok_or_else(|| McpError {
+        })?
+        .ok_or_else(|| McpError {
             message: "Template not found".into(),
             code: rmcp::model::ErrorCode::INVALID_PARAMS,
             data: None,
@@ -1244,28 +1289,38 @@ impl VantageServer {
         let command = template.command.clone();
         let args = request.override_args.unwrap_or(template.args.clone());
         let env = request.override_env.unwrap_or(template.env.clone());
-        let cwd = request.override_cwd.or(template.cwd.clone()).map(std::path::PathBuf::from);
+        let cwd = request
+            .override_cwd
+            .or(template.cwd.clone())
+            .map(std::path::PathBuf::from);
 
         // ProcessManager経由でプロセスを作成
-        self.process_manager.create_process(
-            request.process_id.clone(),
-            command,
-            args,
-            env,
-            cwd,
-            request.auto_start.unwrap_or(false),
-        ).await.map_err(|e| McpError {
-            message: format!("Failed to create process: {}", e).into(),
-            code: rmcp::model::ErrorCode::INTERNAL_ERROR,
-            data: None,
-        })?;
+        self.process_manager
+            .create_process(
+                request.process_id.clone(),
+                command,
+                args,
+                env,
+                cwd,
+                request.auto_start.unwrap_or(false),
+            )
+            .await
+            .map_err(|e| McpError {
+                message: format!("Failed to create process: {}", e).into(),
+                code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+                data: None,
+            })?;
 
         // 使用回数を更新
-        let template_id = template.id.as_ref().ok_or_else(|| McpError {
-            message: "Template has no ID".into(),
-            code: rmcp::model::ErrorCode::INTERNAL_ERROR,
-            data: None,
-        })?.to_string();
+        let template_id = template
+            .id
+            .as_ref()
+            .ok_or_else(|| McpError {
+                message: "Template has no ID".into(),
+                code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+                data: None,
+            })?
+            .to_string();
 
         if let Err(e) = repo.increment_use_count(&template_id).await {
             tracing::warn!("Failed to increment template use count: {}", e);
@@ -1279,7 +1334,7 @@ impl VantageServer {
         });
 
         Ok(CallToolResult::success(vec![Content::text(
-            serde_json::to_string_pretty(&response).unwrap()
+            serde_json::to_string_pretty(&response).unwrap(),
         )]))
     }
 

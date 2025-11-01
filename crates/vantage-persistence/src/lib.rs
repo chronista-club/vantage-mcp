@@ -31,9 +31,9 @@
 //! }
 //! ```
 
+pub mod db;
 pub mod persistence;
 pub mod types;
-pub mod db;
 
 // Re-export main types
 pub use persistence::manager::PersistenceManager;
@@ -45,5 +45,5 @@ pub use types::{
 };
 
 // Re-export DB types
-pub use db::{DbConnection, TemplateRepository, SchemaManager};
 pub use db::template_repository::{Template, TemplateCategory};
+pub use db::{DbConnection, SchemaManager, TemplateRepository};
