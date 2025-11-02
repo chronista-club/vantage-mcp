@@ -9,7 +9,8 @@
     "dashboard": "Dashboard",
     "processes": "Processes",
     "templates": "Templates",
-    "clipboard": "Clipboard"
+    "clipboard": "Clipboard",
+    "settings": "Settings"
   },
   "dashboard": {
     "quickActions": "Quick Actions",
@@ -62,8 +63,29 @@
     "notstarted": "Not Started"
   },
   "settings": {
-    "theme": "Theme",
-    "language": "Language"
+    "title": "Settings",
+    "description": "Customize application display and theme",
+    "theme": {
+      "title": "Theme Settings",
+      "mode": "Display Mode",
+      "light": "Light",
+      "dark": "Dark",
+      "colorPalette": "Color Palette"
+    },
+    "display": {
+      "title": "Display Settings",
+      "language": "Language",
+      "viewMode": "View Mode",
+      "cardView": "Card",
+      "tableView": "Table"
+    },
+    "colorDemo": {
+      "title": "OKLCH Color Demo",
+      "description": "Adjust OKLCH color space parameters to see color changes in real-time.",
+      "lightness": "Lightness",
+      "chroma": "Chroma",
+      "hue": "Hue"
+    }
   },
   "templates": {
     "title": "Templates",
@@ -114,9 +136,17 @@
     "processCreated": "Process \"{id}\" created successfully",
     "createProcessError": "Failed to create process: {error}"
   },
+  "clipboard": {
+    "title": "Clipboard",
+    "clearAll": "Clear All"
+  },
+  "errors": {
+    "occurred": "An error occurred"
+  },
   "common": {
     "cancel": "Cancel",
     "delete": "Delete",
-    "enabled": "Enabled"
+    "enabled": "Enabled",
+    "refresh": "Refresh"
   }
 }
