@@ -9,7 +9,6 @@ import {
   createLightTheme,
   createDarkTheme,
   applyTheme,
-  getCurrentTheme,
   oklchToString,
   adjustLightness,
   adjustChroma,
