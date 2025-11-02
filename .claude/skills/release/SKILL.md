@@ -4,7 +4,8 @@ Vantage MCPプロジェクトのリリースプロセスを自動化・サポー
 
 ## 概要
 
-このスキルは、バージョン管理からGitHubリリースの作成まで、リリースプロセス全体をガイドします。
+このスキルは、バージョン管理からGitHubリリースの作成まで、リリースプロセス全体を自動化します。
+Bun + TypeScriptで実装された決定論的なスクリプトにより、一貫性のあるリリースを保証します。
 
 ## 主な機能
 
@@ -16,13 +17,14 @@ Vantage MCPプロジェクトのリリースプロセスを自動化・サポー
 ### 2. リリース前チェック
 - ビルドの成功確認
 - テストの実行と検証
-- CIチェックの確認
 - ブランチ保護ルールの遵守確認
+- 未コミット変更の検出
+- リモート同期の確認
 
 ### 3. リリース作成
-- Gitタグの作成とプッシュ
-- GitHubリリースの作成
-- リリースノートの生成
+- Gitタグの自動作成とプッシュ
+- GitHubリリースの作成サポート
+- ロールバック機能（テスト失敗時）
 
 ### 4. リリース後処理
 - 次期バージョンへの準備
@@ -30,81 +32,92 @@ Vantage MCPプロジェクトのリリースプロセスを自動化・サポー
 
 ## 使用方法
 
-### 基本的なリリースフロー
+### リリーススクリプトの実行
 
 ```bash
-# 1. リリーススキルを起動
-/release
+# scripts ディレクトリに移動
+cd .claude/skills/release/scripts
 
-# 2. 対話的にリリースプロセスを進める
-# - 現在のバージョンを確認
-# - 新しいバージョンを入力
-# - リリースノートを作成
-# - リリースを実行
+# リリーススクリプトを実行
+bun run release.ts <version>
+
+# 例: Beta版のリリース
+bun run release.ts 0.1.0-beta21
+
+# 例: 正式版のリリース
+bun run release.ts 0.2.0
 ```
+
+### リリーススクリプトの処理フロー
+
+リリーススクリプトは以下の8ステップを自動実行します：
+
+1. **📋 事前チェック**
+   - mainブランチにいるか確認
+   - 未コミット変更がないか確認
+   - リモートと同期しているか確認
+
+2. **📝 バージョン情報の表示**
+   - 現在のバージョンと新しいバージョンを表示
+   - ユーザー確認を求める
+
+3. **🔧 Cargo.toml と Cargo.lock の更新**
+   - バージョンフィールドを書き換え
+   - `cargo build`でCargo.lockを更新
+
+4. **🧪 テストの実行**
+   - `cargo test`を実行
+   - 失敗時は自動ロールバック
+
+5. **🔨 リリースビルド**
+   - `cargo build --release`を実行
+   - 失敗時は自動ロールバック
+
+6. **📦 Gitコミットの作成**
+   - Cargo.tomlとCargo.lockをコミット
+   - コミットメッセージ: `chore: bump version to vX.Y.Z`
+
+7. **🏷️ Gitタグの作成**
+   - アノテーテッドタグを作成
+   - タグメッセージ: `Release vX.Y.Z`
+
+8. **🚢 リモートへのプッシュ（確認付き）**
+   - プッシュ前にユーザー確認
+   - ブランチとタグを同時にプッシュ
+
+9. **🎉 次のステップの表示**
+   - GitHubリリース作成コマンドを表示
+   - インストール方法を表示
+
+### エラーハンドリングとロールバック
+
+スクリプトは以下の場合に自動的にロールバックします：
+
+- **テスト失敗時**: Cargo.tomlを元のバージョンに戻し、Cargo.lockを再生成
+- **ビルド失敗時**: 同様にロールバック
+- **タグ作成失敗時**: コミットを取り消し、ファイルをロールバック
 
 ## リリース手順の詳細
 
-### ステップ1: 事前確認
+### ステップ1: 事前準備
 
-リリース前に以下を確認します：
-
-1. **ブランチの状態**
-   - mainブランチにいること
-   - リモートと同期していること
-   - 未コミットの変更がないこと
-
-2. **CIチェック**
-   - すべてのテストが通過していること
-   - Clippyで警告がないこと
-   - Rustfmtでフォーマットされていること
-
-3. **ブランチ保護**
-   - 必要なレビュー承認を取得していること
-   - すべての会話が解決されていること
-
-### ステップ2: バージョン更新
-
-1. **現在のバージョンを確認**
+1. **ブランチの確認**
    ```bash
-   grep "^version" Cargo.toml
+   git status
+   git branch
    ```
 
-2. **新しいバージョンを決定**
-   - セマンティックバージョニングに従う
-   - MAJOR.MINOR.PATCH[-PRERELEASE]
-   - 例: `0.1.0-beta20` → `0.1.0-beta21`
-
-3. **Cargo.tomlを更新**
+2. **最新の変更を取得**
    ```bash
-   # versionフィールドを更新
-   # 例: version = "0.1.0-beta20" → version = "0.1.0-beta21"
+   git pull origin main
    ```
 
-4. **Cargo.lockを更新**
-   ```bash
-   cargo build
-   ```
+3. **CIチェックの確認**
+   - GitHubのPRやActionsで全てのチェックが通過していることを確認
 
-### ステップ3: ビルドとテスト
+### ステップ2: リリースノート作成
 
-```bash
-# リリースビルド
-cargo build --release
-
-# テスト実行
-cargo test
-
-# Clippy実行
-cargo clippy -- -D warnings
-
-# フォーマットチェック
-cargo fmt -- --check
-```
-
-### ステップ4: リリースノート作成
-
-リリースノートには以下を含めます：
+リリース前に`release-notes.md`を作成します：
 
 ```markdown
 # v0.1.0-betaXX
@@ -134,36 +147,28 @@ cargo install --git https://github.com/chronista-club/vantage-mcp --tag v0.1.0-b
 ```
 ```
 
-### ステップ5: コミットとタグ作成
+### ステップ3: リリーススクリプト実行
 
 ```bash
-# 1. 変更をステージング
-git add Cargo.toml Cargo.lock
-
-# 2. コミット作成
-git commit -m "chore: bump version to v0.1.0-betaXX"
-
-# 3. タグ作成
-git tag -a v0.1.0-betaXX -m "Release v0.1.0-betaXX - 簡潔な説明"
-
-# 4. プッシュ
-git push origin main
-git push origin v0.1.0-betaXX
+cd .claude/skills/release/scripts
+bun run release.ts 0.1.0-beta21
 ```
 
-### ステップ6: GitHubリリース作成
+スクリプトが以下を自動実行します：
+- 事前チェック
+- Cargo.toml/Cargo.lock更新
+- テストとビルド
+- Gitコミットとタグ作成
+- リモートプッシュ（確認後）
+
+### ステップ4: GitHubリリース作成
+
+スクリプトが表示するコマンドを実行：
 
 ```bash
-# リリースノートファイルを使用
-gh release create v0.1.0-betaXX \
-  --title "v0.1.0-betaXX - リリースタイトル" \
+gh release create v0.1.0-beta21 \
+  --title "v0.1.0-beta21 - リリースタイトル" \
   --notes-file release-notes.md \
-  --prerelease
-
-# または、インラインでノートを指定
-gh release create v0.1.0-betaXX \
-  --title "v0.1.0-betaXX - リリースタイトル" \
-  --notes "リリースノート本文" \
   --prerelease
 ```
 
@@ -191,7 +196,7 @@ gh release create v0.1.0-betaXX \
 ### 4. プレリリースとリリース
 
 - 開発中は`--prerelease`フラグを使用
-- 正式版では`--latest`フラグを使用
+- 正式版では`--latest`フラグを使用（または省略）
 
 ## トラブルシューティング
 
@@ -209,17 +214,49 @@ git tag -d v0.1.0-betaXX
 git push origin :refs/tags/v0.1.0-betaXX
 ```
 
+### テストやビルドが失敗する
+
+リリーススクリプトは自動的にロールバックするため、手動での修正は不要です。
+失敗の原因を修正してから再度スクリプトを実行してください。
+
 ### cargo installが失敗する
 
 - タグ名が正しいか確認（`v`プレフィックス必須）
 - Cargo.tomlのバージョンとタグが一致しているか確認
 - リリースが公開されているか確認
 
-### CIチェックが失敗している
+### プッシュをキャンセルした場合
 
-- mainブランチでCIが通過していることを確認
-- 必要に応じてPRを作成して修正
-- すべてのチェックが通過してからリリース
+```bash
+# 後でプッシュする場合
+git push origin main
+git push origin v0.1.0-beta21
+```
+
+## スクリプト構成
+
+### ファイル構成
+
+```
+.claude/skills/release/scripts/
+├── types.ts         # 型定義
+├── lib.ts           # ユーティリティ関数
+├── release.ts       # メインスクリプト
+└── tsconfig.json    # TypeScript設定
+```
+
+### 型定義（types.ts）
+
+- `Version`: バージョン情報（major, minor, patch, prerelease）
+- `ReleaseConfig`: リリース設定（currentVersion, newVersion, tag）
+- `CheckResult`: チェック結果（passed, error）
+
+### ユーティリティ関数（lib.ts）
+
+- **Version Utils**: `parseVersion()`, `formatVersion()`, `formatTag()`
+- **Cargo Utils**: `getCurrentVersion()`, `updateCargoToml()`, `updateCargoLock()`, `runCargoTest()`, `runCargoBuildRelease()`
+- **Git Utils**: `getCurrentBranch()`, `hasUncommittedChanges()`, `isSyncedWithRemote()`, `createCommit()`, `createTag()`, `pushToRemote()`
+- **Pre-flight Checks**: `checkPrerequisites()`
 
 ## チェックリスト
 
@@ -230,11 +267,8 @@ git push origin :refs/tags/v0.1.0-betaXX
 - [ ] 未コミットの変更がない
 - [ ] CIチェックがすべて通過している
 - [ ] 必要なレビュー承認を取得している
-- [ ] Cargo.tomlのバージョンを更新した
-- [ ] `cargo build --release`が成功する
-- [ ] `cargo test`が成功する
-- [ ] リリースノートを作成した
-- [ ] タグ名がCargo.tomlのバージョンと一致している
+- [ ] リリースノート（release-notes.md）を作成した
+- [ ] Bunがインストールされている
 - [ ] プレリリースか正式版かを決定した
 
 ## 参考資料
@@ -242,7 +276,9 @@ git push origin :refs/tags/v0.1.0-betaXX
 - [セマンティックバージョニング](https://semver.org/lang/ja/)
 - [GitHub CLI - リリース作成](https://cli.github.com/manual/gh_release_create)
 - [Cargo Book - Publishing](https://doc.rust-lang.org/cargo/reference/publishing.html)
+- [Bun Documentation](https://bun.sh/docs)
 
 ## 更新履歴
 
-- 2025-01-02: 初版作成
+- 2025-01-02: 初版作成（シェルスクリプト版）
+- 2025-01-02: Bun + TypeScript版に移行、自動ロールバック機能追加
