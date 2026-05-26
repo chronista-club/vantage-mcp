@@ -1,5 +1,10 @@
 # Vantage MCP
 
+> [!NOTE]
+> **This repository has been archived (2026-05-26)**
+> Successor: [vantage-point](https://github.com/chronista-club/vantage-point) — vantage-mcp's process management & MCP server have been integrated into vantage-point's Lane/Wing infrastructure as built-in capabilities.
+> Conceptual designs (SurrealDB-backed smart features, Agent Orchestration) live on in creo-memories and vantage-point's design docs.
+
 **English** | [日本語](./docs/README.ja.md)
 
 Process as a Resource - Manage processes as resources
